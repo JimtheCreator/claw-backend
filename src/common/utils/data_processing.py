@@ -34,3 +34,10 @@ def normalize_binance_data(klines: list) -> pd.DataFrame:
     
     # Keep essential columns
     return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+
+def downsample_sparkline(data: list, points: int = 20) -> list:
+    """Reduce data points for efficient sparkline rendering"""
+    if len(data) <= points:
+        return data
+    step = len(data) // points
+    return [data[i] for i in range(0, len(data), step)][:points]
