@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+pandas
+numpy
+celery
+redis
+psycopg2-binary  # PostgreSQL
+influxdb-client  # Time-series data
+python-jose[cryptography] # JWT (future auth)
+pytest
+pytest-asyncio
+requests
+TA-Lib
