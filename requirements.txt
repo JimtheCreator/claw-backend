@@ -13,3 +13,4 @@ pytest
 pytest-asyncio
 requests
 TA-Lib
+python-binance
