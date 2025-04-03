@@ -24,7 +24,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-
 # Include all routers
 app.include_router(market_data.router, prefix="/api/v1")  # Add this line
 
