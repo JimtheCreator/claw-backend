@@ -14,3 +14,6 @@ pytest-asyncio
 requests
 TA-Lib
 python-binance
+slowapi
+prometheus-client
+aioredis

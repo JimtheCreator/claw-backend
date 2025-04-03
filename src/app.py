@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from common.logger import configure_logging, logger
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
@@ -27,6 +28,7 @@ app = FastAPI(
 # Include all routers
 app.include_router(market_data.router, prefix="/api/v1")  # Add this line
 
+    
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}

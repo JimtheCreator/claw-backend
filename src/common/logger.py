@@ -6,36 +6,35 @@ from logging.handlers import RotatingFileHandler
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_DIR/"app.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+def configure_logging(name: str = "ClawBackend") -> logging.Logger:
+    """Configure and return a logger with file and stream handlers"""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
+    # Clear existing handlers to avoid duplicates
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-def configure_logging():
-    LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    MAX_LOG_SIZE = 10 * 1024 * 1024  # 10 MB
-    LOG_BACKUP_COUNT = 5
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format=LOG_FORMAT,
-        handlers=[
-            RotatingFileHandler(
-                "logs/app.log",
-                maxBytes=MAX_LOG_SIZE,
-                backupCount=LOG_BACKUP_COUNT
-            ),
-            logging.StreamHandler()
-        ]
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    
-    # Silence noisy loggers
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("redis").setLevel(logging.WARNING)
 
-logger = logging.getLogger(__name__)
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        LOG_DIR / "app.log",
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setFormatter(formatter)
+
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
+
+# Configure root logger
+logger = configure_logging()
