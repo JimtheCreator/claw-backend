@@ -17,7 +17,7 @@ class RedisCache:
             decode_responses=True,
             socket_connect_timeout=3
         )
-        
+
         self._verify_connection()
 
    
@@ -31,7 +31,8 @@ class RedisCache:
             logger.critical(f"🔥 Critical Redis connection failure: {str(e)}")
             raise
 
-    def get_cached_data(self, key: str):
+    # Update the methods to be async
+    async def get_cached_data(self, key: str):
         """Safe getter with error handling"""
         try:
             return self.redis.get(key)
@@ -39,7 +40,7 @@ class RedisCache:
             logger.error(f"Redis GET error: {str(e)}")
             return None
 
-    def set_cached_data(self, key: str, value, ttl: int = 60):
+    async def set_cached_data(self, key: str, value, ttl: int = 60):
         """Safe setter with error handling"""
         try:
             self.redis.setex(key, ttl, value)
