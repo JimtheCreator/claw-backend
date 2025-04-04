@@ -25,7 +25,6 @@ Claw Backend is a Flask-based backend system designed for market trend analysis 
 ## Project Structure
 ```plaintext
 Claw/
-├── .gitignore               # Ignore unnecessary files
 ├── docker-compose.yml       # Service orchestration (Postgres, Redis, etc.)
 ├── Makefile                 # Useful CLI shortcuts
 ├── requirements.txt         # Dependencies
