@@ -1,7 +1,7 @@
 # Claw Backend
 
 ## Overview
-Claw Backend is a FastAPI-based system for market trend analysis and trading pattern detection.  It powers Claw’s AI-driven insights, decoding candlesticks, trends, and breakouts. Integrates Redis, PostgreSQL, Celery, InfluxDB, and Nginx, with Docker handling deployment and service orchestration.
+**Claw Backend** is a **FastAPI-based** system for market trend analysis and trading pattern detection. It powers Claw’s AI-driven insights, tracking candlesticks, trends, and breakouts for real-time predictions. Uses **Redis** for caching, **PostgreSQL** for storage, **Celery** for task processing, and **InfluxDB** for time-series data. **Nginx** handles routing, with **Docker** orchestrating deployment. 🚀
 
 ---
 
