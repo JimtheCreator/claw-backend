@@ -17,3 +17,4 @@ python-binance
 slowapi
 prometheus-client
 aioredis
+binance-connector
