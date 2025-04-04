@@ -3,15 +3,6 @@
 ## Overview
 Claw Backend is a Flask-based backend system designed for market trend analysis and trading pattern detection. It integrates Redis, PostgreSQL, Celery, InfluxDB, and Nginx, with Docker handling deployment and service orchestration.
 
-## Technologies Used
-- **Flask** - Web framework
-- **Redis** - Caching and task queue backend
-- **PostgreSQL** - Primary database
-- **Celery** - Asynchronous task queue
-- **InfluxDB** - Time-series database for storing market data
-- **Nginx** - Reverse proxy and load balancing
-- **Docker** - Containerization for deployment
-
 ---
 
 ## ⚙️ Tech Stack & Architecture
