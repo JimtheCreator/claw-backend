@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  claw_influxdb:  # 🛠️ Renamed the service to claw-influxdb
+    image: influxdb:2.7
+    container_name: claw_influxdb  # 🧾 Consistent with service name
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=clawsecurepass
+      - DOCKER_INFLUXDB_INIT_ORG=claworg
+      - DOCKER_INFLUXDB_INIT_BUCKET=clawbucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=clawsupersecrettoken
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./data:/var/lib/influxdb2
+    networks:
+      - claw_network
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+networks:
+  claw_network:
+    driver: bridge

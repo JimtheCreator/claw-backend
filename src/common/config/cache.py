@@ -1,53 +1,52 @@
-import redis
 import os
-from dotenv import load_dotenv
-import json
-
+import logging
+from typing import Optional
+from redis.asyncio import Redis
+import redis.asyncio
 from redis.exceptions import ConnectionError
+from dotenv import load_dotenv
 from common.logger import logger
 
 load_dotenv()
 
 class RedisCache:
-    def __init__(self):
-        self.redis = redis.Redis(
-            host=os.getenv("REDIS_HOST", "claw_redis"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-            db=0,
-            decode_responses=True,
-            socket_connect_timeout=3
-        )
+    _instance = None
+    _redis: Optional[Redis] = None
+    _initialized = False
 
-        self._verify_connection()
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(RedisCache, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
-   
-    def _verify_connection(self):
-        try:
-            if self.redis.ping():
-                logger.info("✅ Successfully connected to Redis")
-            else:
-                logger.error("❌ Redis connection verification failed")
-        except redis.ConnectionError as e:
-            logger.critical(f"🔥 Critical Redis connection failure: {str(e)}")
-            raise
+    async def initialize(self):
+        if not self._initialized:
+            try:
+                self._redis = redis.asyncio.from_url(
+                    f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
+                    encoding="utf-8",
+                    decode_responses=True,
+                    socket_connect_timeout=3
+                )
+                if await self._redis.ping():
+                    logger.info("✅ Successfully connected to Redis")
+                else:
+                    logger.error("❌ Redis connection verification failed")
+                self._initialized = True
+            except ConnectionError as e:
+                logger.critical(f"🔥 Critical Redis connection failure: {str(e)}")
+                raise
 
-    # Update the methods to be async
-    async def get_cached_data(self, key: str):
-        """Safe getter with error handling"""
-        try:
-            return self.redis.get(key)
-        except redis.RedisError as e:
-            logger.error(f"Redis GET error: {str(e)}")
-            return None
+    async def get_cached_data(self, key: str) -> Optional[str]:
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized. Call `await redis_cache.initialize()` first.")
+        return await self._redis.get(key)
 
-    async def set_cached_data(self, key: str, value, ttl: int = 60):
-        """Safe setter with error handling"""
-        try:
-            self.redis.setex(key, ttl, value)
-            return True
-        except redis.RedisError as e:
-            logger.error(f"Redis SET error: {str(e)}")
-            return False
+    async def set_cached_data(self, key: str, value: str, ttl: int = 60):
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized. Call `await redis_cache.initialize()` first.")
+        await self._redis.set(name=key, value=value, ex=ttl)
 
 # Singleton instance
 redis_cache = RedisCache()

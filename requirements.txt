@@ -18,3 +18,6 @@ slowapi
 prometheus-client
 aioredis
 binance-connector
+supabase
+psycopg2
+orjson
