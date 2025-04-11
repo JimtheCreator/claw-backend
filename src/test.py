@@ -7,14 +7,14 @@ from influxdb_client.client.exceptions import InfluxDBError
 from common.logger import logger
 import asyncio
 from infrastructure.data_sources.binance.client import BinanceMarketData
-
+from common.config.cache import redis_cache
+import asyncio
 # Temporary test code
-async def test_monthly_klines():
-    client = BinanceMarketData()
-    client.connect()
-    monthly_data = await client.get_klines("BTCUSDT", "1M", limit=10)
-    client.disconnect()
-    print("Monthly klines:", monthly_data)
 
 
-asyncio.run(test_monthly_klines())
+# Nuclear option - clear entire cache
+async def clear_redis_cache():
+    await redis_cache.flush_all()
+
+
+clear_redis_cache()

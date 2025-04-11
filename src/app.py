@@ -14,6 +14,7 @@ import core.services.crypto_list as crypto_data
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
 from common.config.cache import redis_cache
+from core.services.crypto_list import initialize_binance_connection_pool
 
 
 @asynccontextmanager
@@ -23,7 +24,9 @@ async def lifespan(app: FastAPI):
         configure_logging()
         logger.info("Starting application...")
         await redis_cache.initialize()
-        await crypto_data.store_all_binance_tickers_in_supabase()
+        await redis_cache.flush_all()
+        await initialize_binance_connection_pool()
+        # await crypto_data.store_all_binance_tickers_in_supabase()
         logger.info("✅ Preloaded all Binance tickers into Supabase")
     except Exception as e:
         logger.error(f"❌ Failed to preload tickers: {e}")
