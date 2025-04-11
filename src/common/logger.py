@@ -11,7 +11,7 @@ def configure_logging(name: str = "ClawBackend") -> logging.Logger:
     logging.basicConfig(
         stream=sys.stdout,
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
         encoding='utf-8',  # Add this line
         force=True
     )
@@ -25,7 +25,7 @@ def configure_logging(name: str = "ClawBackend") -> logging.Logger:
         logger.handlers.clear()
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
     )
 
     # File handler with rotation

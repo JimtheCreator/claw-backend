@@ -6,6 +6,8 @@ import datetime
 from typing import AsyncGenerator, List, Dict, Any, Optional
 import logging
 import websockets
+import asyncio
+
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -16,34 +18,124 @@ class BinanceMarketData:
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_API_SECRET")
         self.client = None
-        # Import the needed modules at the top of your file
-        # from binance.client import AsyncClient
-        # from binance.streams import BinanceSocketManager
         self.socket_manager = None
+        self.websocket = None
+        self._connection_lock = asyncio.Lock()
+        self._last_call_time = 0
+        self._throttle_delay = 300  # milliseconds
+        # Add a connection timeout to prevent hanging
+        self._connection_timeout = 10  # seconds
+        # Add a connection pool to reuse connections
+        self._connection_pool = {}
+        self._pool_size = 10
+        self._pool_lock = asyncio.Lock()
+        self._init_task = None
 
     async def connect(self):
-        """Initialize connection to Binance API"""
-        if self.client is None:
-            try:
-                self.client = await AsyncClient.create(
+        """Initialize connection to Binance API with proper locking"""
+        # Use a lock to prevent multiple simultaneous connection attempts
+        async with self._connection_lock:
+            if self.client is None:
+                try:
+                    # Use a timeout to prevent hanging
+                    self.client = await asyncio.wait_for(
+                        AsyncClient.create(
+                            self.api_key, 
+                            self.api_secret
+                        ),
+                        timeout=self._connection_timeout
+                    )
+                    logger.debug("Connected to Binance API")
+                except asyncio.TimeoutError:
+                    logger.error("Timeout connecting to Binance API")
+                    raise
+                except Exception as e:
+                    logger.error(f"Failed to connect to Binance API: {str(e)}")
+                    raise
+
+    async def init_connection_pool(self):
+        """Initialize a pool of connections for parallel requests"""
+        if self._init_task is None:
+            self._init_task = asyncio.create_task(self._initialize_pool())
+        return await self._init_task
+            
+    async def _initialize_pool(self):
+        """Create a pool of connections"""
+        async with self._pool_lock:
+            if not self._connection_pool:
+                logger.info(f"Initializing connection pool with {self._pool_size} connections")
+                tasks = []
+                for i in range(self._pool_size):
+                    tasks.append(self._create_connection(i))
+                await asyncio.gather(*tasks)
+                logger.info(f"Connection pool initialized with {len(self._connection_pool)} connections")
+                
+    async def _create_connection(self, index):
+        """Create a single connection for the pool"""
+        try:
+            client = await asyncio.wait_for(
+                AsyncClient.create(
                     self.api_key, 
                     self.api_secret
-                )
-                logger.debug("Connected to Binance API")
-            except Exception as e:
-                logger.error(f"Failed to connect to Binance API: {str(e)}")
-                raise
+                ),
+                timeout=self._connection_timeout
+            )
+            self._connection_pool[index] = client
+            return client
+        except Exception as e:
+            logger.error(f"Failed to create connection {index}: {str(e)}")
+            return None
+            
+    async def get_pooled_client(self):
+        """Get a client from the pool"""
+        # Make sure the pool is initialized
+        if not self._connection_pool:
+            await self.init_connection_pool()
+            
+        # Find an available client
+        async with self._pool_lock:
+            for index, client in self._connection_pool.items():
+                if client:
+                    return client
+                    
+        # If no clients available, create a new one
+        if not self.client:
+            await self.connect()
+        return self.client
 
     async def disconnect(self):
-        """Close connection gracefully"""
-        if self.client:
-            try:
-                await self.client.close_connection()
-                self.client = None
-                logger.debug("Disconnected from Binance API")
-            except Exception as e:
-                logger.error(f"Error disconnecting from Binance API: {str(e)}")
+        """Close connection gracefully with proper locking"""
+        async with self._connection_lock:
+            if self.client:
+                try:
+                    await self.client.close_connection()
+                    self.client = None
+                    logger.debug("Disconnected from Binance API")
+                except Exception as e:
+                    logger.error(f"Error disconnecting from Binance API: {e}")
+                    
+        # Close pool connections
+        async with self._pool_lock:
+            close_tasks = []
+            for index, client in list(self._connection_pool.items()):
+                if client:
+                    try:
+                        close_tasks.append(client.close_connection())
+                        self._connection_pool[index] = None
+                    except Exception as e:
+                        logger.error(f"Error closing pooled connection {index}: {e}")
+            
+            if close_tasks:
+                await asyncio.gather(*close_tasks, return_exceptions=True)
+                logger.debug("Closed all pooled connections")
 
+    async def ensure_connected(self):
+        """Ensure client is connected before making API calls"""
+        if self.client is None:
+            await self.connect()
+        return self.client is not None
+    
+    # Modified to use connection pooling and with timeout
     async def get_klines(
         self, 
         symbol: str, 
@@ -52,14 +144,7 @@ class BinanceMarketData:
         start_time: Optional[int] = None, 
         end_time: Optional[int] = None
     ) -> list:
-        """
-        Fetch OHLCV data (Open, High, Low, Close, Volume)
-        
-        Args:
-            symbol: Trading pair (e.g., BTCUSDT)
-            interval: Timeframe (1m, 5m, 1h, 4h, 1M, etc.)
-            limit: Number of candles to retrieve (max 1000)
-        """
+        """Fetch OHLCV data (Open, High, Low, Close, Volume)"""
         # Validate interval first
         valid_intervals = [
             "1m", "3m", "5m", "15m", "30m",
@@ -72,31 +157,56 @@ class BinanceMarketData:
             raise ValueError(f"Invalid interval: {interval}. Valid intervals: {valid_intervals}")
 
         try:
-            if not self.client:
-                await self.connect()
+            await self._throttle()  
+            
+            # Get a client from the pool if available
+            client = await self.get_pooled_client()
+            
+            # Validate symbol format
+            if not symbol.isalnum():
+                raise ValueError("Invalid symbol")
 
             # Add debug logging for raw response
             logger.debug(f"Fetching {limit} {interval} klines for {symbol}")
             
-            klines = await self.client.get_klines(
-                symbol=symbol,
-                interval=interval,
-                limit=limit,
-                startTime=start_time,
-                endTime=end_time
+            # Use a timeout for the API call
+            klines = await asyncio.wait_for(
+                client.get_klines(
+                    symbol=symbol,
+                    interval=interval,
+                    limit=limit,
+                    startTime=start_time,
+                    endTime=end_time
+                ),
+                timeout=self._connection_timeout
             )
 
             # Validate response structure
             if not isinstance(klines, list) or len(klines) == 0:
                 logger.warning(f"No klines data returned for {symbol}/{interval}")
                 return []
-
-            if len(klines[0]) < 11:
+            
+            # Validate structure
+            if len(klines[0]) < 6:
                 logger.error(f"Malformed kline data for {symbol}/{interval}")
                 return []
 
-            return klines
+            # Filter out all-zero or malformed candles
+            valid_klines = [
+                k for k in klines 
+                if len(k) >= 6 and all(float(val) > 0 for val in k[1:6])
+            ]
 
+            if not valid_klines:
+                logger.warning(f"Filtered out all klines for {symbol}/{interval} due to zero values")
+                return []
+
+            return valid_klines
+
+
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout fetching klines for {symbol}")
+            return []
         except BinanceAPIException as e:
             logger.error(f"Binance API Error fetching klines for {symbol}: {e}")
             return []
@@ -105,8 +215,204 @@ class BinanceMarketData:
             return []
         
 
-        
-        
+    async def get_exchange_info(self):
+        """Get exchange information including symbol details"""
+        try:
+            await self._throttle()
+            
+            # Get a client from the pool if available
+            client = await self.get_pooled_client()
+            
+            # Use a timeout for the API call
+            exchange_info = await asyncio.wait_for(
+                client.get_exchange_info(),
+                timeout=self._connection_timeout
+            )
+            return exchange_info
+        except asyncio.TimeoutError:
+            logger.error("Timeout fetching exchange info")
+            return {"symbols": []}
+        except BinanceAPIException as e:
+            logger.error(f"Binance API Error fetching exchange info: {e}")
+            return {"symbols": []}
+        except Exception as e:
+            logger.error(f"Error fetching exchange info: {e}")
+            return {"symbols": []}
+
+    async def search_symbols(self, query: str, limit: int = 20):
+        """Search for symbols matching the query"""
+        try:
+            await self._throttle()
+            
+            # Get a client from the pool if available
+            client = await self.get_pooled_client()
+            
+            # Get all tickers first
+            all_tickers = await asyncio.wait_for(
+                client.get_ticker(),
+                timeout=self._connection_timeout
+            )
+            
+            # Filter by the query string
+            query = query.upper()
+            
+            # First find exact symbol matches
+            exact_matches = [t for t in all_tickers if t.get('symbol') == query]
+            
+            # Then find symbols containing the query
+            contains_matches = [t for t in all_tickers if query in t.get('symbol') and t not in exact_matches]
+            
+            # Sort by volume (high to low)
+            contains_matches.sort(
+                key=lambda x: float(x.get('quoteVolume', 0)), 
+                reverse=True
+            )
+            
+            # Combine exact matches (higher priority) with other matches
+            filtered_tickers = exact_matches + contains_matches
+            
+            # Get exchange info to determine base and quote assets
+            exchange_info = await self.get_exchange_info()
+            symbol_info = {}
+            
+            for symbol_data in exchange_info.get('symbols', []):
+                symbol = symbol_data.get('symbol')
+                if symbol:
+                    symbol_info[symbol] = {
+                        'base_currency': symbol_data.get('quoteAsset'),
+                        'asset': symbol_data.get('baseAsset')
+                    }
+            
+            # Enhance ticker data with symbol info
+            enhanced_results = []
+            for ticker in filtered_tickers[:limit]:
+                symbol = ticker.get('symbol')
+                if symbol in symbol_info:
+                    ticker.update(symbol_info[symbol])
+                enhanced_results.append(ticker)
+            
+            return enhanced_results[:limit]
+        except asyncio.TimeoutError:
+            logger.error("Timeout searching symbols")
+            return []
+        except BinanceAPIException as e:
+            logger.error(f"Binance API Error searching symbols: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Error searching symbols: {e}")
+            return []
+
+    async def get_ticker_data(self):
+        """Get all ticker data"""
+        try:
+            await self._throttle()
+            
+            # Get a client from the pool if available
+            client = await self.get_pooled_client()
+            
+            # Use a timeout for the API call
+            ticker_data = await asyncio.wait_for(
+                client.get_ticker(),
+                timeout=self._connection_timeout
+            )
+            return ticker_data
+        except asyncio.TimeoutError:
+            logger.error("Timeout fetching ticker data")
+            return []
+        except BinanceAPIException as e:
+            logger.error(f"Binance API Error fetching ticker data: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Error fetching ticker data: {e}")
+            return []
+
+    # Modified to use connection pool and timeout
+    async def get_ticker(self, symbol: str) -> Dict[str, Any]:
+        """Get ticker data for a specific symbol"""
+        try:
+            await self._throttle()  
+            
+            # Get a client from the pool if available
+            client = await self.get_pooled_client()
+            
+            # Use a timeout for the API call
+            ticker = await asyncio.wait_for(
+                client.get_ticker(symbol=symbol),
+                timeout=self._connection_timeout
+            )
+            return ticker
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout fetching ticker for {symbol}")
+            return {
+                "lastPrice": "0", 
+                "priceChangePercent": "0",
+                "quoteVolume": "0"
+            }
+        except BinanceAPIException as e:
+            logger.error(f"Binance API Error fetching ticker for {symbol}: {e}")
+            return {
+                "lastPrice": "0", 
+                "priceChangePercent": "0",
+                "quoteVolume": "0"
+            }
+        except Exception as e:
+            logger.error(f"Error fetching ticker for {symbol}: {e}")
+            return {
+                "lastPrice": "0", 
+                "priceChangePercent": "0",
+                "quoteVolume": "0"
+            }
+            
+    # Method to get multiple tickers in parallel
+    async def get_tickers_batch(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
+        """Get ticker data for multiple symbols in parallel"""
+        if not symbols:
+            return {}
+            
+        try:
+            # Initialize connection pool if not already done
+            if not self._connection_pool:
+                await self.init_connection_pool()
+                
+            # Create tasks for each symbol
+            tasks = []
+            for symbol in symbols:
+                tasks.append(self.get_ticker(symbol))
+                
+            # Run all tasks in parallel
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Process results
+            tickers = {}
+            for i, result in enumerate(results):
+                symbol = symbols[i]
+                if isinstance(result, Exception):
+                    logger.error(f"Error fetching ticker for {symbol}: {result}")
+                    tickers[symbol] = {
+                        "lastPrice": "0", 
+                        "priceChangePercent": "0",
+                        "quoteVolume": "0"
+                    }
+                else:
+                    tickers[symbol] = result
+                    
+            return tickers
+        except Exception as e:
+            logger.error(f"Error in batch ticker fetch: {e}")
+            return {symbol: {
+                "lastPrice": "0", 
+                "priceChangePercent": "0",
+                "quoteVolume": "0"
+            } for symbol in symbols}
+
+    async def _throttle(self):
+        now = asyncio.get_event_loop().time() * 1000  # in ms
+        delta = now - self._last_call_time
+        if delta < self._throttle_delay:
+            await asyncio.sleep((self._throttle_delay - delta) / 1000)
+        self._last_call_time = asyncio.get_event_loop().time() * 1000
+
+
     async def get_realtime_metrics(self, symbol: str) -> AsyncGenerator[dict, None]:
         """WebSocket-based real-time updates with proper typing"""
         # Make sure we're connected
@@ -119,7 +425,6 @@ class BinanceMarketData:
         # Let's use the websocket client directly
         base_url = "wss://stream.binance.com:9443/ws/"
         socket_url = f"{base_url}{symbol.lower()}@ticker"
-        
         
         try:
             async with websockets.connect(socket_url) as websocket:
@@ -142,114 +447,6 @@ class BinanceMarketData:
             # No need to explicitly close the websocket here as the 'async with' context manager handles it
             pass
 
-
-    async def get_ticker(self, symbol: str) -> Dict[str, Any]:
-        """Get ticker data for a specific symbol"""
-        try:
-            # Make sure we're connected
-            if not self.client:
-                await self.connect()
-                
-            ticker = await self.client.get_ticker(symbol=symbol)
-            return ticker
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching ticker for {symbol}: {e}")
-            return {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            }
-        except Exception as e:
-            logger.error(f"Error fetching ticker for {symbol}: {e}")
-            return {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            }
-    
-            
-    async def get_ticker_data(self) -> List[Dict[str, Any]]:
-        """Get ticker data for all trading pairs"""
-        try:
-            # Make sure we're connected
-            if not self.client:
-                await self.connect()
-                
-            return await self.client.get_ticker()
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching all tickers: {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Error fetching all tickers: {e}")
-            return []
-
-    async def search_symbols(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
-        """
-        Search for cryptocurrency symbols matching the query
-        
-        Args:
-            query: Search string (case insensitive)
-            limit: Maximum number of results to return
-        """
-        try:
-            # Make sure we're connected
-            if not self.client:
-                await self.connect()
-                
-            # Get exchange info
-            exchange_info = await self.client.get_exchange_info()
-            
-            # Filter symbols based on query
-            query = query.upper()
-            matching_symbols = []
-            
-            for symbol_info in exchange_info['symbols']:
-                if len(matching_symbols) >= limit:
-                    break
-                    
-                # Only include active trading pairs
-                if symbol_info['status'] != 'TRADING':
-                    continue
-                    
-                symbol = symbol_info['symbol']
-                base_asset = symbol_info['baseAsset']
-                quote_asset = symbol_info['quoteAsset']
-                
-                # Check if query matches symbol, base asset or quote asset
-                if (query in symbol or query in base_asset or query in quote_asset):
-                    matching_symbols.append(symbol_info['symbol'])
-            
-            # If we found symbols, get their ticker data
-            if matching_symbols:
-                all_tickers = await self.client.get_ticker()
-                
-                # Filter tickers for our matching symbols and return
-                result = [
-                    ticker for ticker in all_tickers 
-                    if ticker['symbol'] in matching_symbols
-                ]
-                
-                return result[:limit]
-            else:
-                return []
-                
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error searching symbols with query '{query}': {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Error searching symbols with query '{query}': {e}")
-            return []
-        
-    async def get_exchange_info(self) -> dict:
-        """Get Binance exchange information"""
-        try:
-            if not self.client:
-                await self.connect()
-            return await self.client.get_exchange_info()
-        except Exception as e:
-            logger.error(f"Error getting exchange info: {e}")
-            return {}
-        
     async def start_websocket(self, symbol: str):
         """Initialize WebSocket connection for trade data"""
         # Make sure we're connected
@@ -290,37 +487,3 @@ class BinanceMarketData:
             except Exception as e:
                 logger.error(f"Error receiving WebSocket message: {e}")
                 return None
-
-
-    async def fetch_latest_price_from_binance(self, symbol: str) -> float:
-        """
-        Fetch latest price data directly from Binance API
-        
-        Args:
-            symbol: Trading pair (e.g., BTCUSDT)
-            
-        Returns:
-            float: The latest price of the symbol
-            
-        Raises:
-            Exception: If there's an error connecting to Binance or fetching the price
-        """
-        try:
-            # Create an instance of BinanceMarketData
-            # Make sure we're connected
-            if not self.client:
-                await self.connect()
-            
-            # Get ticker data for the specified symbol
-            ticker = await self.client.get_ticker(symbol=symbol)
-            
-            # Extract the latest price
-            latest_price = float(ticker["lastPrice"])
-            
-            # Close connection
-            await self.client.disconnect()
-            
-            return latest_price
-        except Exception as e:
-            logger.error(f"Failed to fetch latest price for {symbol}: {str(e)}")
-            raise

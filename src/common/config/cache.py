@@ -48,5 +48,22 @@ class RedisCache:
             raise RuntimeError("Redis is not initialized. Call `await redis_cache.initialize()` first.")
         await self._redis.set(name=key, value=value, ex=ttl)
 
+    async def delete_key(self, key: str):
+        await self._redis.delete(key)
+
+    async def clear_namespace(self, prefix: str):
+        """Clear all keys with a specific prefix"""
+        keys = []
+        async for key in self._redis.scan_iter(f"{prefix}:*"):
+            keys.append(key)
+        if keys:
+            await self._redis.delete(*keys)
+
+    async def flush_all(self):
+        """Clear entire cache (use with caution!)"""
+        logger.info("Initializing data remavol....")
+        await self._redis.flushall()
+        logger.info("CACHED DATA COMPLETE ✅")
+
 # Singleton instance
 redis_cache = RedisCache()

@@ -1,6 +1,5 @@
 # src/presentation/api/routes/market_data.py
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from fastapi import APIRouter, HTTPException
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -9,31 +8,78 @@ sys.path.append(parent_dir)
 from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
 import json
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from core.use_cases.market.market_data import fetch_crypto_data
-from core.services.crypto_list import search_cryptos, fetch_realtime_metrics_from_binance, downsample_sparkline
+from core.services.crypto_list import search_cryptos, downsample_sparkline
 from common.logger import logger
 from fastapi.responses import StreamingResponse
-from core.domain.entities.MarketDataEntity import MarketDataEntity
-from common.config.cache import redis_cache
-import datetime
+
+from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
+from core.use_cases.market.market_data import delete_market_data, delete_all_market_data, fetch_crypto_data
+# src/api/v1/routes/market_data.py
+from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
+from datetime import datetime, timezone
+from typing import Optional, List
+
 
 router = APIRouter(tags=["Market Data"])
 
-@router.get("/market/{symbol}")
-async def get_market_data(symbol: str, interval: str):
-    """
-    Get detailed market data for a specific cryptocurrency pair
-    """
+@router.get("/market/{symbol}", response_model=List[MarketDataResponse])
+async def get_market_data(
+    symbol: str,
+    interval: str,
+    background_tasks: BackgroundTasks
+):
     try:
-        logger.info(f"Fetching market data for {symbol} ({interval})")
-        data = await fetch_crypto_data(symbol, interval)
-        if "error" in data:
-            logger.warning(f"Data error for {symbol}: {data['error']}")
+        data = await fetch_crypto_data(symbol, interval, background_tasks)
+        if isinstance(data, dict) and "error" in data:
             raise HTTPException(status_code=404, detail=data["error"])
         return data
     except Exception as e:
-        logger.error(f"Market data error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+
+# Example usage in your API endpoint:
+# DELETE /api/v1/delete/{symbol}?interval={interval}
+# DELETE endpoint for removing market data
+@router.delete("/delete/{symbol}", response_model=DeleteResponse)
+async def delete_market_data_endpoint(
+    symbol: str,
+    interval: Optional[str] = Query(None, description="Candlestick interval (e.g., 1m, 5m, 1h)"),
+    start_time: Optional[datetime] = Query(None, description="Start time for deletion range (ISO format)"),
+    end_time: Optional[datetime] = Query(None, description="End time for deletion range (ISO format)")
+):
+    """
+    Delete market data for a specific symbol and optional interval
+    """
+    result = await delete_market_data(symbol, interval, start_time, end_time)
+    
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail=result.get("message"))
+    elif result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message"))
+        
+    return result
+
+
+
+# DELETE endpoint for removing ALL market data (additional safeguard with a separate endpoint)
+@router.delete("/delete-all-data", response_model=DeleteResponse)
+async def delete_all_market_data_endpoint(
+    confirm: bool = Query(False, description="Set to true to confirm deletion of ALL market data")
+):
+    """
+    Delete ALL market data - USE WITH CAUTION
+    """
+    if not confirm:
+        raise HTTPException(status_code=400, detail="Confirmation required: set 'confirm=true' to proceed with deletion of ALL market data")
+    
+    from core.use_cases.market.market_data import delete_all_market_data
+    result = await delete_all_market_data()
+    
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message"))
+        
+    return result
+
 
 @router.get("/cryptos/search")
 async def search_crypto_pairs(query: str, limit: int = 20):
