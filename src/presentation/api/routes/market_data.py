@@ -6,6 +6,10 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
+
+from core.domain.entities.MarketDataEntity import MarketDataEntity
+from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
+from core.use_cases.market.market_data import fetch_crypto_data_paginated
 from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
 import json
 from infrastructure.data_sources.binance.client import BinanceMarketData
@@ -22,25 +26,85 @@ from typing import Optional, List
 import websockets
 
 
+
 router = APIRouter(tags=["Market Data"])
 
 # Create a single shared client for all WebSocket connections
 # This avoids creating multiple connection pools
 shared_binance_client = BinanceMarketData()
 
-@router.get("/market/{symbol}", response_model=List[MarketDataResponse])
+@router.get("/market-data/{symbol}")
 async def get_market_data(
     symbol: str,
-    interval: str,
-    background_tasks: BackgroundTasks
+    interval: str = Query("1m", description="Time interval (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w)"),
+    start_time: Optional[str] = Query(None, description="Start time in ISO format"),
+    end_time: Optional[str] = Query(None, description="End time in ISO format"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(500, ge=10, le=1000, description="Items per page"),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
+    """
+    Get paginated market data for a specific symbol and interval.
+    
+    This endpoint supports pagination and optional date range filtering.
+    """
     try:
-        data = await fetch_crypto_data(symbol, interval, background_tasks)
-        if isinstance(data, dict) and "error" in data:
-            raise HTTPException(status_code=404, detail=data["error"])
-        return data
+        # Convert time strings to datetime objects if provided
+        start_datetime = None
+        if start_time:
+            try:
+                start_datetime = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            except ValueError:
+                return {"error": f"Invalid start_time format: {start_time}. Use ISO format (YYYY-MM-DDTHH:MM:SS+00:00)"}
+        
+        end_datetime = None
+        if end_time:
+            try:
+                end_datetime = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+            except ValueError:
+                return {"error": f"Invalid end_time format: {end_time}. Use ISO format (YYYY-MM-DDTHH:MM:SS+00:00)"}
+        
+        # Use our existing function with the new pagination parameters
+        result = await fetch_crypto_data_paginated(
+            symbol=symbol,
+            interval=interval,
+            start_time=start_datetime,
+            end_time=end_datetime,
+            page=page,
+            page_size=page_size,
+            background_tasks=background_tasks
+        )
+        
+        # Check if result contains an error
+        if isinstance(result, dict) and "error" in result:
+            return result
+        
+        # Convert to response format
+        response_data = []
+        for entity in result:
+            if isinstance(entity, MarketDataEntity):
+                response_data.append({
+                    "timestamp": entity.timestamp.isoformat(),
+                    "open": entity.open,
+                    "high": entity.high,
+                    "low": entity.low,
+                    "close": entity.close,
+                    "volume": entity.volume
+                })
+        
+        # Create the response with pagination info
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "page": page,
+            "page_size": page_size,
+            "data": response_data,
+            "total_records": len(response_data),  # This is just the count of current page
+            "has_more": len(response_data) == page_size  # If we got a full page, there might be more
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Error processing request: {str(e)}")
+        return {"error": "An unexpected error occurred while processing your request"}
     
 
 # Example usage in your API endpoint:
