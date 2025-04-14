@@ -7,6 +7,8 @@ from typing import AsyncGenerator, List, Dict, Any, Optional
 import logging
 import websockets
 import asyncio
+import json
+from datetime import datetime, timezone
 
 
 logger = logging.getLogger(__name__)
@@ -412,7 +414,6 @@ class BinanceMarketData:
             await asyncio.sleep((self._throttle_delay - delta) / 1000)
         self._last_call_time = asyncio.get_event_loop().time() * 1000
 
-
     async def get_realtime_metrics(self, symbol: str) -> AsyncGenerator[dict, None]:
         """WebSocket-based real-time updates with proper typing"""
         # Make sure we're connected
@@ -487,3 +488,168 @@ class BinanceMarketData:
             except Exception as e:
                 logger.error(f"Error receiving WebSocket message: {e}")
                 return None
+            
+
+    async def get_realtime_metrics_to_websocket(self, symbol: str) -> AsyncGenerator[dict, None]:
+        """WebSocket-based real-time updates with proper symbol formatting"""
+        symbol = symbol.upper()  # Binance requires uppercase symbols
+        base_url = "wss://stream.binance.com:9443/ws/"
+        socket_url = f"{base_url}{symbol.lower()}@ticker"
+        
+        try:
+            async with websockets.connect(socket_url) as websocket:
+                async for msg_text in websocket:
+                    msg = json.loads(msg_text)
+                    yield {
+                        "price": float(msg['c']),
+                        "change": float(msg['P']),  # Price change percent
+                        "volume": float(msg['v']),  # Quote volume
+                        "timestamp": msg['E']
+                    }
+        except Exception as e:
+            logger.error(f"Binance WS error: {str(e)}")
+            raise
+
+    async def get_ohlcv_stream(self, symbol: str, interval: str = "1m") -> AsyncGenerator[dict, None]:
+        """Stream OHLCV data for a specific symbol and interval
+        
+        Args:
+            symbol (str): The trading pair symbol (e.g., BTCUSDT)
+            interval (str): Kline/candlestick interval (1m, 5m, 15m, 1h, etc.)
+            
+        Yields:
+            dict: OHLCV data structure with open, high, low, close, volume
+        """
+        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
+        stream_name = f"{symbol}@kline_{interval}"
+        socket_url = f"wss://stream.binance.com:9443/ws/{stream_name}"
+        
+        try:
+            async with websockets.connect(socket_url) as websocket:
+                async for msg_text in websocket:
+                    msg = json.loads(msg_text)
+                    kline = msg.get('k', {})
+                    
+                    # Only yield completed candles if requested
+                    if kline.get('x', False):  # x = is this kline closed?
+                        yield {
+                            "open_time": kline.get('t'),            # Open time
+                            "close_time": kline.get('T'),           # Close time
+                            "open": float(kline.get('o', 0)),       # Open price
+                            "high": float(kline.get('h', 0)),       # High price
+                            "low": float(kline.get('l', 0)),        # Low price
+                            "close": float(kline.get('c', 0)),      # Close price
+                            "volume": float(kline.get('v', 0)),     # Base asset volume
+                            "quote_volume": float(kline.get('q', 0)), # Quote asset volume
+                            "trades": kline.get('n', 0),            # Number of trades
+                            "timestamp": msg.get('E')               # Event time
+                        }
+        except Exception as e:
+            logger.error(f"Error in OHLCV stream for {symbol}: {e}")
+        finally:
+            # No need to explicitly close the websocket as it's handled by the context manager
+            pass
+
+    async def get_combined_stream(self, symbol: str, include_ticker: bool = True, include_ohlcv: bool = True, ohlcv_interval: str = "1m") -> AsyncGenerator[dict, None]:
+        """Stream combined market data including ticker and OHLCV
+        
+        Args:
+            symbol (str): The trading pair symbol (e.g., BTCUSDT)
+            include_ticker (bool): Whether to include ticker data
+            include_ohlcv (bool): Whether to include OHLCV data
+            ohlcv_interval (str): OHLCV candle interval
+            
+        Yields:
+            dict: Combined data structure with ticker and/or OHLCV data
+        """
+        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
+        
+        # Build the streams list
+        streams = []
+        if include_ticker:
+            streams.append(f"{symbol}@ticker")
+        if include_ohlcv:
+            streams.append(f"{symbol}@kline_{ohlcv_interval}")
+        
+        if not streams:
+            logger.error("No streams selected for combined stream")
+            return
+        
+        # Create the combined stream URL
+        streams_path = "/".join(streams)
+        socket_url = f"wss://stream.binance.com:9443/stream?streams={streams_path}"
+        
+        try:
+            async with websockets.connect(socket_url) as websocket:
+                async for msg_text in websocket:
+                    msg = json.loads(msg_text)
+                    
+                    # Process the combined stream data
+                    stream_name = msg.get('stream', '')
+                    data = msg.get('data', {})
+                    
+                    response = {
+                        "symbol": symbol.upper(),
+                        "timestamp": datetime.now(timezone.utc).timestamp() * 1000
+                    }
+                    
+                    # Add ticker data if present
+                    if '@ticker' in stream_name:
+                        response["ticker"] = {
+                            "price": float(data.get('c', 0)),  # Close price
+                            "change": float(data.get('P', 0)),  # Price change percent
+                            "volume": float(data.get('v', 0)),  # Volume
+                            "quote_volume": float(data.get('q', 0)),  # Quote volume
+                            "high": float(data.get('h', 0)),  # High price
+                            "low": float(data.get('l', 0)),  # Low price
+                            "event_time": data.get('E')  # Event time
+                        }
+                    
+                    # Add OHLCV data if present
+                    if '@kline' in stream_name:
+                        kline = data.get('k', {})
+                        response["ohlcv"] = {
+                            "interval": kline.get('i'),          # Interval
+                            "open_time": kline.get('t'),         # Open time
+                            "close_time": kline.get('T'),        # Close time
+                            "open": float(kline.get('o', 0)),    # Open price
+                            "high": float(kline.get('h', 0)),    # High price
+                            "low": float(kline.get('l', 0)),     # Low price
+                            "close": float(kline.get('c', 0)),   # Close price
+                            "volume": float(kline.get('v', 0)),  # Base asset volume
+                            "quote_volume": float(kline.get('q', 0)),  # Quote asset volume
+                            "trades": kline.get('n', 0),         # Number of trades
+                            "is_closed": kline.get('x', False)   # Is this kline closed?
+                        }
+                    
+                    yield response
+        except Exception as e:
+            logger.error(f"Error in combined stream for {symbol}: {e}")
+        finally:
+            # No need to explicitly close the websocket as it's handled by the context manager
+            pass
+
+    async def ensure_connected_minimal(self):
+        """Ensure client is connected with minimal resource usage (no pool initialization)"""
+        if self.client is None:
+            # Use a lock to prevent multiple simultaneous connection attempts
+            async with self._connection_lock:
+                if self.client is None:
+                    try:
+                        # Create just a single client without initializing the pool
+                        self.client = await asyncio.wait_for(
+                            AsyncClient.create(
+                                self.api_key, 
+                                self.api_secret
+                            ),
+                            timeout=self._connection_timeout
+                        )
+                        logger.debug("Connected to Binance API with minimal resources")
+                    except asyncio.TimeoutError:
+                        logger.error("Timeout connecting to Binance API")
+                        raise
+                    except Exception as e:
+                        logger.error(f"Failed to connect to Binance API: {str(e)}")
+                        raise
+                        
+        return self.client is not None

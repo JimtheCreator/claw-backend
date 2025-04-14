@@ -1,4 +1,5 @@
 # src/core/use_cases/market/market_data.py
+# src/core/use_cases/market/market_data.py
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +13,7 @@ from infrastructure.database.influxdb.market_data_repository import InfluxDBMark
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
 import asyncio
+from typing import List, Dict, Any
 
 INTERVAL_MINUTES = {
     "1m": 1,
@@ -67,7 +69,6 @@ async def batch_save_market_data(repo: InfluxDBMarketDataRepository, data_entiti
     Updates the global task registry when starting and completing.
     Returns True when completed successfully.
     """
-    from typing import List, Dict, Any
     
     try:
         # Register this task as active
@@ -150,7 +151,6 @@ async def batch_save_market_data(repo: InfluxDBMarketDataRepository, data_entiti
         task_key = (symbol, interval)
         ACTIVE_BACKGROUND_TASKS.pop(task_key, None)
         logger.info(f"Unregistered background task for {symbol} ({interval})")
-
 
 async def fetch_crypto_data(
     symbol: str,
@@ -410,7 +410,7 @@ async def fetch_crypto_data(
     except Exception as e:
         logger.critical(f"Critical error in fetch_crypto_data: {str(e)}")
         return {"error": "Internal server error"}
-    
+   
 
 
 async def delete_market_data(
@@ -530,4 +530,4 @@ async def delete_all_market_data():
         error_msg = f"Failed to delete all market data: {str(e)}"
         logger.error(error_msg)
         return {"status": "error", "message": error_msg}
-    
+
