@@ -7,36 +7,55 @@ from influxdb_client import InfluxDBClient
 from influxdb_client.client.exceptions import InfluxDBError
 from common.logger import logger
 from influxdb_client import InfluxDBClient, Point
-from typing import Optional
-from datetime import datetime, timezone
+from typing import Optional, Dict, Any, Tuple
+import asyncio
+import time
+from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
+
 
 
 class InfluxDBMarketDataRepository(MarketDataRepository):
     def __init__(self):
+        # Improved connection configuration with timeout settings
         self.client = InfluxDBClient(
             url=os.getenv("INFLUXDB_URL"),
             token=os.getenv("INFLUXDB_TOKEN"),
-            org=os.getenv("INFLUXDB_ORG")
+            org=os.getenv("INFLUXDB_ORG"),
+            timeout=120_000  # 2 minutes timeout
         )
         self.bucket = os.getenv("INFLUXDB_BUCKET")
         self._verify_connection()
+        
+        # Cache to store minimum timestamps per symbol+interval
+        self._min_timestamps_cache: Dict[Tuple[str, str], datetime] = {}
 
     def _verify_connection(self):
-        """Verify InfluxDB connection on initialization"""
-        try:
-            if self.client.ping():
-                logger.info("✅ Successfully connected to InfluxDB")
-            else:
-                logger.error("❌ InfluxDB connection verification failed")
-        except InfluxDBError as e:
-            logger.critical(f"🔥 Critical InfluxDB connection failure: {str(e)}")
-            raise
+        """Verify InfluxDB connection on initialization with retry logic"""
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                if self.client.ping():
+                    logger.info("✅ Successfully connected to InfluxDB")
+                    return
+                else:
+                    retry_count += 1
+                    logger.warning(f"InfluxDB connection verification failed (attempt {retry_count}/{max_retries})")
+                    time.sleep(1)
+            except InfluxDBError as e:
+                retry_count += 1
+                if (retry_count >= max_retries):
+                    logger.critical(f"🔥 Critical InfluxDB connection failure: {str(e)}")
+                    raise
+                logger.warning(f"InfluxDB connection error (attempt {retry_count}/{max_retries}): {str(e)}")
+                time.sleep(1)
+        
+        logger.critical("🔥 Critical InfluxDB connection failure after retries")
+        raise InfluxDBError("Failed to connect to InfluxDB after multiple attempts")
 
-    
-    # In market_data_repository.py
     @staticmethod
-    def parse_flux_record(record) -> dict:
+    def parse_flux_record(record) -> Optional[dict]:
         try:
             return {
                 'timestamp': record.get_time() or datetime.now(timezone.utc),
@@ -51,6 +70,58 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         except Exception as e:
             logger.error(f"Failed to parse InfluxDB record: {str(e)}")
             return None
+
+    async def get_min_timestamp(self, symbol: str, interval: str) -> Optional[datetime]:
+        """Get the earliest available timestamp for a symbol+interval combination"""
+        # Check cache first
+        cache_key = (symbol, interval)
+        if cache_key in self._min_timestamps_cache:
+            return self._min_timestamps_cache[cache_key]
+        
+        # If not in cache, query from database
+        query = f'''
+        from(bucket: "{self.bucket}")
+        |> range(start: -30y)
+        |> filter(fn: (r) => r._measurement == "market_data")
+        |> filter(fn: (r) => r.symbol == "{symbol}")
+        |> filter(fn: (r) => r.interval == "{interval}")
+        |> filter(fn: (r) => r._field == "close")
+        |> sort(columns: ["_time"], desc: false)
+        |> limit(n: 1)
+        '''
+        
+        try:
+            result = self.client.query_api().query(query)
+            for table in result:
+                for record in table.records:
+                    timestamp = record.get_time()
+                    if timestamp:
+                        # Store in cache
+                        self._min_timestamps_cache[cache_key] = timestamp
+                        return timestamp
+            return None
+        except Exception as e:
+            logger.error(f"Error getting min timestamp: {str(e)}")
+            return None
+
+    async def get_last_update_timestamp(self, symbol: str, interval: str) -> Optional[datetime]:
+        """Get the latest timestamp for a symbol and interval."""
+        query = f'''
+        from(bucket: "{self.bucket}")
+        |> range(start: 0)
+        |> filter(fn: (r) => r._measurement == "market_data")
+        |> filter(fn: (r) => r.symbol == "{symbol}")
+        |> filter(fn: (r) => r.interval == "{interval}")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: 1)
+        '''
+        try:
+            result = self.client.query_api().query(query)
+            if result and result[0].records:
+                return result[0].records[0].get_time()
+        except Exception as e:
+            logger.error(f"Failed to get last update timestamp: {e}")
+        return None
 
     async def get_historical_data(self, symbol: str, interval: str, start_time: Optional[datetime] = None) -> list[MarketDataEntity]:
         flux_interval = self._get_flux_interval(interval)
@@ -85,6 +156,116 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         except Exception as e:
             logger.error(f"InfluxDB query error: {str(e)}")
             return []
+    
+    def _flux_field_filter(fields: list[str]) -> str:
+        return " or ".join([f'r._field == "{field}"' for field in fields])
+
+
+    async def _get_downsampled_data(
+        self, 
+        symbol: str, 
+        interval: str, 
+        start_time: datetime,
+        end_time: datetime,
+        page: int = 1, 
+        page_size: int = 500
+    ) -> list[MarketDataEntity]:
+        """Get downsampled data for chart rendering optimization"""
+        # Calculate target number of points based on typical chart resolution
+        # Most charts look good with 200-500 data points
+        target_points = 300
+        
+        # Calculate appropriate window duration based on date range
+        date_range_seconds = (end_time - start_time).total_seconds()
+        window_seconds = max(int(date_range_seconds / target_points), 60)  # At least 1 minute
+        
+        # Convert to Flux duration string (e.g., "1h", "30m")
+        window_duration = self._seconds_to_flux_duration(window_seconds)
+        
+        offset = (page - 1) * page_size
+        
+        query = f'''
+        from(bucket: "{self.bucket}")
+        |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
+        |> filter(fn: (r) => r._measurement == "market_data")
+        |> filter(fn: (r) => r.symbol == "{symbol}")
+        |> filter(fn: (r) => r.interval == "{interval}")
+        |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
+        |> aggregateWindow(
+            every: {window_duration},
+            fn: (column, tables=<-) => {{
+                open = tables |> filter(fn: (r) => r._field == "open") |> first() |> findRecord(fn: (key) => true, idx: 0)
+                high = tables |> filter(fn: (r) => r._field == "high") |> max() |> findRecord(fn: (key) => true, idx: 0)
+                low = tables |> filter(fn: (r) => r._field == "low") |> min() |> findRecord(fn: (key) => true, idx: 0)
+                close = tables |> filter(fn: (r) => r._field == "close") |> last() |> findRecord(fn: (key) => true, idx: 0)
+                volume_sum = tables |> filter(fn: (r) => r._field == "volume") |> sum()
+                
+                return {{
+                    r: {{
+                        _time: open._time,
+                        open: open._value,
+                        high: high._value,
+                        low: low._value,
+                        close: close._value,
+                        volume: volume_sum
+                    }}
+                }}
+            }},
+            createEmpty: false
+        )
+        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: false)
+        |> limit(n: {page_size}, offset: {offset})
+        '''
+        
+        try:
+            result = self.client.query_api().query(query)
+            parsed_records = []
+            for table in result:
+                for record in table.records:
+                    parsed = self.parse_flux_record(record)
+                    if parsed:
+                        try:
+                            parsed_records.append(MarketDataEntity(**parsed))
+                        except ValidationError as e:
+                            logger.error(f"Invalid MarketDataEntity: {str(e)}")
+
+            logger.info(f"Retrieved {len(parsed_records)} downsampled records from InfluxDB for {symbol} ({interval})")
+            return parsed_records
+        except Exception as e:
+            logger.error(f"InfluxDB downsampling query error: {str(e)}")
+            return []
+
+    def _seconds_to_flux_duration(self, seconds: int) -> str:
+        """Convert seconds to a Flux duration string"""
+        if seconds < 60:
+            return f"{seconds}s"
+        elif seconds < 3600:
+            return f"{seconds // 60}m"
+        elif seconds < 86400:
+            return f"{seconds // 3600}h"
+        else:
+            return f"{seconds // 86400}d"
+
+    def _should_downsample(self, interval: str, date_range: timedelta) -> bool:
+        """Determine if downsampling is needed based on interval and date range"""
+        # For small intervals with large date ranges, we should downsample
+        if interval == "1m" and date_range.days > 7:
+            return True
+        elif interval == "5m" and date_range.days > 30:
+            return True
+        elif interval == "15m" and date_range.days > 60:
+            return True
+        elif interval == "30m" and date_range.days > 90:
+            return True
+        elif interval == "1h" and date_range.days > 180:
+            return True
+        elif interval == "4h" and date_range.days > 365:
+            return True
+        elif interval == "1d" and date_range.days > 730:  # 2 years
+            return True
+        
+        return False
 
     async def save_market_data_bulk(self, data_list: list[MarketDataEntity]) -> None:
         try:
@@ -104,6 +285,183 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
                 write_api.write(bucket=self.bucket, record=points)
         except Exception as e:
             logger.error(f"InfluxDB bulk write error: {str(e)}")
+            
+    async def delete_market_data(
+        self,
+        symbol: Optional[str] = None,
+        interval: Optional[str] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        timeout: int = 250
+    ) -> Dict[str, Any]:
+        """
+        Delete market data with improved timeout handling
+        
+        Args:
+            symbol: Optional symbol filter
+            interval: Optional interval filter
+            start_time: Optional start time for deletion range
+            end_time: Optional end time for deletion range
+            timeout: Timeout in seconds (default: 120)
+            
+        Returns:
+            Dict[str, Any]: Result of the deletion operation
+        """
+        # Build predicate components for delete operation
+        predicate_parts = ['_measurement="market_data"']
+        
+        if symbol:
+            predicate_parts.append(f'symbol="{symbol}"')
+        
+        if interval:
+            predicate_parts.append(f'interval="{interval}"')
+        
+        # Join with AND operator
+        predicate = ' AND '.join(predicate_parts)
+        
+        # For large deletions, use chunked approach
+        if interval in ["1m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "1d", "3d", "1w"] and (not start_time or not end_time):
+            return await self._chunked_delete(symbol, interval, start_time, end_time, timeout)
+        
+        # For smaller deletions, use standard approach
+        try:
+            # Create a client with the specified timeout for this operation
+            client_with_timeout = InfluxDBClient(
+                url=os.getenv("INFLUXDB_URL"),
+                token=os.getenv("INFLUXDB_TOKEN"),
+                org=os.getenv("INFLUXDB_ORG"),
+                timeout=timeout * 1000  # Convert to milliseconds
+            )
+            
+            logger.info(f"Deleting market data with predicate: {predicate}")
+            result = client_with_timeout.delete_api().delete(
+                start=start_time if start_time else datetime(1970, 1, 1, tzinfo=timezone.utc),
+                stop=end_time if end_time else datetime.now(timezone.utc) + timedelta(days=1),
+                predicate=predicate,
+                bucket=self.bucket
+            )
+            
+            message = f"Successfully deleted data"
+            if symbol:
+                message += f" for symbol {symbol}"
+            if interval:
+                message += f" with interval {interval}"
+            if start_time or end_time:
+                message += " in specified time range"
+                
+            logger.info(message)
+            client_with_timeout.close()
+            return {"status": "success", "message": message}
+            
+        except Exception as e:
+            error_msg = f"Failed to delete market data: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
+
+    async def _chunked_delete(
+        self, 
+        symbol: Optional[str], 
+        interval: Optional[str],
+        start_time: Optional[datetime],
+        end_time: Optional[datetime],
+        timeout: int
+    ) -> Dict[str, Any]:
+        """Delete large datasets in chunks to avoid timeouts"""
+        if not start_time:
+            # Get minimum timestamp or default to 5 years ago
+            if symbol and interval:
+                min_timestamp = await self.get_min_timestamp(symbol, interval)
+                start_time = min_timestamp if min_timestamp else datetime.now(timezone.utc) - timedelta(days=1825)
+            else:
+                start_time = datetime.now(timezone.utc) - timedelta(days=1825)
+        
+        if not end_time:
+            end_time = datetime.now(timezone.utc)
+            
+        # For larger intervals, we can use longer chunk periods
+        # Chunking is only necessary for smaller intervals with large datasets
+        if interval in ["1m", "5m", "15m", "30m", "1h"]:
+            chunk_period = timedelta(days=90)  # 3 months chunks for smaller intervals
+        elif interval in ["2h", "4h", "6h", "1d", "3d", "6d", "1w"]:
+            chunk_period = timedelta(days=365)  # 1 year chunks for larger intervals
+        else:
+            chunk_period = timedelta(days=730)  # Default to 2 years for unknown intervals
+            
+        # Create chunks
+        current_start = start_time
+        success_count = 0
+        error_count = 0
+        
+        while current_start < end_time:
+            chunk_end = min(current_start + chunk_period, end_time)
+            
+            # Build predicate components for this chunk
+            predicate_parts = ['_measurement="market_data"']
+            
+            if symbol:
+                predicate_parts.append(f'symbol="{symbol}"')
+            
+            if interval:
+                predicate_parts.append(f'interval="{interval}"')
+            
+            predicate = ' AND '.join(predicate_parts)
+            
+            try:
+                # Create a client with the specified timeout for this operation
+                client_with_timeout = InfluxDBClient(
+                    url=os.getenv("INFLUXDB_URL"),
+                    token=os.getenv("INFLUXDB_TOKEN"),
+                    org=os.getenv("INFLUXDB_ORG"),
+                    timeout=timeout * 1000  # Convert to milliseconds
+                )
+                
+                logger.info(f"Deleting chunk from {current_start.isoformat()} to {chunk_end.isoformat()} with predicate: {predicate}")
+                
+                client_with_timeout.delete_api().delete(
+                    start=current_start,
+                    stop=chunk_end,
+                    predicate=predicate,
+                    bucket=self.bucket
+                )
+                
+                success_count += 1
+                logger.info(f"Successfully deleted chunk from {current_start.isoformat()} to {chunk_end.isoformat()}")
+                client_with_timeout.close()
+                
+            except Exception as e:
+                error_count += 1
+                logger.error(f"Failed to delete chunk from {current_start.isoformat()} to {chunk_end.isoformat()}: {str(e)}")
+            
+            # Move to next chunk
+            current_start = chunk_end
+            
+            # Small delay to avoid overwhelming the database
+            await asyncio.sleep(1)
+            
+        if error_count == 0:
+            message = f"Successfully deleted all data"
+            if symbol:
+                message += f" for symbol {symbol}"
+            if interval:
+                message += f" with interval {interval}"
+                
+            return {"status": "success", "message": message}
+        elif success_count > 0:
+            message = f"Partially deleted data with {error_count} failed chunks"
+            if symbol:
+                message += f" for symbol {symbol}"
+            if interval:
+                message += f" with interval {interval}"
+                
+            return {"status": "partial", "message": message, "success_count": success_count, "error_count": error_count}
+        else:
+            message = f"Failed to delete any data"
+            if symbol:
+                message += f" for symbol {symbol}"
+            if interval:
+                message += f" with interval {interval}"
+                
+            return {"status": "error", "message": message}
 
     def _get_flux_interval(self, interval: str) -> str:
         """Map user-friendly intervals to Flux durations"""
@@ -116,13 +474,13 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             "4h": "4h",
             "1d": "1d",
             "1w": "1w",
-            "1M": "1mo"  # Add monthly interval mapping
+            "1M": "1mo"
         }
         return interval_mapping.get(interval, "1h")
 
     def __del__(self):
         """Ensure proper cleanup"""
-        self.client.close()
-
-    
-    
+        try:
+            self.client.close()
+        except:
+            pass

@@ -1,4 +1,5 @@
 # src/presentation/api/routes/market_data.py
+from fastapi import WebSocket, WebSocketDisconnect
 from fastapi import APIRouter, HTTPException
 import sys
 import os
@@ -18,9 +19,14 @@ from core.use_cases.market.market_data import delete_market_data, delete_all_mar
 from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from datetime import datetime, timezone
 from typing import Optional, List
+import websockets
 
 
 router = APIRouter(tags=["Market Data"])
+
+# Create a single shared client for all WebSocket connections
+# This avoids creating multiple connection pools
+shared_binance_client = BinanceMarketData()
 
 @router.get("/market/{symbol}", response_model=List[MarketDataResponse])
 async def get_market_data(
@@ -58,7 +64,6 @@ async def delete_market_data_endpoint(
         raise HTTPException(status_code=500, detail=result.get("message"))
         
     return result
-
 
 
 # DELETE endpoint for removing ALL market data (additional safeguard with a separate endpoint)
@@ -108,17 +113,18 @@ def calculate_change(current: float, previous: float) -> float:
 def update_sparkline(sparkline: list, new_price: float) -> list:
     return (sparkline + [new_price])[-20:]  # Keep last 20 points
 
+
 @router.get("/market/cryptos/stream-market-data/{symbol}")
 async def stream_market_data(symbol: str):
     """Real-time streaming endpoint with sparkline support"""
-    client = BinanceMarketData()
-    await client.connect()
+    # Use shared client
+    await shared_binance_client.ensure_connected()
     
     async def generate():
         try:
-            async for msg in client.get_realtime_metrics(symbol):
+            async for msg in shared_binance_client.get_realtime_metrics(symbol):
                 # Get sparkline updates
-                klines = await client.get_klines(symbol, "1h", 24)
+                klines = await shared_binance_client.get_klines(symbol, "1h", 24)
                 sparkline = downsample_sparkline([float(k[4]) for k in klines])
                 
                 yield json.dumps({
@@ -128,7 +134,101 @@ async def stream_market_data(symbol: str):
                     "sparkline": sparkline,
                     "timestamp": msg['timestamp']
                 })
-        finally:
-            await client.disconnect()
+        except Exception as e:
+            logger.error(f"Error in streaming market data for {symbol}: {e}")
+            # Don't disconnect the shared client
     
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+# Modified WebSocket endpoint in market_data.py
+@router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
+async def websocket_stream_market_data(
+    websocket: WebSocket,
+    symbol: str,
+    interval: str = "1m",  # Add interval parameter
+    include_ohlcv: bool = True  # Default to including OHLCV data
+):
+    """WebSocket endpoint for real-time market data with optional OHLCV data"""
+    await websocket.accept()
+    
+    try:
+        # Use minimal connection instead of initializing the full pool
+        await shared_binance_client.ensure_connected_minimal()
+        
+        # Get the initial OHLCV data
+        last_kline_timestamp = 0
+        
+        if include_ohlcv:
+            current_klines = await shared_binance_client.get_klines(symbol, interval, 1)
+            if current_klines:
+                last_kline_timestamp = int(current_klines[0][0])  # Kline open time
+        
+        # Stream real-time ticker data
+        if include_ohlcv:
+            # Use a combined stream URL for both ticker and kline data
+            ohlcv_url = f"{symbol.lower()}@kline_{interval}"
+            socket_url = f"wss://stream.binance.com:9443/stream?streams={symbol.lower()}@ticker/{ohlcv_url}"
+        else:
+            socket_url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
+        
+        async with websockets.connect(socket_url) as binance_ws:
+            while True:
+                msg_text = await binance_ws.recv()
+                msg_data = json.loads(msg_text)
+                
+                # Handle combined stream format if using combined stream
+                is_combined_stream = 'stream' in msg_data
+                stream_data = msg_data.get('data', msg_data)
+                stream_name = msg_data.get('stream', '')
+                
+                response_data = {}
+                
+                # Process ticker data
+                if 'ticker' in stream_name or not is_combined_stream:
+                    ticker_data = stream_data
+                    response_data.update({
+                        "price": float(ticker_data.get('c', 0)),
+                        "change": float(ticker_data.get('P', 0)),
+                        "volume": float(ticker_data.get('v', 0)),
+                        "timestamp": ticker_data.get('E', 0)
+                    })
+                
+                # Process OHLCV/kline data if present and include_ohlcv is True
+                if include_ohlcv and 'kline' in stream_name:
+                    kline_data = stream_data.get('k', {})
+                    kline_timestamp = kline_data.get('t', 0)
+                    
+                    # Only process if this is a new kline
+                    if kline_timestamp > last_kline_timestamp:
+                        last_kline_timestamp = kline_timestamp
+                        
+                        response_data.update({
+                            "ohlcv": {
+                                "open_time": kline_data.get('t', 0),
+                                "close_time": kline_data.get('T', 0),
+                                "open": float(kline_data.get('o', 0)),
+                                "high": float(kline_data.get('h', 0)),
+                                "low": float(kline_data.get('l', 0)),
+                                "close": float(kline_data.get('c', 0)),
+                                "volume": float(kline_data.get('v', 0)),
+                                "quote_volume": float(kline_data.get('q', 0)),
+                                "trades": kline_data.get('n', 0),
+                                "is_closed": kline_data.get('x', False)
+                            }
+                        })
+                
+                # Removed sparkline data generation to reduce API calls and improve performance
+                
+                # Send the combined data to the client
+                await websocket.send_json(response_data)
+                
+    except WebSocketDisconnect:
+        logger.info(f"Client disconnected for {symbol}")
+    except Exception as e:
+        logger.error(f"WebSocket error for {symbol}: {str(e)}")
+        if not websocket.client_state.DISCONNECTED:
+            await websocket.close(code=1011)
+    finally:
+        # Don't disconnect the shared client, just close this websocket connection
+        pass
