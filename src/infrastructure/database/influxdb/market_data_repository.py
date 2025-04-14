@@ -123,19 +123,58 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             logger.error(f"Failed to get last update timestamp: {e}")
         return None
 
-    async def get_historical_data(self, symbol: str, interval: str, start_time: Optional[datetime] = None) -> list[MarketDataEntity]:
-        flux_interval = self._get_flux_interval(interval)
-        start_str = f"start: {start_time.isoformat()}" if start_time else "start: -5y"
+    async def get_historical_data(
+    self, 
+    symbol: str, 
+    interval: str, 
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
+    page: int = 1,
+    page_size: int = 500
+) -> list[MarketDataEntity]:
+        """
+        Get historical market data with pagination support.
         
+        Args:
+            symbol: The trading pair symbol
+            interval: Timeframe interval (e.g., "1m", "5m", "1h")
+            start_time: Optional start time filter
+            end_time: Optional end time filter
+            page: Page number (default: 1)
+            page_size: Number of records per page (default: 500)
+            
+        Returns:
+            List of MarketDataEntity objects
+        """
+        flux_interval = self._get_flux_interval(interval)
+        
+        # Set default start_time if not provided
+        if not start_time:
+            start_time = datetime.now(timezone.utc) - timedelta(days=30)  # Default to 30 days
+        
+        # Set default end_time if not provided
+        if not end_time:
+            end_time = datetime.now(timezone.utc)
+        
+        # Calculate offset for pagination
+        offset = (page - 1) * page_size
+        
+        # Check if downsampling is appropriate based on the date range
+        date_range = end_time - start_time
+        if self._should_downsample(interval, date_range):
+            return await self._get_downsampled_data(symbol, interval, start_time, end_time, page, page_size)
+        
+        # Regular query with pagination
         query = f'''
         from(bucket: "{self.bucket}")
-        |> range({start_str})
+        |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
         |> filter(fn: (r) => r._measurement == "market_data")
         |> filter(fn: (r) => r.symbol == "{symbol}")
         |> filter(fn: (r) => r.interval == "{interval}")
         |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
-        |> aggregateWindow(every: {flux_interval}, fn: last, createEmpty: false)
         |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: false)
+        |> limit(n: {page_size}, offset: {offset})
         '''
         
         try:
@@ -149,9 +188,8 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
                             parsed_records.append(MarketDataEntity(**parsed))
                         except ValidationError as e:
                             logger.error(f"Invalid MarketDataEntity: {str(e)}")
-
             
-            logger.info("Data retrieved from INFLUXDB")
+            logger.info(f"Data retrieved from INFLUXDB - Page {page}, {len(parsed_records)} records")
             return parsed_records
         except Exception as e:
             logger.error(f"InfluxDB query error: {str(e)}")
