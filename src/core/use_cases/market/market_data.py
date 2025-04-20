@@ -475,6 +475,8 @@ async def fetch_and_save_full_history(symbol: str, interval: str, start_time: da
         ACTIVE_BACKGROUND_TASKS.pop(task_key, None)
         logger.info(f"Unregistered background task for {symbol} ({interval})")
 
+
+
 async def delete_market_data(
     symbol: str = None,
     interval: str = None,

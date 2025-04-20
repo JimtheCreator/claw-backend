@@ -18,7 +18,7 @@ from common.logger import logger
 from fastapi.responses import StreamingResponse
 
 from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
-from core.use_cases.market.market_data import delete_market_data, delete_all_market_data, fetch_crypto_data
+from core.use_cases.market.market_data import delete_market_data
 # src/api/v1/routes/market_data.py
 from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from datetime import datetime, timezone
@@ -45,26 +45,55 @@ async def get_market_data(
 ):
     """
     Get paginated market data for a specific symbol and interval.
-    
     This endpoint supports pagination and optional date range filtering.
     """
     try:
-        # Convert time strings to datetime objects if provided
+        logger.info(f"🔍 Request for {symbol} with interval={interval}, "
+                    f"start_time={start_time}, end_time={end_time}, "
+                    f"page={page}, page_size={page_size}")
+
+
         start_datetime = None
         if start_time:
             try:
-                start_datetime = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-            except ValueError:
-                return {"error": f"Invalid start_time format: {start_time}. Use ISO format (YYYY-MM-DDTHH:MM:SS+00:00)"}
-        
+                # Handle 'Z' suffix and convert to UTC datetime
+                start_time_clean = start_time.replace('Z', '+00:00') if 'Z' in start_time else start_time
+                start_datetime = datetime.fromisoformat(start_time_clean).astimezone(timezone.utc)
+                logger.debug(f"🕒 Parsed start_time: {start_datetime}")
+            except ValueError as e:
+                logger.warning(f"❌ Invalid start_time format: {start_time}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid start_time format: {start_time}. Use ISO 8601 format (e.g., 2025-04-15T11:06:31Z)"
+                )
+
         end_datetime = None
         if end_time:
             try:
-                end_datetime = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-            except ValueError:
-                return {"error": f"Invalid end_time format: {end_time}. Use ISO format (YYYY-MM-DDTHH:MM:SS+00:00)"}
+                # Handle 'Z' suffix and convert to UTC datetime
+                end_time_clean = end_time.replace('Z', '+00:00') if 'Z' in end_time else end_time
+                end_datetime = datetime.fromisoformat(end_time_clean).astimezone(timezone.utc)
+                logger.info(f"🕒 Parsed end_time: {end_datetime}")
+            except ValueError as e:
+                logger.warning(f"❌ Invalid end_time format: {end_time}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid end_time format: {end_time}. Use ISO 8601 format (e.g., 2025-04-15T11:06:31Z)"
+                )
+            
+        # Add validation for time range
+        if start_datetime and end_datetime and start_datetime >= end_datetime:
+            raise HTTPException(
+                status_code=400,
+                detail="start_time must be before end_time"
+            )
         
-        # Use our existing function with the new pagination parameters
+
+        logger.info(f"🕒 Parsed start_time: {start_datetime}")
+
+        logger.info(f"🕒 Parsed end_time: {end_datetime}")
+
+        logger.info("📦 Fetching crypto data from store/cache...")
         result = await fetch_crypto_data_paginated(
             symbol=symbol,
             interval=interval,
@@ -74,12 +103,11 @@ async def get_market_data(
             page_size=page_size,
             background_tasks=background_tasks
         )
-        
-        # Check if result contains an error
+
         if isinstance(result, dict) and "error" in result:
+            logger.warning(f"⚠️ Error from fetch function: {result}")
             return result
-        
-        # Convert to response format
+
         response_data = []
         for entity in result:
             if isinstance(entity, MarketDataEntity):
@@ -91,21 +119,23 @@ async def get_market_data(
                     "close": entity.close,
                     "volume": entity.volume
                 })
-        
-        # Create the response with pagination info
+
+        logger.info(f"✅ Returning {len(response_data)} records for {symbol} page {page}")
+
         return {
             "symbol": symbol,
             "interval": interval,
             "page": page,
             "page_size": page_size,
             "data": response_data,
-            "total_records": len(response_data),  # This is just the count of current page
-            "has_more": len(response_data) == page_size  # If we got a full page, there might be more
+            "total_records": len(response_data),
+            "has_more": len(response_data) == page_size
         }
+
     except Exception as e:
-        logger.error(f"Error processing request: {str(e)}")
+        logger.exception("🔥 Unexpected error in get_market_data")
         return {"error": "An unexpected error occurred while processing your request"}
-    
+
 
 # Example usage in your API endpoint:
 # DELETE /api/v1/delete/{symbol}?interval={interval}
@@ -177,7 +207,6 @@ def calculate_change(current: float, previous: float) -> float:
 def update_sparkline(sparkline: list, new_price: float) -> list:
     return (sparkline + [new_price])[-20:]  # Keep last 20 points
 
-
 @router.get("/market/cryptos/stream-market-data/{symbol}")
 async def stream_market_data(symbol: str):
     """Real-time streaming endpoint with sparkline support"""
@@ -205,94 +234,303 @@ async def stream_market_data(symbol: str):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-# Modified WebSocket endpoint in market_data.py
+# @router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
+# async def websocket_stream_market_data(
+#     websocket: WebSocket,
+#     symbol: str,
+#     interval: str = "1m",
+#     include_ohlcv: bool = True
+# ):
+#     await websocket.accept()
+#     logger.info(f"New WebSocket connection for {symbol} ({interval})")
+
+#     # Initialize variables
+#     symbol_lower = symbol.lower()
+#     last_known_price = None
+#     reference_price = None
+
+#     # Initialize candle tracking only if include_ohlcv is True
+#     current_candle = None
+#     previous_close = None
+#     current_open = None
+
+#     if include_ohlcv:
+#         try:
+#             # Get initial candle state
+#             initial_candles = await get_historical_candles(symbol, interval, limit=2)
+#             if initial_candles and len(initial_candles) > 0:
+#                 current_candle = initial_candles[0]
+#                 current_open = current_candle.get("open")
+#                 last_known_price = current_candle.get("close")
+                
+#                 # Set reference price
+#                 if len(initial_candles) > 1:
+#                     previous_close = initial_candles[1].get("close")
+#                     reference_price = previous_close
+#                 else:
+#                     previous_close = current_open
+#                     reference_price = current_open
+#         except Exception as e:
+#             logger.error(f"Error initializing candles: {e}")
+
+#     try:
+#         # Connect to Binance combined stream
+#         streams = []
+#         if include_ohlcv:
+#             streams.append(f"{symbol_lower}@kline_{interval}")
+#         streams.append(f"{symbol_lower}@ticker")  # Always include ticker for price updates
+            
+#         async with websockets.connect(
+#             f"wss://stream.binance.com:9443/stream?streams={'/'.join(streams)}"
+#         ) as binance_ws:
+#             while True:
+#                 msg = await binance_ws.recv()
+#                 data = json.loads(msg)
+#                 stream_data = data.get('data', {})
+#                 stream_type = data.get('stream', '')
+
+#                 response = {"type": "update"}
+#                 new_candle = False
+
+#                 # Process kline events (only if include_ohlcv is True)
+#                 if include_ohlcv and 'kline' in stream_type:
+#                     kline = stream_data.get('k', {})
+                    
+#                     if kline.get('x', False):  # Candle closed
+#                         previous_close = float(kline['c'])
+#                         current_open = float(kline['o'])
+#                         last_known_price = previous_close
+#                         reference_price = previous_close
+                        
+#                         response.update({
+#                             "type": "candle",
+#                             "ohlcv": {
+#                                 "open_time": kline['t'],
+#                                 "close_time": kline['T'],
+#                                 "open": float(kline['o']),
+#                                 "high": float(kline['h']),
+#                                 "low": float(kline['l']),
+#                                 "close": float(kline['c']),
+#                                 "volume": float(kline['v']),
+#                                 "is_closed": True
+#                             }
+#                         })
+                        
+#                         # Initialize new candle
+#                         current_candle = {
+#                             "open_time": kline['T'],
+#                             "open": float(kline['c']),
+#                             "high": float(kline['c']),
+#                             "low": float(kline['c']),
+#                             "close": float(kline['c']),
+#                             "volume": 0.0,
+#                             "is_closed": False
+#                         }
+#                         new_candle = True
+
+#                 # Process price updates (from ticker stream)
+#                 if 'ticker' in stream_type:
+#                     current_price = float(stream_data.get('c', 0))
+                    
+#                     if current_price > 0:
+#                         last_known_price = current_price
+                    
+#                     # Calculate change percentage
+#                     change_percent = 0.0
+#                     if reference_price and reference_price > 0 and current_price > 0:
+#                         change_percent = ((current_price - reference_price) / reference_price) * 100
+                    
+#                     # Use Binance's 24h change if available
+#                     if 'P' in stream_data:
+#                         change_percent = float(stream_data.get('P', 0.0))
+                    
+#                     # Update current candle (only if include_ohlcv is True)
+#                     if include_ohlcv and current_candle and not new_candle and current_price > 0:
+#                         current_candle['high'] = max(current_candle['high'], current_price)
+#                         current_candle['low'] = min(current_candle['low'], current_price)
+#                         current_candle['close'] = current_price
+#                         current_candle['volume'] += float(stream_data.get('v', 0))
+
+#                     # Build response
+#                     price_response = {
+#                         "type": "price",
+#                         "price": current_price,
+#                         "change": round(change_percent, 2),
+#                         "change_source": "binance_24h" if 'P' in stream_data else "calculated",
+#                         "timestamp": stream_data.get('E')
+#                     }
+                    
+#                     # Add OHLCV data only if enabled
+#                     if include_ohlcv and current_candle:
+#                         price_response["ohlcv"] = current_candle
+                    
+#                     response.update(price_response)
+
+#                 # Send response
+#                 if response["type"] != "update":
+#                     await websocket.send_json(response)
+
+#     except WebSocketDisconnect:
+#         logger.info(f"Client disconnected for {symbol}")
+#     except Exception as e:
+#         logger.error(f"WebSocket error for {symbol}: {str(e)}")
+#         await websocket.close(code=1011)
+#     finally:
+#         logger.info(f"Closing connection for {symbol}")
+
+
+
+
+
+
 @router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
 async def websocket_stream_market_data(
     websocket: WebSocket,
     symbol: str,
-    interval: str = "1m",  # Add interval parameter
-    include_ohlcv: bool = True  # Default to including OHLCV data
+    interval: str = "1m",
+    include_ohlcv: bool = True
 ):
-    """WebSocket endpoint for real-time market data with optional OHLCV data"""
     await websocket.accept()
-    
+    logger.info(f"New WebSocket connection for {symbol} ({interval})")
+
+    # Initialize candle tracking
+    current_candle = None
+    symbol_lower = symbol.lower()
+    last_known_price = None
+    reference_price = None
+
+    if include_ohlcv:
+        # Initialize with historical candles including forming candle
+        try:
+            initial_candles = await get_historical_candles(symbol, interval, limit=2)
+            if initial_candles:
+                # Current forming candle is always the first in the list
+                current_candle = initial_candles[0]
+                last_known_price = current_candle.get("close")
+                
+                # Set reference price to previous close if available
+                if len(initial_candles) > 1:
+                    reference_price = initial_candles[1].get("close")
+                else:
+                    reference_price = current_candle.get("open")
+        except Exception as e:
+            logger.error(f"Error initializing candles: {e}")
+
     try:
-        # Use minimal connection instead of initializing the full pool
-        await shared_binance_client.ensure_connected_minimal()
-        
-        # Get the initial OHLCV data
-        last_kline_timestamp = 0
-        
+        streams = [f"{symbol_lower}@ticker"]  # Always include ticker
         if include_ohlcv:
-            current_klines = await shared_binance_client.get_klines(symbol, interval, 1)
-            if current_klines:
-                last_kline_timestamp = int(current_klines[0][0])  # Kline open time
-        
-        # Stream real-time ticker data
-        if include_ohlcv:
-            # Use a combined stream URL for both ticker and kline data
-            ohlcv_url = f"{symbol.lower()}@kline_{interval}"
-            socket_url = f"wss://stream.binance.com:9443/stream?streams={symbol.lower()}@ticker/{ohlcv_url}"
-        else:
-            socket_url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
-        
-        async with websockets.connect(socket_url) as binance_ws:
+            streams.insert(0, f"{symbol_lower}@kline_{interval}")  # Kline first
+            
+        async with websockets.connect(
+            f"wss://stream.binance.com:9443/stream?streams={'/'.join(streams)}"
+        ) as binance_ws:
             while True:
-                msg_text = await binance_ws.recv()
-                msg_data = json.loads(msg_text)
-                
-                # Handle combined stream format if using combined stream
-                is_combined_stream = 'stream' in msg_data
-                stream_data = msg_data.get('data', msg_data)
-                stream_name = msg_data.get('stream', '')
-                
-                response_data = {}
-                
-                # Process ticker data
-                if 'ticker' in stream_name or not is_combined_stream:
-                    ticker_data = stream_data
-                    response_data.update({
-                        "price": float(ticker_data.get('c', 0)),
-                        "change": float(ticker_data.get('P', 0)),
-                        "volume": float(ticker_data.get('v', 0)),
-                        "timestamp": ticker_data.get('E', 0)
+                msg = await binance_ws.recv()
+                data = json.loads(msg)
+                stream_data = data.get('data', {})
+                stream_type = data.get('stream', '')
+
+                response = {"type": "update"}
+
+                # Process kline updates (both closed and forming candles)
+                if include_ohlcv and 'kline' in stream_type:
+                    kline = stream_data.get('k', {})
+                    is_closed = kline.get('x', False)
+
+                    # Update current candle with latest data
+                    current_candle = {
+                        "open_time": kline['t'],
+                        "close_time": kline['T'],
+                        "open": float(kline['o']),
+                        "high": float(kline['h']),
+                        "low": float(kline['l']),
+                        "close": float(kline['c']),
+                        "volume": float(kline['v']),
+                        "is_closed": is_closed
+                    }
+
+                    # Update reference price when candle closes
+                    if is_closed:
+                        reference_price = float(kline['c'])
+                        last_known_price = reference_price
+
+                    # Send candle update regardless of closure status
+                    response.update({
+                        "type": "candle",
+                        "ohlcv": current_candle,
+                        "timestamp": stream_data.get('E')
                     })
-                
-                # Process OHLCV/kline data if present and include_ohlcv is True
-                if include_ohlcv and 'kline' in stream_name:
-                    kline_data = stream_data.get('k', {})
-                    kline_timestamp = kline_data.get('t', 0)
-                    
-                    # Only process if this is a new kline
-                    if kline_timestamp > last_kline_timestamp:
-                        last_kline_timestamp = kline_timestamp
-                        
-                        response_data.update({
-                            "ohlcv": {
-                                "open_time": kline_data.get('t', 0),
-                                "close_time": kline_data.get('T', 0),
-                                "open": float(kline_data.get('o', 0)),
-                                "high": float(kline_data.get('h', 0)),
-                                "low": float(kline_data.get('l', 0)),
-                                "close": float(kline_data.get('c', 0)),
-                                "volume": float(kline_data.get('v', 0)),
-                                "quote_volume": float(kline_data.get('q', 0)),
-                                "trades": kline_data.get('n', 0),
-                                "is_closed": kline_data.get('x', False)
-                            }
-                        })
-                
-                # Removed sparkline data generation to reduce API calls and improve performance
-                
-                # Send the combined data to the client
-                await websocket.send_json(response_data)
-                
+
+                # Process price updates from ticker
+                if 'ticker' in stream_type:
+                    current_price = float(stream_data.get('c', 0))
+                    change_percent = float(stream_data.get('P', 0.0))  # Use Binance's 24h change
+
+                    # Fallback calculation if no Binance percentage
+                    if change_percent == 0 and reference_price and current_price > 0:
+                        change_percent = ((current_price - reference_price) / reference_price) * 100
+
+                    price_response = {
+                        "type": "price",
+                        "price": current_price,
+                        "change": round(change_percent, 2),
+                        "timestamp": stream_data.get('E')
+                    }
+
+                    # Merge candle data if available
+                    if include_ohlcv and current_candle:
+                        price_response["ohlcv"] = current_candle
+
+                    response.update(price_response)
+
+                # Send response if we have valid data
+                if response["type"] != "update":
+                    await websocket.send_json(response)
+
     except WebSocketDisconnect:
         logger.info(f"Client disconnected for {symbol}")
     except Exception as e:
         logger.error(f"WebSocket error for {symbol}: {str(e)}")
-        if not websocket.client_state.DISCONNECTED:
-            await websocket.close(code=1011)
+        await websocket.close(code=1011)
     finally:
-        # Don't disconnect the shared client, just close this websocket connection
-        pass
+        logger.info(f"Closing connection for {symbol}")
+        
+
+async def get_historical_candles(symbol: str, interval: str, limit: int = 2) -> list:
+    """Get the most recent candles from Binance including closed and current ones"""
+    try:
+        klines = await shared_binance_client.get_klines(
+            symbol=symbol,
+            interval=interval,
+            limit=limit
+        )
+
+        if not klines:
+            return []
+
+        result = []
+        current_time = int(datetime.now().timestamp() * 1000)
+        
+        for kline in klines:
+            candle = {
+                "open_time": kline[0],
+                "close_time": kline[6],
+                "open": float(kline[1]),
+                "high": float(kline[2]),
+                "low": float(kline[3]),
+                "close": float(kline[4]),
+                "volume": float(kline[5]),
+                "is_closed": kline[6] < current_time
+            }
+            result.append(candle)
+            
+        return result
+
+    except Exception as e:
+        logger.error(f"Error getting historical candles: {e}")
+        return []
+
+async def get_current_candle(symbol: str, interval: str) -> Optional[dict]:
+    """Get the latest incomplete candle from Binance"""
+    candles = await get_historical_candles(symbol, interval, limit=1)
+    return candles[0] if candles else None
