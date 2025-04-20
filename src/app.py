@@ -3,7 +3,7 @@ from fastapi import FastAPI
 import sys
 import os
 import uvicorn
-from fastapi.middleware.cors import CORSMiddleware  # <-- Add this
+from fastapi.middleware.cors import CORSMiddleware
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -16,7 +16,6 @@ from common.logger import configure_logging, logger
 from common.config.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 🚀 Startup
@@ -27,9 +26,9 @@ async def lifespan(app: FastAPI):
         await redis_cache.flush_all()
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
-        logger.info("✅ Preloaded all Binance tickers into Supabase")
+        logger.info("Preloaded all Binance tickers into Supabase")
     except Exception as e:
-        logger.error(f"❌ Failed to preload tickers: {e}")
+        logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
@@ -41,6 +40,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+
 
 # Add CORS middleware
 app.add_middleware(
