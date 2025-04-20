@@ -36,7 +36,7 @@ shared_binance_client = BinanceMarketData()
 @router.get("/market-data/{symbol}")
 async def get_market_data(
     symbol: str,
-    interval: str = Query("1m", description="Time interval (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w)"),
+    interval: str = Query("1m", description="Time interval (1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, 1M)"),
     start_time: Optional[str] = Query(None, description="Start time in ISO format"),
     end_time: Optional[str] = Query(None, description="End time in ISO format"),
     page: int = Query(1, ge=1, description="Page number"),
