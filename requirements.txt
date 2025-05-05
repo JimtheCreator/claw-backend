@@ -21,3 +21,4 @@ binance-connector
 supabase
 psycopg2
 orjson
+scipy

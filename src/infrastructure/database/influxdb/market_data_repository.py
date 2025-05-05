@@ -14,7 +14,6 @@ from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
 
 
-
 class InfluxDBMarketDataRepository(MarketDataRepository):
     def __init__(self):
         # Improved connection configuration with timeout settings
@@ -37,7 +36,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         while retry_count < max_retries:
             try:
                 if self.client.ping():
-                    logger.info("✅ Successfully connected to InfluxDB")
+                    logger.info("Successfully connected to InfluxDB")
                     return
                 else:
                     retry_count += 1
@@ -46,12 +45,12 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             except InfluxDBError as e:
                 retry_count += 1
                 if (retry_count >= max_retries):
-                    logger.critical(f"🔥 Critical InfluxDB connection failure: {str(e)}")
+                    logger.critical(f"Critical InfluxDB connection failure: {str(e)}")
                     raise
                 logger.warning(f"InfluxDB connection error (attempt {retry_count}/{max_retries}): {str(e)}")
                 time.sleep(1)
         
-        logger.critical("🔥 Critical InfluxDB connection failure after retries")
+        logger.critical("Critical InfluxDB connection failure after retries")
         raise InfluxDBError("Failed to connect to InfluxDB after multiple attempts")
 
     @staticmethod
@@ -176,6 +175,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         |> sort(columns: ["_time"], desc: false)
         |> limit(n: {page_size}, offset: {offset})
         '''
+        
         
         try:
             result = self.client.query_api().query(query)

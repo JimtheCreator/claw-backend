@@ -11,6 +11,7 @@ sys.path.append(parent_dir)
 
 from presentation.api.routes import market_data
 import core.services.crypto_list as crypto_data
+from presentation.api.routes import analysis
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
 from common.config.cache import redis_cache
@@ -23,10 +24,9 @@ async def lifespan(app: FastAPI):
         configure_logging()
         logger.info("Starting application...")
         await redis_cache.initialize()
-        await redis_cache.flush_all()
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
-        logger.info("Preloaded all Binance tickers into Supabase")
+        # logger.info("Preloaded all Binance tickers into Supabase")
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
@@ -34,14 +34,11 @@ async def lifespan(app: FastAPI):
     yield  # 🧘 Everything after this happens at shutdown
     logger.info("Shutting down application...")
 
-
 app = FastAPI(
     title="Claw-Backend",
     version="0.1.0",
     lifespan=lifespan
 )
-
-
 
 # Add CORS middleware
 app.add_middleware(
@@ -55,6 +52,7 @@ app.add_middleware(
 
 # Include all routers
 app.include_router(market_data.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
 
 @app.get("/health")
 async def health_check():

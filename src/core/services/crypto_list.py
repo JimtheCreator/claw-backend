@@ -167,10 +167,7 @@ def sort_results_by_relevance(results: List[dict], query: str) -> List[dict]:
     
     # Sort by relevance score (descending)
     return sorted(results, key=get_relevance_score, reverse=True)
-    
-
-
-        
+       
 # Optimized batch fetching for multiple symbols in parallel
 async def fetch_realtime_metrics_from_binance(symbols: Union[str, List[str]]) -> Dict[str, dict]:
     """Batch fetch metrics for multiple symbols in parallel"""
@@ -370,5 +367,3 @@ def process_exchange_info(exchange_info: dict) -> dict:
         for item in exchange_info.get('symbols', [])
         if item.get('symbol')
     }
-
-    
