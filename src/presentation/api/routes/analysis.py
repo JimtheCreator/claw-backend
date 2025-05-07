@@ -38,7 +38,10 @@ async def analyze_market(
         )
         pattern_api = PatternAPI()
         # Detect ALL patterns by default
-        result = await pattern_api.analyze_market_data(ohlcv=ohlcv)
+        result = await pattern_api.analyze_market_data(
+            ohlcv=ohlcv,
+            interval=interval)
+        
         return result
     except DataUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e))
