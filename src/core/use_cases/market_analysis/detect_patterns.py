@@ -1021,8 +1021,6 @@ class PatternDetector:
                 key_levels[f'support{i+1}'] = lows[idx]
         
         return key_levels
-    
-    
 
 
 initialized_pattern_registry = _pattern_registry

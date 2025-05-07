@@ -1,4 +1,4 @@
-# src/core/use_cases/market_analysis/enhanced_pattern_detection.py
+# src/core/use_cases/market_analysis/main_analysis_structure.py
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
@@ -8,6 +8,7 @@ from datetime import datetime
 from enum import Enum
 from collections import deque
 from fastapi import HTTPException
+import math
 import asyncio
 from common.logger import logger
 from core.use_cases.market_analysis.detect_patterns import PatternDetector, initialized_pattern_registry
@@ -123,19 +124,45 @@ class ForecastResult:
 class MarketAnalyzer:
     """Enhanced market analyzer that implements trader-like thinking""" 
     def __init__(
-        self, 
+        self,
+        interval: str,
         window_sizes: List[int] = None,
         min_pattern_length: int = 3,
         overlap_threshold: float = 0.5,
         pattern_history_size: int = 20
     ):
+        
+        self.interval = interval
+        # Add interval to multiplier mapping
+        self.interval_multipliers = {
+            "1m": 0.1,    # Base multiplier for 1m
+            "5m": 0.2,
+            "15m": 0.35,
+            "30m": 0.5,
+            "1h": 1.0,    # Base interval (1h = 1.0x)
+            "2h": 1.5,
+            "4h": 2.2,
+            "6h": 3.0,
+            "1d": 4.0,
+            "3d": 5.0,
+            "1w": 6.0,
+            "1M": 8.0
+        }
+
         """Initialize the analyzer with configuration parameters"""
         self.window_sizes = window_sizes or [5, 10, 15, 20]  # Various window sizes to detect patterns at different scales
         self.min_pattern_length = min_pattern_length
         self.overlap_threshold = overlap_threshold
         self.pattern_history = deque(maxlen=pattern_history_size)  # Store recent patterns
         self.current_context = None  # Will hold the current MarketContext
-        
+
+    # In _get_interval_factor, ensure logarithmic scaling
+    def _get_interval_factor(self) -> float:
+        base_interval = "1h"
+        base_value = self.interval_multipliers.get(base_interval, 1.0)
+        current_value = self.interval_multipliers.get(self.interval, 1.0)
+        return max(0.1, np.log(current_value / base_value + 1) + 1)
+
     async def analyze_market(
         self, 
         ohlcv: Dict[str, List], 
@@ -226,8 +253,8 @@ class MarketAnalyzer:
         df['lower_band'] = df['sma_20'] - (df['std_20'] * 2)
         
         # Volatility
-        df['atr_14'] = self._calculate_atr(df, 14)
-        df['volatility'] = df['atr_14'] / (df['close'] + 1e-10)
+        df['atr'] = self._calculate_atr(df)  # Period now determined automatically
+        df['volatility'] = df['atr'] / (df['close'] + 1e-10)
         
         # Volume indicators
         df['volume_sma_5'] = df['volume'].rolling(window=5).mean()
@@ -248,15 +275,23 @@ class MarketAnalyzer:
 
         return df
 
-    def _calculate_atr(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
-        """Calculate Average True Range"""
+    # In MarketAnalyzer class (main_analysis_structure.py)
+    def _calculate_atr(self, df: pd.DataFrame, period: int = None) -> pd.Series:
+        """Calculate Average True Range with dynamic period"""
+        # Determine period based on interval if not provided
+        if not period:
+            interval_to_period = {
+                "1m": 10, "5m": 12, "15m": 14, 
+                "30m": 14, "1h": 14, "4h": 20, 
+                "1d": 24, "1w": 28, "1M": 30
+            }
+            period = interval_to_period.get(self.interval, 14)
+        
         high_low = df['high'] - df['low']
         high_close = abs(df['high'] - df['close'].shift())
         low_close = abs(df['low'] - df['close'].shift())
         
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = ranges.max(axis=1)
-        
+        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         return true_range.rolling(window=period).mean()
 
     async def _detect_patterns_with_windows(
@@ -540,172 +575,80 @@ class MarketAnalyzer:
         df: pd.DataFrame, 
         context: MarketContext
     ) -> ForecastResult:
-        """Generate market forecast based on current context and patterns"""
-        # Get latest price and context information
+        """
+        Generate market forecast based on current context with improved TP/SL logic
+        
+        Args:
+            df: DataFrame with price data and indicators
+            context: Current market context
+            
+        Returns:
+            ForecastResult with direction, TP/SL levels, and confidence
+        """
+        # Get latest price and volatility metrics
         close = df['close'].iloc[-1]
+        atr = df['atr'].iloc[-1] if 'atr' in df.columns else close * context.volatility * 0.01
+        
+        # Get context information
         scenario = context.scenario
         trend_strength = context.trend_strength
         volatility = context.volatility
         active_patterns = context.active_patterns
         
-        # Get ATR for realistic price targets
-        atr = df['atr_14'].iloc[-1] if 'atr_14' in df.columns else close * volatility * 0.01
+        # Extract key levels
+        recent_high = df['high'].tail(20).max()
+        recent_low = df['low'].tail(20).min()
         
-        # Initialize with default values
-        direction = "sideways"
-        confidence = 0.5
-        target_price = None
-        stop_loss = None
+        # Get nearest support/resistance (with validation)
+        support_levels = sorted([level for level in context.support_levels if level < close])
+        resistance_levels = sorted([level for level in context.resistance_levels if level > close])
         
-        # Dictionary to track scenario transition probabilities
-        scenario_transitions = {s: 0.0 for s in MarketScenario}
-        scenario_continuation = 0.6  # Default continuation probability
+        nearest_support = support_levels[-1] if support_levels else recent_low
+        nearest_resistance = resistance_levels[0] if resistance_levels else recent_high
         
-        # Directional bias based on current scenario
-        if scenario == MarketScenario.TRENDING_UP:
-            direction = "up"
-            confidence = min(0.8, 0.5 + trend_strength / 2)
-            
-            # Use ATR for more realistic targets in short-term
-            target_multiplier = 1.5 + (volatility / 2)  # Scale with volatility but keep reasonable
-            stop_multiplier = 0.75
-            
-            target_price = close + (target_multiplier * atr)
-            stop_loss = close - (stop_multiplier * atr)
-            
-            # Likely transitions
-            scenario_transitions[MarketScenario.CONSOLIDATION] = 0.2
-            scenario_transitions[MarketScenario.REVERSAL_ZONE] = 0.1
-            scenario_continuation = 0.7
-            
-        elif scenario == MarketScenario.TRENDING_DOWN:
-            direction = "down"
-            confidence = min(0.8, 0.5 + abs(trend_strength) / 2)
-            
-            # Use ATR for more realistic targets in short-term
-            target_multiplier = 1.5 + (volatility / 2)  # Scale with volatility but keep reasonable
-            stop_multiplier = 0.75
-            
-            target_price = close - (target_multiplier * atr)
-            stop_loss = close + (stop_multiplier * atr)
-            
-            # Likely transitions
-            scenario_transitions[MarketScenario.CONSOLIDATION] = 0.2
-            scenario_transitions[MarketScenario.REVERSAL_ZONE] = 0.15
-            scenario_continuation = 0.65
-            
-        elif scenario == MarketScenario.CONSOLIDATION:
-            direction = "sideways"
-            confidence = 0.6
-            
-            # Set targets based on ATR rather than percentage of price
-            target_price = close + (0.7 * atr * (1 if trend_strength > 0 else -1))
-            stop_loss = close - (0.7 * atr * (1 if trend_strength > 0 else -1))
-            
-            # Likely transitions
-            scenario_transitions[MarketScenario.BREAKOUT_BUILDUP] = 0.3
-            scenario_transitions[MarketScenario.TRENDING_UP] = 0.15
-            scenario_transitions[MarketScenario.TRENDING_DOWN] = 0.15
-            scenario_continuation = 0.4
-            
-        elif scenario == MarketScenario.BREAKOUT_BUILDUP:
-            # Predict breakout direction based on current trend bias
-            direction = "up" if trend_strength > 0 else "down"
-            confidence = 0.6
-            
-            # Calculate targets based on pattern key levels or ATR
-            if active_patterns:
-                key_levels = active_patterns[0].key_levels
-                if direction == "up" and 'resistance1' in key_levels:
-                    resistance = key_levels.get('resistance1')
-                    # Don't use resistance directly, instead use a realistic distance
-                    target_price = min(resistance, close + (2.0 * atr))
-                    stop_loss = close - (1.0 * atr)
-                elif direction == "down" and 'support1' in key_levels:
-                    support = key_levels.get('support1')
-                    # Don't use support directly, instead use a realistic distance
-                    target_price = max(support, close - (2.0 * atr))
-                    stop_loss = close + (1.0 * atr)
-                else:
-                    # Fallback to ATR-based targets
-                    target_price = close + (2.0 * atr * (1 if direction == "up" else -1))
-                    stop_loss = close - (1.0 * atr * (1 if direction == "up" else -1))
-            else:
-                # No patterns - use ATR for targets
-                target_price = close + (2.0 * atr * (1 if direction == "up" else -1))
-                stop_loss = close - (1.0 * atr * (1 if direction == "up" else -1))
-            
-            # Likely transitions
-            scenario_transitions[MarketScenario.TRENDING_UP] = 0.3 if direction == "up" else 0.1
-            scenario_transitions[MarketScenario.TRENDING_DOWN] = 0.3 if direction == "down" else 0.1
-            scenario_transitions[MarketScenario.HIGH_VOLATILITY] = 0.2
-            scenario_continuation = 0.3
-            
-        elif scenario == MarketScenario.REVERSAL_ZONE:
-            # Predict opposite of current trend
-            direction = "down" if trend_strength > 0 else "up"
-            confidence = 0.55
-            
-            # Set reversal targets using ATR
-            target_price = close + (1.5 * atr * (1 if direction == "up" else -1))
-            stop_loss = close - (0.75 * atr * (1 if direction == "up" else -1))
-            
-            # Likely transitions
-            scenario_transitions[MarketScenario.TRENDING_UP] = 0.25 if direction == "up" else 0.05
-            scenario_transitions[MarketScenario.TRENDING_DOWN] = 0.25 if direction == "down" else 0.05
-            scenario_transitions[MarketScenario.CHOPPY] = 0.2
-            scenario_continuation = 0.4
+        # Determine direction based on scenario and trend
+        direction, confidence = self._determine_forecast_direction(scenario, trend_strength, active_patterns)
         
-        # Handle all other scenarios (HIGH_VOLATILITY, LOW_VOLATILITY, CHOPPY, etc.)
-        else:
-            # Set default targets based on trend direction and ATR
-            direction = "up" if trend_strength > 0 else "down" if trend_strength < 0 else "sideways"
-            
-            # Scale target with volatility but keep it realistic
-            target_multiplier = min(2.0, 1.0 + volatility/2)
-            stop_multiplier = min(1.0, 0.5 + volatility/4)
-            
-            if direction != "sideways":
-                target_price = close + (target_multiplier * atr * (1 if direction == "up" else -1))
-                stop_loss = close - (stop_multiplier * atr * (1 if direction == "up" else -1))
-            else:
-                # For sideways, set modest targets based on recent price action
-                upper = min(df['high'].tail(10).max(), close + (1.2 * atr))
-                lower = max(df['low'].tail(10).min(), close - (1.2 * atr))
-                target_price = upper if close < (upper + lower) / 2 else lower
-                stop_loss = lower if close > (upper + lower) / 2 else upper
+        # Calculate base risk parameters (% of position)
+        base_risk_pct = self._calculate_base_risk(scenario, volatility)
         
-        # Pattern-based adjustments
-        for pattern in active_patterns:
-            if pattern.pattern_name == "zigzag" and pattern.confidence > 0.7:
-                # ZigZag often precedes continuation in the recent direction
-                confidence = min(0.85, confidence + 0.1)
-                
-            elif pattern.pattern_name == "triangle" and pattern.confidence > 0.6:
-                # Triangle breakout direction can be inferred from the context
-                if scenario == MarketScenario.BREAKOUT_BUILDUP:
-                    confidence = min(0.9, confidence + 0.15)
-                    # Increase probability of trending scenarios
-                    scenario_transitions[MarketScenario.TRENDING_UP] += 0.1
-                    scenario_transitions[MarketScenario.TRENDING_DOWN] += 0.1
-                    scenario_continuation -= 0.2
+        # Apply timeframe-specific adjustments
+        tf_multiplier = self._get_normalized_tf_multiplier()
         
-        # Expected volatility forecast
-        if volatility > 0.7:
-            expected_volatility = "decreasing"
-        elif volatility < 0.3:
-            expected_volatility = "increasing"
-        else:
-            expected_volatility = "unchanged"
-        
-        # Validate and adjust price levels to ensure they're realistic
-        target_price, stop_loss = self._validate_price_levels(
-            close=close, 
-            target=target_price, 
-            stop=stop_loss, 
-            direction=direction, 
-            atr=atr
+        # Calculate stop loss based on market context
+        stop_loss = self._calculate_stop_loss(
+            direction=direction,
+            close=close,
+            atr=atr,
+            scenario=scenario,
+            nearest_support=nearest_support,
+            nearest_resistance=nearest_resistance,
+            tf_multiplier=tf_multiplier,
+            patterns=active_patterns,
+            volatility=volatility,
+            base_risk_pct=base_risk_pct
         )
+        
+        # Calculate take profit with dynamic R:R ratio
+        target_price = self._calculate_take_profit(
+            direction=direction,
+            close=close,
+            stop_loss=stop_loss,
+            atr=atr,
+            scenario=scenario,
+            tf_multiplier=tf_multiplier,
+            patterns=active_patterns,
+            nearest_support=nearest_support,
+            nearest_resistance=nearest_resistance,
+            context=context
+        )
+        
+        # Determine scenario probabilities
+        scenario_transitions = self._calculate_scenario_transitions(scenario, direction, volatility)
+        scenario_continuation = 1.0 - sum(scenario_transitions.values())
+        
+        # Expected volatility trend
+        expected_volatility = self._forecast_volatility(volatility, scenario)
         
         return ForecastResult(
             direction=direction,
@@ -717,74 +660,963 @@ class MarketAnalyzer:
             expected_volatility=expected_volatility
         )
 
-    # Changes to _validate_price_levels method
-    def _validate_price_levels(self, close: float, target: float, stop: float, direction: str, atr: float) -> Tuple[float, float]:
-        """Ensure realistic price targets and stop losses with proper rounding"""
-        # If target or stop is None, create sensible defaults
-        if target is None:
-            if direction == "up":
-                target = close + (1.5 * atr)
-            elif direction == "down":
-                target = close - (1.5 * atr)
-            else:  # sideways
-                target = close + (0.5 * atr)
+    def _determine_forecast_direction(
+        self,
+        scenario: MarketScenario,
+        trend_strength: float,
+        patterns: List[PatternInstance]
+    ) -> Tuple[str, float]:
+        """Determine forecast direction and confidence"""
+        # Default values
+        direction = "sideways"
+        confidence = 0.5
         
-        if stop is None:
-            if direction == "up":
-                stop = close - (0.75 * atr)
-            elif direction == "down":
-                stop = close + (0.75 * atr)
-            else:  # sideways
-                stop = close - (0.75 * atr)
+        # Analyze pattern direction influence
+        pattern_direction = self._analyze_pattern_direction(patterns)
+        pattern_confidence = max([p.confidence for p in patterns], default=0.0) if patterns else 0.0
         
-        # Ensure minimum price movement (based on price magnitude)
-        min_move_pct = 0.001 if close > 100 else 0.002 if close > 10 else 0.005
-        min_move = max(atr * 0.2, close * min_move_pct)
+        # Determine base direction and confidence from scenario
+        if scenario == MarketScenario.TRENDING_UP:
+            direction = "up"
+            confidence = min(0.8, 0.5 + trend_strength / 2)
+        elif scenario == MarketScenario.TRENDING_DOWN:
+            direction = "down"
+            confidence = min(0.8, 0.5 + abs(trend_strength) / 2)
+        elif scenario == MarketScenario.CONSOLIDATION:
+            # In consolidation, bias based on relative position in range
+            if trend_strength > 0.1:
+                direction = "up"
+                confidence = 0.5 + (trend_strength / 4)
+            elif trend_strength < -0.1:
+                direction = "down"
+                confidence = 0.5 + (abs(trend_strength) / 4)
+            else:
+                direction = "sideways"
+                confidence = 0.6
+        elif scenario == MarketScenario.BREAKOUT_BUILDUP:
+            # For breakout setups, rely more on pattern direction
+            if pattern_direction:
+                direction = pattern_direction
+                confidence = 0.5 + (pattern_confidence / 4)
+            else:
+                direction = "up" if trend_strength > 0 else "down"
+                confidence = 0.55
+        elif scenario == MarketScenario.REVERSAL_ZONE:
+            # For reversals, predict opposite of current trend
+            direction = "down" if trend_strength > 0 else "up"
+            confidence = 0.55
+        else:
+            # Default to trend direction for other scenarios
+            direction = "up" if trend_strength > 0 else "down" if trend_strength < 0 else "sideways"
+            confidence = 0.5 + (abs(trend_strength) / 4)
         
-        if abs(target - close) < min_move:
-            target = close + (min_move if direction == "up" or direction == "sideways" else -min_move)
+        # If pattern direction conflicts with scenario direction but has high confidence,
+        # adjust the direction and confidence
+        if (pattern_direction and pattern_direction != direction and 
+            pattern_confidence > 0.7 and not scenario in [MarketScenario.TRENDING_UP, MarketScenario.TRENDING_DOWN]):
+            direction = pattern_direction
+            confidence = (confidence + pattern_confidence) / 2
         
-        if abs(stop - close) < min_move:
-            stop = close - (min_move if direction == "up" or direction == "sideways" else -min_move)
+        return direction, confidence
+
+    def _get_normalized_tf_multiplier(self) -> float:
+        """Get a normalized timeframe multiplier for risk calculations"""
+        base_interval = "1h"
+        base_value = self.interval_multipliers.get(base_interval, 1.0)
+        current_value = self.interval_multipliers.get(self.interval, 1.0)
         
-        # Ensure reasonable risk (don't risk more than 1.5%)
-        max_risk_pct = 0.015  # 1.5%
-        max_risk = close * max_risk_pct
-        actual_risk = abs(stop - close)
+        # Use square root scaling for more balanced results
+        return math.sqrt(current_value / base_value)
+
+    def _calculate_base_risk(self, scenario: MarketScenario, volatility: float) -> float:
+        """Calculate base risk percentage based on market conditions"""
+        # Start with default risk
+        base_risk = 0.015  # 1.5% position risk
         
-        if actual_risk > max_risk:
-            if not (direction == "down" and stop > close) and not (direction == "up" and stop < close):
-                # Only adjust if stop is in the expected direction
-                stop = close - (max_risk if direction == "up" or direction == "sideways" else -max_risk)
+        # Adjust for market scenario
+        scenario_adjustments = {
+            MarketScenario.HIGH_VOLATILITY: 0.7,    # Reduce risk in high volatility
+            MarketScenario.CHOPPY: 0.8,             # Reduce risk in choppy markets
+            MarketScenario.TRENDING_UP: 1.2,        # Increase risk in strong trends
+            MarketScenario.TRENDING_DOWN: 1.2,
+            MarketScenario.REVERSAL_ZONE: 0.9,      # More cautious in reversal zones
+            MarketScenario.BREAKOUT_BUILDUP: 1.1    # Slightly increased for breakouts
+        }
         
-        # Ensure reasonable reward/risk ratio (minimum 1:1.5)
-        min_rr_ratio = 1.5
-        reward = abs(target - close)
-        risk = abs(stop - close)
+        # Apply scenario adjustment
+        scenario_multiplier = scenario_adjustments.get(scenario, 1.0)
         
-        if reward < risk * min_rr_ratio and risk > 0:
-            target = close + (risk * min_rr_ratio * (1 if direction == "up" or direction == "sideways" else -1))
+        # Apply volatility adjustment (reduce risk in high volatility markets)
+        volatility_multiplier = 1.0 / (1.0 + volatility)
         
-        # Ensure target is not too far from current price for short-term forecast
-        # Cap the target movement at 3 times ATR for short-term
-        max_target_move = 3 * atr
-        if abs(target - close) > max_target_move:
-            target = close + (max_target_move * (1 if target > close else -1))
+        # Calculate final base risk
+        adjusted_risk = base_risk * scenario_multiplier * volatility_multiplier
         
-        # Determine appropriate precision based on price magnitude
-        precision = 2
-        if close < 0.1:
-            precision = 5
-        elif close < 1:
-            precision = 4
-        elif close < 10:
-            precision = 3
+        # Ensure risk stays within reasonable bounds
+        return max(0.005, min(0.03, adjusted_risk))
+    
+
+    def _calculate_stop_loss(
+        self,
+        direction: str,
+        close: float,
+        atr: float,
+        scenario: MarketScenario,
+        nearest_support: float,
+        nearest_resistance: float,
+        tf_multiplier: float,
+        patterns: List[PatternInstance],
+        volatility: float,
+        base_risk_pct: float
+    ) -> float:
+        """
+        Calculate stop loss based on market context and risk parameters
+        
+        The function implements a multi-layered approach:
+        1. Technical levels (support/resistance)
+        2. Pattern-based levels
+        3. Volatility-based (ATR) safety net
+        4. Maximum risk limit safeguard
+        """
+        # Initialize candidate stop levels
+        stop_candidates = []
+        
+        # Calculate pure ATR-based stop (for baseline)
+        atr_multiplier = 1.5 * tf_multiplier
+        atr_stop = close - (atr_multiplier * atr) if direction == "up" else close + (atr_multiplier * atr)
+        
+        # Calculate maximum allowed risk (% of price)
+        max_risk_pct = base_risk_pct * (1 + volatility)
+        max_risk_distance = close * max_risk_pct
+        
+        # CRITICAL FIX: Ensure proper direction-based calculation of max risk stop
+        max_risk_stop = close - max_risk_distance if direction == "up" else close + max_risk_distance
+        
+        # 1. Add support/resistance levels as candidates
+        if direction == "up":
+            # For long positions, use nearest support as potential stop
+            # Add a small buffer to avoid getting stopped out by normal price action
+            if nearest_support < close:
+                buffer = min(atr * 0.2, (close - nearest_support) * 0.1)
+                sr_stop = nearest_support - buffer
+                stop_candidates.append(sr_stop)
+        else:
+            # For short positions, use nearest resistance as potential stop
+            if nearest_resistance > close:
+                buffer = min(atr * 0.2, (nearest_resistance - close) * 0.1)
+                sr_stop = nearest_resistance + buffer
+                stop_candidates.append(sr_stop)
+        
+        # 2. Add pattern-based stops
+        pattern_stop = self._get_pattern_based_stop(patterns, direction, close, atr)
+        if pattern_stop:
+            stop_candidates.append(pattern_stop)
+        
+        # 3. Always include ATR-based stop as a baseline
+        stop_candidates.append(atr_stop)
+        
+        # CRITICAL FIX: Add validation to ensure stop loss is on correct side of price
+        # Filter out invalid stop loss levels before selection
+        if direction == "up":
+            # For long positions, stop MUST be below entry
+            stop_candidates = [s for s in stop_candidates if s < close]
             
-        # Round values to appropriate precision
-        target = round(target, precision)
-        stop = round(stop, precision)
+            # If no valid stops, use max risk stop (ensuring it's valid)
+            if not stop_candidates:
+                return min(max_risk_stop, close - (atr * 0.5))  # Ensure at least some minimal distance
+            
+            # Select the highest (closest) stop loss that's within risk tolerance
+            valid_stops = [s for s in stop_candidates if close - s <= max_risk_distance]
+            
+            # If no valid stops within risk tolerance, use the closest one that doesn't exceed max risk
+            if not valid_stops:
+                closest_stop = max(stop_candidates)  # Highest (closest) from candidates
+                if close - closest_stop <= max_risk_distance * 1.5:  # Allow slight flexibility
+                    return closest_stop
+                else:
+                    return max_risk_stop  # Fall back to max risk stop
+            
+            return max(valid_stops)  # Return the highest (closest) valid stop
+        else:
+            # For short positions, stop MUST be above entry
+            stop_candidates = [s for s in stop_candidates if s > close]
+            
+            # If no valid stops, use max risk stop (ensuring it's valid)
+            if not stop_candidates:
+                return max(max_risk_stop, close + (atr * 0.5))  # Ensure at least some minimal distance
+            
+            # Select the lowest (closest) stop loss that's within risk tolerance
+            valid_stops = [s for s in stop_candidates if s - close <= max_risk_distance]
+            
+            # If no valid stops within risk tolerance, use the closest one that doesn't exceed max risk
+            if not valid_stops:
+                closest_stop = min(stop_candidates)  # Lowest (closest) from candidates
+                if closest_stop - close <= max_risk_distance * 1.5:  # Allow slight flexibility
+                    return closest_stop
+                else:
+                    return max_risk_stop  # Fall back to max risk stop
+            
+            return min(valid_stops)  # Return the lowest (closest) valid stop
+
+    def _get_pattern_based_stop(
+        self,
+        patterns: List[PatternInstance],
+        direction: str,
+        close: float,
+        atr: float
+    ) -> Optional[float]:
+        """Extract stop loss level from pattern key levels"""
+        if not patterns:
+            return None
         
-        return target, stop
+        # Get highest confidence pattern
+        pattern = max(patterns, key=lambda p: p.confidence)
+        
+        # Skip if confidence is too low
+        if pattern.confidence < 0.5:
+            return None
+        
+        key_levels = pattern.key_levels
+        pattern_name = pattern.pattern_name
+        
+        # Pattern-specific stop logic
+        if direction == "up":
+            # For bullish scenarios, find appropriate stop level
+            if pattern_name in ["double_bottom", "triple_bottom"]:
+                # Use the bottom level as stop
+                if 'support1' in key_levels:
+                    buffer = atr * 0.1
+                    return key_levels['support1'] - buffer
+                    
+            elif pattern_name == "wedge_falling":
+                # Use lower trendline as stop
+                if 'lower_trendline' in key_levels:
+                    buffer = atr * 0.15
+                    return key_levels['lower_trendline'] - buffer
+                    
+            elif pattern_name == "flag_bullish":
+                # Use flag low as stop
+                if 'flag_low' in key_levels:
+                    buffer = atr * 0.1
+                    return key_levels['flag_low'] - buffer
+                    
+            elif pattern_name == "triangle":
+                # Use lower trendline as stop
+                if 'lower_trendline' in key_levels:
+                    buffer = atr * 0.15
+                    return key_levels['lower_trendline'] - buffer
+                    
+            # ENHANCED: Additional pattern handling for smart trader logic
+            elif pattern_name == "cup_and_handle":
+                # Use cup bottom as stop
+                if 'cup_bottom' in key_levels:
+                    buffer = atr * 0.15
+                    return key_levels['cup_bottom'] - buffer
+                
+            elif pattern_name == "inverse_head_and_shoulder":
+                # Use neckline as stop for this bullish pattern
+                if 'neckline' in key_levels:
+                    return key_levels['neckline'] * 0.985  # Slight buffer below neckline
+        else:
+            # For bearish scenarios, find appropriate stop level
+            if pattern_name in ["double_top", "triple_top", "head_and_shoulder"]:
+                # Use the top level as stop
+                if 'resistance1' in key_levels:
+                    buffer = atr * 0.1
+                    return key_levels['resistance1'] + buffer
+                    
+            elif pattern_name == "wedge_rising":
+                # Use upper trendline as stop
+                if 'upper_trendline' in key_levels:
+                    buffer = atr * 0.15
+                    return key_levels['upper_trendline'] + buffer
+                    
+            elif pattern_name == "flag_bearish":
+                # Use flag high as stop
+                if 'flag_high' in key_levels:
+                    buffer = atr * 0.1
+                    return key_levels['flag_high'] + buffer
+                    
+            elif pattern_name == "triangle":
+                # Use upper trendline as stop
+                if 'upper_trendline' in key_levels:
+                    buffer = atr * 0.15
+                    return key_levels['upper_trendline'] + buffer
+                
+            # ENHANCED: Additional bearish patterns
+            elif pattern_name == "descending_triangle":
+                # Use the upper resistance as stop
+                if 'upper_resistance' in key_levels:
+                    buffer = atr * 0.12
+                    return key_levels['upper_resistance'] + buffer
+        
+        # ENHANCEMENT: For any pattern, check if we have a recent swing high/low to use
+        if direction == "up" and 'recent_swing_low' in key_levels:
+            return key_levels['recent_swing_low'] * 0.99  # Just below the swing low
+        elif direction == "down" and 'recent_swing_high' in key_levels:
+            return key_levels['recent_swing_high'] * 1.01  # Just above the swing high
+        
+        return None
+
+    def _determine_scenario(
+        self, 
+        df: pd.DataFrame, 
+        trend_strength: float, 
+        volatility: float, 
+        volume_profile: str,
+        patterns: List[PatternInstance]
+    ) -> MarketScenario:
+        """
+        Determine the current market scenario with professional trader thinking
+        
+        Enhanced to consider market psychology and improved pattern recognition
+        """
+        # Get most recent candles
+        recent_df = df.tail(10)
+        close = df['close'].iloc[-1]
+        
+        # Pattern influence - check for strong pattern signals
+        pattern_signals = {p.pattern_name: p.confidence for p in patterns}
+        
+        # Default to UNDEFINED
+        scenario = MarketScenario.UNDEFINED
+        
+        # ENHANCED: Calculate momentum indicators for trend quality assessment
+        trend_quality = self._calculate_trend_quality(df)
+        
+        # ENHANCED: Check for divergences (price/indicator disagreement)
+        divergence = self._check_for_divergence(df)
+        
+        # Strong trending market
+        if abs(trend_strength) > 0.7 and trend_quality > 0.6:
+            if trend_strength > 0:
+                scenario = MarketScenario.TRENDING_UP
+            else:
+                scenario = MarketScenario.TRENDING_DOWN
+        # Weak trend or potential reversal        
+        elif abs(trend_strength) > 0.5 and trend_quality < 0.4:
+            scenario = MarketScenario.REVERSAL_ZONE
+        # Consolidation
+        elif abs(trend_strength) < 0.3 and volatility < 0.4:
+            scenario = MarketScenario.CONSOLIDATION
+            
+            # Check for accumulation vs distribution
+            if volume_profile == "increasing" and trend_strength > 0:
+                scenario = MarketScenario.ACCUMULATION
+            elif volume_profile == "increasing" and trend_strength < 0:
+                scenario = MarketScenario.DISTRIBUTION
+        
+        # Breakout buildup
+        elif volatility < 0.3 and self._has_breakout_pattern(patterns):
+            scenario = MarketScenario.BREAKOUT_BUILDUP
+            
+        # Reversal zone based on divergences and candlestick patterns
+        elif divergence or self._has_reversal_pattern(patterns):
+            scenario = MarketScenario.REVERSAL_ZONE
+            
+        # High volatility
+        elif volatility > 0.7:
+            scenario = MarketScenario.HIGH_VOLATILITY
+            
+        # Low volatility
+        elif volatility < 0.2:
+            scenario = MarketScenario.LOW_VOLATILITY
+            
+        # Choppy market
+        elif abs(trend_strength) < 0.4 and volatility > 0.5:
+            scenario = MarketScenario.CHOPPY
+            
+        return scenario
+
+    # ENHANCEMENT: New helper methods for professional trader thinking
+    def _calculate_trend_quality(self, df: pd.DataFrame) -> float:
+        """Calculate trend quality based on price action and indicators"""
+        # Check for consecutive candles in trend direction
+        recent_df = df.tail(10)
+        
+        # Count consecutive up/down candles
+        consecutive_bullish = 0
+        max_consecutive = 0
+        for i in range(len(recent_df)):
+            if recent_df['close'].iloc[i] > recent_df['open'].iloc[i]:
+                consecutive_bullish += 1
+                max_consecutive = max(max_consecutive, consecutive_bullish)
+            else:
+                consecutive_bullish = 0
+        
+        consecutive_bearish = 0
+        for i in range(len(recent_df)):
+            if recent_df['close'].iloc[i] < recent_df['open'].iloc[i]:
+                consecutive_bearish += 1
+                max_consecutive = max(max_consecutive, consecutive_bearish)
+            else:
+                consecutive_bearish = 0
+                
+        # Check MA alignment (are shorter MAs aligned with longer ones?)
+        ma_alignment = 0
+        if 'sma_5' in df.columns and 'sma_20' in df.columns:
+            diff_5_20 = df['sma_5'].iloc[-1] - df['sma_20'].iloc[-1]
+            prev_diff_5_20 = df['sma_5'].iloc[-5] - df['sma_20'].iloc[-5]
+            
+            # Positive alignment = shorter MA moving away from longer MA in trend direction
+            if (diff_5_20 > 0 and diff_5_20 > prev_diff_5_20) or (diff_5_20 < 0 and diff_5_20 < prev_diff_5_20):
+                ma_alignment = 0.2
+        
+        # Check if price is making higher highs and higher lows (uptrend) 
+        # or lower highs and lower lows (downtrend)
+        price_pattern = 0
+        recent_highs = df['high'].tail(20).values
+        recent_lows = df['low'].tail(20).values
+        
+        # Using argrelextrema to find local maxima and minima
+        order = min(3, len(recent_highs) // 5)
+        high_idx = argrelextrema(recent_highs, np.greater, order=order)[0]
+        low_idx = argrelextrema(recent_lows, np.less, order=order)[0]
+        
+        if len(high_idx) >= 2 and len(low_idx) >= 2:
+            # Check if highs are ascending and lows are ascending (uptrend)
+            if (recent_highs[high_idx[-1]] > recent_highs[high_idx[-2]] and 
+                recent_lows[low_idx[-1]] > recent_lows[low_idx[-2]]):
+                price_pattern = 0.3
+            # Check if highs are descending and lows are descending (downtrend)
+            elif (recent_highs[high_idx[-1]] < recent_highs[high_idx[-2]] and 
+                recent_lows[low_idx[-1]] < recent_lows[low_idx[-2]]):
+                price_pattern = 0.3
+        
+        # Combine factors to determine trend quality (0.0 to 1.0)
+        trend_quality = min(1.0, (max_consecutive/10) + ma_alignment + price_pattern)
+        
+        return trend_quality
+
+    def _check_for_divergence(self, df: pd.DataFrame) -> bool:
+        """
+        Check for divergences between price and indicators
+        Divergences often signal potential reversals
+        """
+        if len(df) < 20:
+            return False
+            
+        # We need to look for hidden and regular divergences
+        # For this we compare price action with momentum indicators
+        
+        # Check if we have necessary indicators
+        if 'close' not in df.columns:
+            return False
+            
+        # Calculate a basic momentum indicator if not present
+        if 'momentum' not in df.columns:
+            df['momentum'] = df['close'].diff(5)
+        
+        price_data = df['close'].tail(20).values
+        momentum_data = df['momentum'].tail(20).values
+        
+        # Get the last two significant price swings (highs and lows)
+        # We'll use a simple method - find global extrema in our window
+        price_max_idx = argrelextrema(price_data, np.greater, order=3)[0]
+        price_min_idx = argrelextrema(price_data, np.less, order=3)[0]
+        
+        # Also find momentum extrema
+        mom_max_idx = argrelextrema(momentum_data, np.greater, order=3)[0]
+        mom_min_idx = argrelextrema(momentum_data, np.less, order=3)[0]
+        
+        # Need at least 2 extrema of each type to check for divergence
+        if (len(price_max_idx) < 2 or len(price_min_idx) < 2 or 
+            len(mom_max_idx) < 2 or len(mom_min_idx) < 2):
+            return False
+        
+        # Check for bearish regular divergence:
+        # Price makes higher high but momentum makes lower high
+        if (price_data[price_max_idx[-1]] > price_data[price_max_idx[-2]] and 
+            momentum_data[mom_max_idx[-1]] < momentum_data[mom_max_idx[-2]]):
+            return True
+            
+        # Check for bullish regular divergence:
+        # Price makes lower low but momentum makes higher low
+        if (price_data[price_min_idx[-1]] < price_data[price_min_idx[-2]] and 
+            momentum_data[mom_min_idx[-1]] > momentum_data[mom_min_idx[-2]]):
+            return True
+        
+        # No divergence found
+        return False
+
+    def _has_breakout_pattern(self, patterns: List[PatternInstance]) -> bool:
+        """Check if any strong breakout patterns are present"""
+        breakout_patterns = ["triangle", "rectangle", "flag_bullish", "flag_bearish", 
+                            "wedge_falling", "wedge_rising", "pennant"]
+                            
+        for pattern in patterns:
+            if pattern.pattern_name in breakout_patterns and pattern.confidence > 0.65:
+                return True
+        
+        return False
+
+    def _has_reversal_pattern(self, patterns: List[PatternInstance]) -> bool:
+        """Check if any strong reversal patterns are present"""
+        reversal_patterns = ["double_top", "double_bottom", "head_and_shoulder", 
+                            "inverse_head_and_shoulder", "engulfing", "evening_star", 
+                            "morning_star"]
+                            
+        for pattern in patterns:
+            if pattern.pattern_name in reversal_patterns and pattern.confidence > 0.7:
+                return True
+        
+        return False
+
+    def _calculate_take_profit(
+        self,
+        direction: str,
+        close: float,
+        stop_loss: float,
+        atr: float,
+        scenario: MarketScenario,
+        tf_multiplier: float,
+        patterns: List[PatternInstance],
+        nearest_support: float,
+        nearest_resistance: float,
+        context: MarketContext
+    ) -> float:
+        """
+        Calculate take profit target based on professional trading principles
+        
+        Enhanced to consider:
+        1. Multiple target levels based on market structure
+        2. Pattern projection targets
+        3. Market context-aware risk:reward
+        4. Fibonacci extensions
+        5. Psychological price levels
+        """
+        # Calculate risk (absolute distance from entry to stop)
+        risk_distance = abs(close - stop_loss)
+        
+        # Base R:R ratio varies by scenario and timeframe
+        base_rr = self._get_base_rr_ratio(scenario, tf_multiplier)
+        
+        # ATR-based target as a baseline
+        atr_multiplier = 2.0 * tf_multiplier
+        atr_target = close + (atr_multiplier * atr) if direction == "up" else close - (atr_multiplier * atr)
+        
+        # Calculate risk-based target
+        risk_reward_target = close + (risk_distance * base_rr) if direction == "up" else close - (risk_distance * base_rr)
+        
+        # Calculate pattern-based target (enhanced)
+        pattern_target = self._get_pattern_based_target(patterns, direction, close, atr)
+        
+        # Consider structure levels as potential targets
+        structure_targets = []
+        
+        if direction == "up":
+            # For long positions, look at resistance levels and beyond
+            if nearest_resistance > close:
+                structure_targets.append(nearest_resistance)
+                
+                # If we have multiple resistance levels, consider the next one too
+                resistance_levels = sorted([r for r in context.resistance_levels if r > close])
+                if len(resistance_levels) > 1:
+                    structure_targets.append(resistance_levels[1])
+        else:
+            # For short positions, look at support levels and beyond
+            if nearest_support < close:
+                structure_targets.append(nearest_support)
+                
+                # If we have multiple support levels, consider the next one too
+                support_levels = sorted([s for s in context.support_levels if s < close], reverse=True)
+                if len(support_levels) > 1:
+                    structure_targets.append(support_levels[1])
+        
+        # ENHANCED: Calculate Fibonacci-based targets
+        fib_targets = self._calculate_fibonacci_targets(direction, close, risk_distance)
+        
+        # ENHANCED: Consider psychological levels (round numbers)
+        psych_target = self._find_psychological_target(direction, close)
+        
+        # Collect all targets
+        targets = [risk_reward_target, atr_target]
+        
+        if pattern_target:
+            targets.append(pattern_target)
+            
+        targets.extend(structure_targets)
+        targets.extend(fib_targets)
+        
+        if psych_target:
+            targets.append(psych_target)
+        
+        # Filter targets based on direction
+        if direction == "up":
+            valid_targets = [t for t in targets if t > close]
+        else:
+            valid_targets = [t for t in targets if t < close]
+            
+        if not valid_targets:
+            # Fallback to basic R:R if no valid targets
+            return close + (1.5 * risk_distance) if direction == "up" else close - (1.5 * risk_distance)
+        
+        # Professional traders often consider multiple timeframe targets
+        # Cluster targets into zones and prioritize clear levels
+        target_clusters = self._cluster_targets(valid_targets)
+        
+        # Weight clusters by importance and scenario
+        weighted_targets = self._weigh_target_clusters(target_clusters, scenario, direction)
+        
+        if not weighted_targets:
+            return risk_reward_target
+        
+        # Return the primary target (highest weight)
+        return max(weighted_targets, key=lambda x: x[1])[0]
+
+    def _calculate_fibonacci_targets(self, direction: str, close: float, risk_distance: float) -> List[float]:
+        """Calculate Fibonacci extension targets from current price"""
+        # Common Fibonacci ratios used by traders
+        fib_ratios = [1.618, 2.0, 2.618]
+        
+        # Calculate targets
+        targets = []
+        for ratio in fib_ratios:
+            if direction == "up":
+                targets.append(close + (risk_distance * ratio))
+            else:
+                targets.append(close - (risk_distance * ratio))
+        
+        return targets
+
+    def _find_psychological_target(self, direction: str, close: float) -> Optional[float]:
+        """Find the next psychological price level (round number)"""
+        # Professional traders often target round numbers
+        # Identify magnitude of price
+        magnitude = 10 ** math.floor(math.log10(close))
+        
+        # Find next round numbers based on price magnitude
+        if direction == "up":
+            # Round up to next significant level
+            if close > 100:
+                # For higher prices, look at 100s
+                return math.ceil(close / 100) * 100
+            elif close > 10:
+                # For medium prices, look at 10s
+                return math.ceil(close / 10) * 10
+            else:
+                # For smaller prices, look at whole numbers
+                return math.ceil(close)
+        else:
+            # Round down to next significant level
+            if close > 100:
+                return math.floor(close / 100) * 100
+            elif close > 10:
+                return math.floor(close / 10) * 10
+            else:
+                return math.floor(close)
+
+    def _cluster_targets(self, targets: List[float]) -> List[List[float]]:
+        """
+        Cluster similar targets together to identify significant zones
+        Professional traders look for confluence of multiple signals
+        """
+        if not targets:
+            return []
+        
+        # Sort targets
+        sorted_targets = sorted(targets)
+        
+        # Group targets that are within 1% of each other
+        clusters = []
+        current_cluster = [sorted_targets[0]]
+        
+        for i in range(1, len(sorted_targets)):
+            current_target = sorted_targets[i]
+            prev_target = sorted_targets[i-1]
+            
+            # If targets are close, add to same cluster
+            if (current_target - prev_target) / prev_target < 0.01:
+                current_cluster.append(current_target)
+            else:
+                # Start new cluster
+                clusters.append(current_cluster)
+                current_cluster = [current_target]
+        
+        # Add the last cluster
+        if current_cluster:
+            clusters.append(current_cluster)
+        
+        return clusters
+
+    def _weigh_target_clusters(
+        self, 
+        clusters: List[List[float]], 
+        scenario: MarketScenario,
+        direction: str
+    ) -> List[Tuple[float, float]]:
+        """
+        Weight target clusters based on multiple factors:
+        - Number of signals in the cluster (confluence)
+        - Current market scenario
+        - Target distance
+        
+        Returns: List of (target_price, weight) tuples
+        """
+        if not clusters:
+            return []
+        
+        weighted_targets = []
+        
+        for cluster in clusters:
+            # Cluster center (average of all targets in cluster)
+            cluster_center = sum(cluster) / len(cluster)
+            
+            # Base weight from number of signals (confluence)
+            base_weight = min(1.0, 0.5 + (len(cluster) * 0.1))
+            
+            # Scenario-based adjustment
+            if scenario == MarketScenario.TRENDING_UP and direction == "up":
+                scenario_mult = 1.2  # Higher targets more likely in strong uptrend
+            elif scenario == MarketScenario.TRENDING_DOWN and direction == "down":
+                scenario_mult = 1.2  # Lower targets more likely in strong downtrend
+            elif scenario == MarketScenario.REVERSAL_ZONE:
+                scenario_mult = 0.9  # Be conservative with targets in reversal zones
+            else:
+                scenario_mult = 1.0
+                
+            weighted_targets.append((cluster_center, base_weight * scenario_mult))
+        
+        # Sort by weight
+        weighted_targets.sort(key=lambda x: x[1], reverse=True)
+        
+        return weighted_targets
+
+    def _get_base_rr_ratio(self, scenario: MarketScenario, tf_multiplier: float) -> float:
+        """
+        Get base risk:reward ratio based on market scenario and timeframe
+        Enhanced with professional trader approach
+        """
+        # Base R:R ratios by scenario - adjusted for pro trading
+        scenario_rr = {
+            MarketScenario.TRENDING_UP: 2.5,
+            MarketScenario.TRENDING_DOWN: 2.5,
+            MarketScenario.CONSOLIDATION: 1.8,
+            MarketScenario.ACCUMULATION: 2.2,   # Added for accumulation
+            MarketScenario.DISTRIBUTION: 2.2,   # Added for distribution
+            MarketScenario.BREAKOUT_BUILDUP: 3.0,
+            MarketScenario.REVERSAL_ZONE: 2.2,
+            MarketScenario.CHOPPY: 1.5,
+            MarketScenario.HIGH_VOLATILITY: 2.0,
+            MarketScenario.LOW_VOLATILITY: 2.5
+        }
+        
+        # Get base R:R for current scenario
+        base_rr = scenario_rr.get(scenario, 2.0)
+        
+        # More nuanced timeframe adjustment 
+        if tf_multiplier < 0.3:  # Very short timeframes (1m, 5m)
+            tf_adjustment = 0.7   # Lower R:R for very short timeframes
+        elif tf_multiplier < 0.6:  # Short timeframes (15m, 30m)
+            tf_adjustment = 0.85
+        elif tf_multiplier > 3.0:  # Very long timeframes (1d+)
+            tf_adjustment = 1.3   # Higher R:R for longer timeframes
+        elif tf_multiplier > 1.5:  # Longer timeframes (4h, 6h)
+            tf_adjustment = 1.15
+        else:
+            tf_adjustment = 1.0   # Base timeframes (1h, 2h)
+        
+        adjusted_rr = base_rr * tf_adjustment
+        
+        # Ensure R:R stays in reasonable bounds
+        return max(1.2, min(4.0, adjusted_rr))
+    
+    def _get_pattern_based_target(
+        self,
+        patterns: List[PatternInstance],
+        direction: str,
+        close: float,
+        atr: float
+    ) -> Optional[float]:
+        """Extract price target based on pattern projections"""
+        if not patterns:
+            return None
+        
+        # Focus on highest confidence pattern
+        pattern = max(patterns, key=lambda p: p.confidence)
+        
+        # Skip if confidence is too low
+        if pattern.confidence < 0.5:
+            return None
+        
+        key_levels = pattern.key_levels
+        pattern_name = pattern.pattern_name
+        
+        # Pattern-specific target projections
+        if direction == "up":
+            # For bullish scenarios
+            if pattern_name in ["double_bottom", "triple_bottom"]:
+                # Target is typically the height of the pattern added to the breakout point
+                if 'support1' in key_levels and 'resistance1' in key_levels:
+                    pattern_height = key_levels['resistance1'] - key_levels['support1']
+                    return close + pattern_height
+                    
+            elif pattern_name == "wedge_falling":
+                # Target is typically the height of the wedge
+                if 'wedge_height' in key_levels:
+                    return close + key_levels['wedge_height']
+                    
+            elif pattern_name == "flag_bullish":
+                # Target is typically the pole height
+                if 'pole_height' in key_levels:
+                    return close + key_levels['pole_height']
+                    
+            elif pattern_name == "rectangle":
+                # Target is height of rectangle
+                if 'resistance1' in key_levels and 'support1' in key_levels:
+                    pattern_height = key_levels['resistance1'] - key_levels['support1']
+                    return key_levels['resistance1'] + pattern_height
+        else:
+            # For bearish scenarios
+            if pattern_name in ["double_top", "triple_top", "head_and_shoulder"]:
+                # Target is typically the height of the pattern from the breakout point
+                if 'support1' in key_levels and 'resistance1' in key_levels:
+                    pattern_height = key_levels['resistance1'] - key_levels['support1']
+                    return close - pattern_height
+                    
+            elif pattern_name == "wedge_rising":
+                # Target is typically the height of the wedge
+                if 'wedge_height' in key_levels:
+                    return close - key_levels['wedge_height']
+                    
+            elif pattern_name == "flag_bearish":
+                # Target is typically the pole height
+                if 'pole_height' in key_levels:
+                    return close - key_levels['pole_height']
+                    
+            elif pattern_name == "rectangle":
+                # Target is height of rectangle
+                if 'resistance1' in key_levels and 'support1' in key_levels:
+                    pattern_height = key_levels['resistance1'] - key_levels['support1']
+                    return key_levels['support1'] - pattern_height
+        
+        return None
+
+    def _forecast_volatility(self, current_volatility: float, scenario: MarketScenario) -> str:
+        """Forecast expected volatility trend"""
+        if current_volatility > 0.7:
+            expected_volatility = "decreasing"
+        elif current_volatility < 0.3:
+            expected_volatility = "increasing"
+        elif scenario in [MarketScenario.BREAKOUT_BUILDUP, MarketScenario.CONSOLIDATION]:
+            expected_volatility = "increasing"
+        elif scenario == MarketScenario.CHOPPY:
+            expected_volatility = "unchanged"
+        else:
+            expected_volatility = "unchanged"
+        
+        return expected_volatility
+
+    def _calculate_scenario_transitions(
+        self,
+        current_scenario: MarketScenario,
+        direction: str,
+        volatility: float
+    ) -> Dict[MarketScenario, float]:
+        """Calculate probabilities of transitioning to different market scenarios"""
+        transitions = {s: 0.0 for s in MarketScenario}
+        
+        # Core scenario transition logic based on current scenario
+        if current_scenario == MarketScenario.TRENDING_UP:
+            transitions[MarketScenario.CONSOLIDATION] = 0.2
+            transitions[MarketScenario.REVERSAL_ZONE] = 0.1
+        
+        elif current_scenario == MarketScenario.TRENDING_DOWN:
+            transitions[MarketScenario.CONSOLIDATION] = 0.2
+            transitions[MarketScenario.REVERSAL_ZONE] = 0.15
+        
+        elif current_scenario == MarketScenario.CONSOLIDATION:
+            transitions[MarketScenario.BREAKOUT_BUILDUP] = 0.3
+            transitions[MarketScenario.TRENDING_UP] = 0.15 if direction == "up" else 0.05
+            transitions[MarketScenario.TRENDING_DOWN] = 0.15 if direction == "down" else 0.05
+        
+        elif current_scenario == MarketScenario.BREAKOUT_BUILDUP:
+            transitions[MarketScenario.TRENDING_UP] = 0.3 if direction == "up" else 0.1
+            transitions[MarketScenario.TRENDING_DOWN] = 0.3 if direction == "down" else 0.1
+            transitions[MarketScenario.HIGH_VOLATILITY] = 0.2
+        
+        elif current_scenario == MarketScenario.REVERSAL_ZONE:
+            transitions[MarketScenario.TRENDING_UP] = 0.25 if direction == "up" else 0.05
+            transitions[MarketScenario.TRENDING_DOWN] = 0.25 if direction == "down" else 0.05
+            transitions[MarketScenario.CHOPPY] = 0.2
+        
+        elif current_scenario == MarketScenario.CHOPPY:
+            transitions[MarketScenario.CONSOLIDATION] = 0.3
+            transitions[MarketScenario.HIGH_VOLATILITY] = 0.2
+        
+        elif current_scenario == MarketScenario.HIGH_VOLATILITY:
+            transitions[MarketScenario.CHOPPY] = 0.25
+            transitions[MarketScenario.TRENDING_UP] = 0.15 if direction == "up" else 0.05
+            transitions[MarketScenario.TRENDING_DOWN] = 0.15 if direction == "down" else 0.05
+        
+        elif current_scenario == MarketScenario.LOW_VOLATILITY:
+            transitions[MarketScenario.BREAKOUT_BUILDUP] = 0.3
+            transitions[MarketScenario.CONSOLIDATION] = 0.2
+        
+        # Volatility influences transitions
+        if volatility > 0.7:
+            transitions[MarketScenario.HIGH_VOLATILITY] += 0.1
+        elif volatility < 0.3:
+            transitions[MarketScenario.LOW_VOLATILITY] += 0.1
+        
+        # Normalize to ensure total probability <= 1.0
+        total_probability = sum(transitions.values())
+        if total_probability > 0.8:  # Leave room for continuation
+            scale_factor = 0.8 / total_probability
+            transitions = {k: v * scale_factor for k, v in transitions.items()}
+        
+        return transitions
+
+    def _analyze_pattern_direction(self, patterns: List[PatternInstance]) -> Optional[str]:
+        """
+        Analyze patterns to determine expected breakout direction
+        
+        Args:
+            patterns: List of detected patterns
+            
+        Returns:
+            Expected direction ("up", "down") or None if uncertain
+        """
+        # No patterns, no direction bias
+        if not patterns:
+            return None
+        
+        # Pattern-based directional bias (sorted by confidence)
+        bullish_patterns = ["double_bottom", "triple_bottom", "flag_bullish", "wedge_falling"]
+        bearish_patterns = ["double_top", "triple_top", "flag_bearish", "wedge_rising", "head_and_shoulder"]
+        # Neutral patterns depend on context: "triangle", "rectangle", "zigzag"
+        
+        # Check each pattern for directional bias
+        bullish_score = 0
+        bearish_score = 0
+        
+        for pattern in patterns:
+            # Weight by confidence
+            weight = pattern.confidence
+            
+            if pattern.pattern_name in bullish_patterns:
+                bullish_score += weight
+            elif pattern.pattern_name in bearish_patterns:
+                bearish_score += weight
+            elif pattern.pattern_name == "zigzag":
+                # ZigZag direction depends on the last swing
+                # We could analyze the pattern more deeply here
+                pass
+            elif pattern.pattern_name == "triangle":
+                # Triangles can break either way
+                # Ascending triangles tend bullish, descending bearish
+                # Would need more detail about triangle type
+                pass
+        
+        # Determine direction if there's a clear bias
+        if bullish_score > bearish_score * 1.5:
+            return "up"
+        elif bearish_score > bullish_score * 1.5:
+            return "down"
+        
+        return None
+        
+  
 
 # === Extended pattern API ===
 class PatternAPI:
@@ -795,10 +1627,12 @@ class PatternAPI:
         
     async def analyze_market_data(
         self, 
-        ohlcv: Dict[str, List], 
+        ohlcv: Dict[str, List],
+        interval:str,
         patterns_to_detect: List[str] = None
     ) -> Dict[str, Any]:
         try:
+            self.analyzer.interval = interval  # Set interval
             result = await self.analyzer.analyze_market(
                 ohlcv=ohlcv,
                 detect_patterns=patterns_to_detect
@@ -816,4 +1650,3 @@ class PatternAPI:
                 status_code=500, 
                 detail="Internal server error"
             )
-
