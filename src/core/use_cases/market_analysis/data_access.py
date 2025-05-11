@@ -47,7 +47,7 @@ async def get_ohlcv_from_db(
             start_time=start_time,
             end_time=end_time,
             page=1,
-            page_size=500,  # Default page size for technical analysis
+            page_size=1000,  # Default page size for technical analysis
             background_tasks=background_tasks
         )
 

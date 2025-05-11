@@ -123,14 +123,14 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         return None
 
     async def get_historical_data(
-    self, 
-    symbol: str, 
-    interval: str, 
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
-    page: int = 1,
-    page_size: int = 500
-) -> list[MarketDataEntity]:
+        self, 
+        symbol: str, 
+        interval: str, 
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        page: int = 1,
+        page_size: int = 500
+    ) -> list[MarketDataEntity]:
         """
         Get historical market data with pagination support.
         
@@ -176,7 +176,6 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         |> limit(n: {page_size}, offset: {offset})
         '''
         
-        
         try:
             result = self.client.query_api().query(query)
             parsed_records = []
@@ -197,7 +196,6 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
     
     def _flux_field_filter(fields: list[str]) -> str:
         return " or ".join([f'r._field == "{field}"' for field in fields])
-
 
     async def _get_downsampled_data(
         self, 
