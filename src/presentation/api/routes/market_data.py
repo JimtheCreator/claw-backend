@@ -22,10 +22,8 @@ from core.use_cases.market.market_data import delete_market_data
 # src/api/v1/routes/market_data.py
 from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 import websockets
-
-
 
 router = APIRouter(tags=["Market Data"])
 
@@ -87,7 +85,6 @@ async def get_market_data(
                 status_code=400,
                 detail="start_time must be before end_time"
             )
-        
 
         logger.info(f"🕒 Parsed start_time: {start_datetime}")
 

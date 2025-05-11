@@ -36,14 +36,14 @@ async def analyze_market(
             interval=interval,
             timeframe=request.timeframe
         )
-        pattern_api = PatternAPI()
+
+        pattern_api = PatternAPI(interval=interval)
         # Detect ALL patterns by default
         result = await pattern_api.analyze_market_data(
-            ohlcv=ohlcv,
-            interval=interval)
-        
+            ohlcv=ohlcv)
+
         return result
     except DataUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error " + str(e))

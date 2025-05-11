@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
 from common.config.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool
+from backend_function_tests.market_analysis.test_analysis import router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,6 +54,7 @@ app.add_middleware(
 # Include all routers
 app.include_router(market_data.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
+app.include_router(router, prefix="/api/v1/test")
 
 @app.get("/health")
 async def health_check():

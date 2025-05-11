@@ -1,5 +1,4 @@
 # src/core/use_cases/market/market_data.py
-# src/core/use_cases/market/market_data.py
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -158,7 +157,7 @@ async def fetch_crypto_data_paginated(
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     page: int = 1,
-    page_size: int = 500,
+    page_size: int = 1000,
     background_tasks: Optional[BackgroundTasks] = None
 ):
     """
@@ -586,7 +585,7 @@ async def delete_all_market_data():
             bucket=repo.bucket
         )
         
-        logger.warning("⚠️ ALL MARKET DATA HAS BEEN DELETED FROM INFLUXDB")
+        logger.info("⚠️ ALL MARKET DATA HAS BEEN DELETED FROM INFLUXDB")
         return {"status": "success", "message": "All market data has been deleted"}
         
     except Exception as e:
