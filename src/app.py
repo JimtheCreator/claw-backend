@@ -14,7 +14,7 @@ import core.services.crypto_list as crypto_data
 from presentation.api.routes import analysis
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
-from common.config.cache import redis_cache
+from infrastructure.database.redis.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool
 from backend_function_tests.market_analysis.test_analysis import router
 
@@ -69,6 +69,6 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
-
+ 
 # For NGROK TUNNELING USE
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000

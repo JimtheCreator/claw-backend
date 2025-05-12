@@ -7,7 +7,7 @@ from influxdb_client.client.exceptions import InfluxDBError
 from common.logger import logger
 import asyncio
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from common.config.cache import redis_cache
+from infrastructure.database.redis.cache import redis_cache
 import asyncio
 # Temporary test code
 

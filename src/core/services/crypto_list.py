@@ -5,7 +5,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from binance import AsyncClient
 from common.utils.data_processing import downsample_sparkline
-from common.config.cache import redis_cache
+from infrastructure.database.redis.cache import redis_cache
 import logging
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 import json

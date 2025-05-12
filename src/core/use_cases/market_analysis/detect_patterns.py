@@ -2492,6 +2492,842 @@ class PatternDetector:
         except Exception as e:
             logger.error(f"Three white soldiers detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
+        
+    @register_pattern("hanging_man")
+    async def _detect_hanging_man(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Hanging Man patterns (bearish reversal after uptrend)
+        Small body at the top, long lower shadow, minimal upper shadow.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "hanging_man"
+
+            # Need at least 5 candles (to confirm prior uptrend)
+            if len(opens) < 5:
+                return False, 0.0, ""
+
+            o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+            prior_closes = closes[-5:-1]
+
+            body = abs(o - c)
+            lower_shadow = min(o, c) - l
+            upper_shadow = h - max(o, c)
+            candle_range = h - l
+
+            if candle_range == 0: # Avoid division by zero for zero-range candles
+                return False, 0.0, ""
+
+            # Criteria for Hanging Man:
+            # 1. Occurs in an uptrend
+            is_uptrend = prior_closes[-1] > prior_closes[0] and np.all(np.diff(prior_closes[-3:]) >= 0) # Last 3 increasing or flat
+
+            # 2. Small real body (e.g., body is less than 1/3 of candle range)
+            small_body = body < (candle_range / 3)
+            
+            # 3. Lower shadow is long (e.g., at least 2x the body)
+            long_lower_shadow = lower_shadow >= (2 * body) if body > 0 else lower_shadow > 0.01 * c # Handle zero body case
+            
+            # 4. Little or no upper shadow (e.g., upper shadow is less than body size, or very small fraction of range)
+            short_upper_shadow = upper_shadow < body if body > 0 else upper_shadow < (0.1 * candle_range)
+            
+            # 5. Body is at the upper end of the trading range
+            body_at_top = (max(o,c) - min(o,c)) / candle_range < 0.33 and (h - max(o,c)) < (min(o,c) - l)
+
+
+            if is_uptrend and small_body and long_lower_shadow and short_upper_shadow and body_at_top:
+                confidence = 0.6
+                if lower_shadow > 2.5 * body and body > 0: confidence += 0.1
+                if upper_shadow < 0.5 * body and body > 0: confidence += 0.1
+                if prior_closes[-1] > prior_closes[0] * 1.02: confidence += 0.1 # Stronger prior uptrend
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Hanging Man detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("inverted_hammer")
+    async def _detect_inverted_hammer(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Inverted Hammer patterns (bullish reversal after downtrend)
+        Small body at the bottom, long upper shadow, minimal lower shadow.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "inverted_hammer"
+
+            # Need at least 5 candles (to confirm prior downtrend)
+            if len(opens) < 5:
+                return False, 0.0, ""
+
+            o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+            prior_closes = closes[-5:-1]
+
+            body = abs(o - c)
+            upper_shadow = h - max(o, c)
+            lower_shadow = min(o, c) - l
+            candle_range = h - l
+            
+            if candle_range == 0:
+                return False, 0.0, ""
+
+            # Criteria for Inverted Hammer:
+            # 1. Occurs in a downtrend
+            is_downtrend = prior_closes[-1] < prior_closes[0] and np.all(np.diff(prior_closes[-3:]) <= 0) # Last 3 decreasing or flat
+
+            # 2. Small real body
+            small_body = body < (candle_range / 3)
+            
+            # 3. Upper shadow is long (e.g., at least 2x the body)
+            long_upper_shadow = upper_shadow >= (2 * body) if body > 0 else upper_shadow > 0.01 * c
+            
+            # 4. Little or no lower shadow
+            short_lower_shadow = lower_shadow < body if body > 0 else lower_shadow < (0.1 * candle_range)
+            
+            # 5. Body is at the lower end of the trading range
+            body_at_bottom = (max(o,c) - min(o,c)) / candle_range < 0.33 and (min(o,c) - l) < (h - max(o,c))
+
+            if is_downtrend and small_body and long_upper_shadow and short_lower_shadow and body_at_bottom:
+                confidence = 0.6
+                if upper_shadow > 2.5 * body and body > 0: confidence += 0.1
+                if lower_shadow < 0.5 * body and body > 0: confidence += 0.1
+                if prior_closes[-1] < prior_closes[0] * 0.98: confidence += 0.1 # Stronger prior downtrend
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Inverted Hammer detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("tweezers_top")
+    async def _detect_tweezers_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Tweezer Top patterns (bearish reversal)
+        Two candles with similar highs after an uptrend.
+        First candle bullish, second bearish.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "tweezers_top"
+
+            if len(opens) < 3: # Need at least 2 candles for pattern, 1 for prior trend context
+                return False, 0.0, ""
+
+            h1, h2 = highs[-2], highs[-1]
+            c1_open, c1_close = opens[-2], closes[-2]
+            c2_open, c2_close = opens[-1], closes[-1]
+            
+            # Prior trend (simple check on candle before pattern)
+            is_uptrend = closes[-3] < opens[-2]
+
+            # First candle bullish, second bearish
+            first_bullish = c1_close > c1_open
+            second_bearish = c2_close < c2_open
+
+            # Highs are nearly identical (allow small tolerance, e.g., 0.1% of price)
+            tolerance = 0.001 * ((h1 + h2) / 2)
+            similar_highs = abs(h1 - h2) <= tolerance
+            
+            if is_uptrend and first_bullish and second_bearish and similar_highs:
+                confidence = 0.7
+                # Stronger if second candle's body is significant
+                if (c2_open - c2_close) > 0.5 * (c1_close - c1_open) and (c1_close - c1_open) > 0 : confidence += 0.1
+                # Stronger if it occurs after a more defined uptrend
+                if len(closes) >= 5 and closes[-5] < closes[-3]: confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Tweezers Top detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("tweezers_bottom")
+    async def _detect_tweezers_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Tweezer Bottom patterns (bullish reversal)
+        Two candles with similar lows after a downtrend.
+        First candle bearish, second bullish.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "tweezers_bottom"
+
+            if len(opens) < 3: # Need at least 2 candles for pattern, 1 for prior trend context
+                return False, 0.0, ""
+
+            l1, l2 = lows[-2], lows[-1]
+            c1_open, c1_close = opens[-2], closes[-2]
+            c2_open, c2_close = opens[-1], closes[-1]
+
+            # Prior trend
+            is_downtrend = closes[-3] > opens[-2]
+
+            # First candle bearish, second bullish
+            first_bearish = c1_close < c1_open
+            second_bullish = c2_close > c2_open
+
+            # Lows are nearly identical
+            tolerance = 0.001 * ((l1 + l2) / 2)
+            similar_lows = abs(l1 - l2) <= tolerance
+
+            if is_downtrend and first_bearish and second_bullish and similar_lows:
+                confidence = 0.7
+                if (c2_close - c2_open) > 0.5 * (c1_open - c1_close) and (c1_open - c1_close) > 0: confidence += 0.1
+                if len(closes) >= 5 and closes[-5] > closes[-3]: confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+                
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Tweezers Bottom detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("abandoned_baby")
+    async def _detect_abandoned_baby(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Abandoned Baby patterns (strong reversal)
+        Bullish: Downtrend -> Bearish Candle -> Gap Down -> Doji -> Gap Up -> Bullish Candle
+        Bearish: Uptrend   -> Bullish Candle -> Gap Up   -> Doji -> Gap Down -> Bearish Candle
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            
+            if len(opens) < 5: # Need 3 for pattern, 2 for prior trend context
+                return False, 0.0, ""
+
+            # Pattern candles
+            o1, h1, l1, c1 = opens[-3], highs[-3], lows[-3], closes[-3] # First candle
+            o2, h2, l2, c2 = opens[-2], highs[-2], lows[-2], closes[-2] # Doji (baby)
+            o3, h3, l3, c3 = opens[-1], highs[-1], lows[-1], closes[-1] # Third candle
+
+            # Prior trend
+            prior_trend_opens = opens[:-3]
+            prior_trend_closes = closes[:-3]
+            
+            avg_body_size = np.mean(np.abs(opens - closes)) if len(opens) > 1 else 0.01
+            doji_body_threshold = avg_body_size * 0.1 # Doji has very small body
+
+            # Check for Doji (baby)
+            is_doji = abs(o2 - c2) <= doji_body_threshold
+
+            if not is_doji:
+                return False, 0.0, ""
+
+            # Bullish Abandoned Baby
+            # 1. Prior downtrend
+            is_prior_downtrend = len(prior_trend_closes) >= 2 and prior_trend_closes[0] > prior_trend_closes[-1]
+            # 2. First candle is bearish
+            first_is_bearish = c1 < o1
+            # 3. Doji gaps below first candle (l2 > h1 is wrong, should be h1 < l2 for first candle's high below doji's low)
+            # Corrected: First candle's low (l1) is above Doji's high (h2)
+            gap1_bullish = l1 > h2 
+            # 4. Third candle is bullish
+            third_is_bullish = c3 > o3
+            # 5. Third candle gaps above Doji (h2 < l3)
+            gap2_bullish = h2 < l3
+            # 6. Third candle closes within the body of the first candle (optional, but stronger)
+            # For now, just the gaps and candle types
+
+            if is_prior_downtrend and first_is_bearish and gap1_bullish and third_is_bullish and gap2_bullish:
+                confidence = 0.85 # Strong pattern
+                if (o1-c1) > avg_body_size and (c3-o3) > avg_body_size: confidence += 0.1 # Large first/third candles
+                return True, round(min(confidence, 1.0), 2), "bullish_abandoned_baby"
+
+            # Bearish Abandoned Baby
+            # 1. Prior uptrend
+            is_prior_uptrend = len(prior_trend_closes) >= 2 and prior_trend_closes[0] < prior_trend_closes[-1]
+            # 2. First candle is bullish
+            first_is_bullish = c1 > o1
+            # 3. Doji gaps above first candle (h1 < l2)
+            gap1_bearish = h1 < l2
+            # 4. Third candle is bearish
+            third_is_bearish = c3 < o3
+            # 5. Third candle gaps below Doji (l2 > h3)
+            gap2_bearish = l2 > h3
+
+            if is_prior_uptrend and first_is_bullish and gap1_bearish and third_is_bearish and gap2_bearish:
+                confidence = 0.85
+                if (c1-o1) > avg_body_size and (o3-c3) > avg_body_size: confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), "bearish_abandoned_baby"
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Abandoned Baby detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("rising_three_methods")
+    async def _detect_rising_three_methods(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Rising Three Methods patterns (bullish continuation)
+        Long bullish -> 3 small bearish (within 1st's range) -> Long bullish (new high)
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "rising_three_methods"
+
+            if len(opens) < 7: # 5 for pattern, 2 for prior uptrend context
+                return False, 0.0, ""
+
+            # Pattern candles
+            o1, h1, l1, c1 = opens[-5], highs[-5], lows[-5], closes[-5]
+            o2, h2, l2, c2 = opens[-4], highs[-4], lows[-4], closes[-4]
+            o3, h3, l3, c3 = opens[-3], highs[-3], lows[-3], closes[-3]
+            o4, h4, l4, c4 = opens[-2], highs[-2], lows[-2], closes[-2]
+            o5, h5, l5, c5 = opens[-1], highs[-1], lows[-1], closes[-1]
+            
+            # Prior uptrend
+            is_uptrend = closes[-7] < closes[-6] < o1
+
+            # 1. First candle is long and bullish
+            is_c1_long_bullish = (c1 > o1) and ((c1 - o1) > np.mean(np.abs(opens[-10:-5] - closes[-10:-5])) if len(opens)>=10 else (c1-o1)>0)
+
+            # 2. Next three candles are small and ideally bearish (or mixed), within range of C1
+            are_middle_small_and_in_range = True
+            middle_candles_body_avg = np.mean([abs(o2-c2), abs(o3-c3), abs(o4-c4)])
+            if middle_candles_body_avg > 0.6 * (c1-o1) and (c1-o1) > 0 : are_middle_small_and_in_range = False # bodies too large
+            
+            for co, ch, cl, cc in [(o2,h2,l2,c2), (o3,h3,l3,c3), (o4,h4,l4,c4)]:
+                if not (cl >= l1 and ch <= h1 and cc < co) : # stay in range, ideally bearish
+                     # Allowing mixed, but must stay in range of C1's H-L
+                    if not (cl >= l1 and ch <= h1):
+                        are_middle_small_and_in_range = False
+                        break
+            # Middle candles should generally trend down slightly or sideways
+            middle_trend_down = c2 > c3 > c4 or (abs(c2-c4) < (0.2 * (c1-o1)) if (c1-o1)>0 else False)
+
+
+            # 3. Fifth candle is long and bullish, closes above C1's close and H1
+            is_c5_long_bullish_breakout = (c5 > o5) and (c5 > c1) and (c5 > h1) and \
+                                          ((c5 - o5) > (c1 - o1) if (c1-o1)>0 else (c5-o5)>0)
+
+
+            if is_uptrend and is_c1_long_bullish and are_middle_small_and_in_range and middle_trend_down and is_c5_long_bullish_breakout:
+                confidence = 0.75
+                if (c5-o5) > 1.2 * (c1-o1) and (c1-o1)>0: confidence += 0.1 # Stronger breakout
+                # Check if middle candles don't dip below open of C1
+                if np.min([l2,l3,l4]) > o1 : confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Rising Three Methods detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("falling_three_methods")
+    async def _detect_falling_three_methods(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Falling Three Methods patterns (bearish continuation)
+        Long bearish -> 3 small bullish (within 1st's range) -> Long bearish (new low)
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "falling_three_methods"
+
+            if len(opens) < 7: # 5 for pattern, 2 for prior downtrend context
+                return False, 0.0, ""
+
+            o1, h1, l1, c1 = opens[-5], highs[-5], lows[-5], closes[-5]
+            o2, h2, l2, c2 = opens[-4], highs[-4], lows[-4], closes[-4]
+            o3, h3, l3, c3 = opens[-3], highs[-3], lows[-3], closes[-3]
+            o4, h4, l4, c4 = opens[-2], highs[-2], lows[-2], closes[-2]
+            o5, h5, l5, c5 = opens[-1], highs[-1], lows[-1], closes[-1]
+            
+            is_downtrend = closes[-7] > closes[-6] > o1
+
+            is_c1_long_bearish = (c1 < o1) and ((o1 - c1) > np.mean(np.abs(opens[-10:-5] - closes[-10:-5])) if len(opens)>=10 else (o1-c1)>0)
+            
+            are_middle_small_and_in_range = True
+            middle_candles_body_avg = np.mean([abs(o2-c2), abs(o3-c3), abs(o4-c4)])
+            if middle_candles_body_avg > 0.6 * (o1-c1) and (o1-c1) >0: are_middle_small_and_in_range = False
+
+            for co, ch, cl, cc in [(o2,h2,l2,c2), (o3,h3,l3,c3), (o4,h4,l4,c4)]:
+                if not (cl >= l1 and ch <= h1 and cc > co): # Stay in range, ideally bullish
+                    if not (cl >= l1 and ch <= h1): # Must stay in H-L range of C1
+                        are_middle_small_and_in_range = False
+                        break
+            middle_trend_up = c2 < c3 < c4 or (abs(c2-c4) < (0.2 * (o1-c1)) if (o1-c1)>0 else False)
+
+            is_c5_long_bearish_breakdown = (c5 < o5) and (c5 < c1) and (c5 < l1) and \
+                                           ((o5 - c5) > (o1 - c1) if (o1-c1)>0 else (o5-c5)>0)
+
+            if is_downtrend and is_c1_long_bearish and are_middle_small_and_in_range and middle_trend_up and is_c5_long_bearish_breakdown:
+                confidence = 0.75
+                if (o5-c5) > 1.2 * (o1-c1) and (o1-c1)>0: confidence += 0.1
+                if np.max([h2,h3,h4]) < o1 : confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Falling Three Methods detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("hikkake")
+    async def _detect_hikkake(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Hikkake patterns (can be bullish or bearish "trap")
+        Complex pattern involving an inside bar then a false breakout.
+        Bullish Hikkake: Inside bar, then candle(s) break below inside bar's low, then a candle breaks above inside bar's high.
+        Bearish Hikkake: Inside bar, then candle(s) break above inside bar's high, then a candle breaks below inside bar's low.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            
+            # Minimum 4 candles for the simplest Hikkake (C1, C2=inside, C3=false_break, C4=confirmation)
+            # Often takes more for C3 and C4 to develop. Let's use a window of 6 for more reliability.
+            if len(opens) < 6:
+                return False, 0.0, ""
+
+            # Define inside bar (Harami) - C-3 is main bar, C-2 is inside bar
+            # For Hikkake, we look back. Let C1 be the large candle, C2 be the inside bar.
+            # The pattern plays out over C3, C4, C5...
+            
+            # Let's look at the last 4-6 candles.
+            # C1 (idx -N), C2 (idx -N+1, inside C1)
+            # C3 (idx -N+2) initial break
+            # C4 (idx -N+3) confirmation / trap spring
+
+            # Simpler approach: Look for inside bar (C-3, C-2), then C-1 breaks one way, Current (C0) breaks other way
+            
+            # Candel -3 (main), Candle -2 (inside)
+            o_m3, h_m3, l_m3, c_m3 = opens[-3], highs[-3], lows[-3], closes[-3] # Main bar
+            o_m2, h_m2, l_m2, c_m2 = opens[-2], highs[-2], lows[-2], closes[-2] # Inside bar
+
+            # Check for inside bar (C-2 body and range within C-1 body and range)
+            # More relaxed: C-2 high < C-3 high AND C-2 low > C-3 low
+            is_inside_bar = (h_m2 < h_m3 and l_m2 > l_m3) 
+            if not is_inside_bar:
+                 # Check Harami (C-2 body inside C-1 body)
+                body_m3_top = max(o_m3, c_m3)
+                body_m3_bottom = min(o_m3, c_m3)
+                body_m2_top = max(o_m2, c_m2)
+                body_m2_bottom = min(o_m2, c_m2)
+                is_inside_bar = (body_m2_top < body_m3_top and body_m2_bottom > body_m3_bottom)
+                if not is_inside_bar:
+                    return False, 0.0, ""
+
+
+            # Candle -1 (false breakout bar)
+            o_m1, h_m1, l_m1, c_m1 = opens[-1], highs[-1], lows[-1], closes[-1]
+            # Current candle (confirmation)
+            o_cur, h_cur, l_cur, c_cur = opens[-0], highs[-0], lows[-0], closes[-0]
+
+
+            # Bullish Hikkake: C-1 breaks below C-2 low, Current breaks above C-2 high
+            bullish_false_break = l_m1 < l_m2 
+            bullish_confirmation = c_cur > h_m2 # Close of current > high of inside bar
+
+            if bullish_false_break and bullish_confirmation:
+                # Further check: C-1 should ideally close below C-2 low or not far above
+                # And current candle should be strong bullish
+                if c_cur > o_cur and (c_cur - o_cur) > 0.5 * abs(o_m2 - c_m2) if abs(o_m2-c_m2)>0 else True :
+                    confidence = 0.7
+                    if h_m1 < h_m2: confidence += 0.1 # C-1 high also below inside bar high
+                    return True, round(min(confidence,1.0),2), "bullish_hikkake"
+
+            # Bearish Hikkake: C-1 breaks above C-2 high, Current breaks below C-2 low
+            bearish_false_break = h_m1 > h_m2
+            bearish_confirmation = c_cur < l_m2 # Close of current < low of inside bar
+            
+            if bearish_false_break and bearish_confirmation:
+                if c_cur < o_cur and (o_cur - c_cur) > 0.5 * abs(o_m2 - c_m2) if abs(o_m2-c_m2)>0 else True:
+                    confidence = 0.7
+                    if l_m1 > l_m2: confidence += 0.1 # C-1 low also above inside bar low
+                    return True, round(min(confidence,1.0),2), "bearish_hikkake"
+
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Hikkake detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("mat_hold")
+    async def _detect_mat_hold(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Mat Hold patterns (bullish/bearish continuation)
+        Bullish: Large Bullish -> Gap Up -> 2-4 small consolidating candles -> Large Bullish breakout
+        Bearish: Large Bearish -> Gap Down -> 2-4 small consolidating candles -> Large Bearish breakdown
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            
+            # Minimum 5 candles (1 initial, 2 consolidation, 1 breakout, 1 prior trend)
+            # Using 6 to be safe (1 initial, 3 consolidation, 1 breakout, 1 prior trend)
+            if len(opens) < 6:
+                return False, 0.0, ""
+
+            # Assuming 3 consolidation candles for this example, can be made more flexible
+            # C-4 (initial), C-3, C-2, C-1 (consolidation), C0 (breakout)
+            
+            # Bullish Mat Hold
+            o_init, h_init, l_init, c_init = opens[-5], highs[-5], lows[-5], closes[-5] # Initial Candle
+            # Consolidation candles
+            cons_opens = opens[-4:-1]
+            cons_highs = highs[-4:-1]
+            cons_lows = lows[-4:-1]
+            cons_closes = closes[-4:-1]
+            # Breakout candle
+            o_break, h_break, l_break, c_break = opens[-1], highs[-1], lows[-1], closes[-1]
+
+            avg_range_prior = np.mean(highs[-10:-5] - lows[-10:-5]) if len(highs) >= 10 else 0.01
+            initial_body = c_init - o_init
+            
+            # 1. Initial candle is large bullish
+            is_initial_bullish = c_init > o_init and initial_body > avg_range_prior * 0.7
+
+            if is_initial_bullish:
+                # 2. Gap up from initial candle's close to first consolidation candle's open/low
+                #    (or at least first consolidation opens above initial close and stays mostly above)
+                gap_up = cons_lows[0] > c_init # Stricter: cons_opens[0] > h_init
+                
+                # 3. Consolidation candles (2-4, using 3 here) stay above initial candle's low (ideally midpoint or high)
+                #    and are relatively small-bodied.
+                consolidation_valid = True
+                for i in range(len(cons_opens)):
+                    if cons_lows[i] < (l_init + initial_body * 0.3): # Must stay well above initial low
+                        consolidation_valid = False; break
+                    if abs(cons_opens[i] - cons_closes[i]) > initial_body * 0.6 : # Bodies should be smaller
+                        consolidation_valid = False; break
+                
+                # 4. Breakout candle is large bullish, closing above consolidation and initial high
+                is_breakout_bullish = c_break > o_break and (c_break - o_break) > initial_body * 0.8 and \
+                                      c_break > np.max(cons_highs) and c_break > h_init
+                
+                if gap_up and consolidation_valid and is_breakout_bullish:
+                    # Check prior uptrend
+                    if len(closes) >= 7 and closes[-7] < closes[-6] < o_init :
+                        confidence = 0.8
+                        if c_break > h_init * 1.01 : confidence += 0.1 # Stronger breakout
+                        return True, round(min(confidence,1.0),2), "bullish_mat_hold"
+
+            # Bearish Mat Hold (similar logic, inverted)
+            initial_body_bearish = o_init - c_init
+            is_initial_bearish = c_init < o_init and initial_body_bearish > avg_range_prior * 0.7
+
+            if is_initial_bearish:
+                gap_down = cons_highs[0] < c_init # Stricter: cons_opens[0] < l_init
+                consolidation_valid_bearish = True
+                for i in range(len(cons_opens)):
+                    if cons_highs[i] > (h_init - initial_body_bearish * 0.3):
+                        consolidation_valid_bearish = False; break
+                    if abs(cons_opens[i] - cons_closes[i]) > initial_body_bearish * 0.6:
+                        consolidation_valid_bearish = False; break
+                
+                is_breakout_bearish = c_break < o_break and (o_break - c_break) > initial_body_bearish * 0.8 and \
+                                      c_break < np.min(cons_lows) and c_break < l_init
+
+                if gap_down and consolidation_valid_bearish and is_breakout_bearish:
+                     if len(closes) >= 7 and closes[-7] > closes[-6] > o_init :
+                        confidence = 0.8
+                        if c_break < l_init * 0.99 : confidence += 0.1
+                        return True, round(min(confidence,1.0),2), "bearish_mat_hold"
+
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Mat Hold detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("spinning_top")
+    async def _detect_spinning_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Spinning Top patterns (indecision)
+        Small real body with upper and lower shadows longer than the body.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "spinning_top"
+
+            if len(opens) < 1:
+                return False, 0.0, ""
+
+            o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+
+            body = abs(o - c)
+            upper_shadow = h - max(o, c)
+            lower_shadow = min(o, c) - l
+            candle_range = h - l
+
+            if candle_range == 0: return False, 0.0, "" # Avoid division by zero
+
+            # Criteria for Spinning Top:
+            # 1. Small body (e.g., body is less than 1/3 of candle range, or less than average body size)
+            avg_body_size = np.mean(np.abs(opens - closes)) if len(opens) > 1 else 0.01
+            small_body = body < (candle_range / 3) and body < avg_body_size * 0.7
+
+            # 2. Upper shadow is long (e.g., > body size)
+            long_upper_shadow = upper_shadow > body if body > 0 else upper_shadow > 0.005 * c
+            
+            # 3. Lower shadow is long (e.g., > body size)
+            long_lower_shadow = lower_shadow > body if body > 0 else lower_shadow > 0.005 * c
+            
+            # 4. Shadows are roughly similar in length (e.g. ratio between 0.7 and 1.3)
+            shadow_ratio = upper_shadow / lower_shadow if lower_shadow > 0 else (0 if upper_shadow == 0 else 100)
+            similar_shadows = 0.7 < shadow_ratio < 1.3 or (upper_shadow == 0 and lower_shadow == 0 and body > 0) # allow no shadows if body is also small (like a short doji)
+
+            if small_body and long_upper_shadow and long_lower_shadow and similar_shadows:
+                confidence = 0.6
+                if body < avg_body_size * 0.4: confidence += 0.1
+                if upper_shadow > 1.5 * body and lower_shadow > 1.5 * body and body > 0: confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Spinning Top detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("marubozu")
+    async def _detect_marubozu(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Marubozu patterns (strong momentum)
+        Full body, little to no shadows.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            
+            if len(opens) < 1:
+                return False, 0.0, ""
+
+            o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+            body = abs(o - c)
+            candle_range = h - l
+            
+            if candle_range == 0 and body == 0 : return False, 0.0, "" # Avoid for zero line candles
+
+            # Threshold for "little to no shadow" (e.g., shadow is < 5% of body)
+            shadow_threshold_factor = 0.05
+            
+            is_bullish_marubozu = False
+            is_bearish_marubozu = False
+
+            # Bullish Marubozu: Open near Low, Close near High
+            if c > o: # Bullish candle
+                upper_shadow = h - c
+                lower_shadow = o - l
+                if upper_shadow < (body * shadow_threshold_factor) and \
+                   lower_shadow < (body * shadow_threshold_factor) and \
+                   body > 0.001 * c: # Body must exist
+                    is_bullish_marubozu = True
+                    pattern_type = "bullish_marubozu"
+            
+            # Bearish Marubozu: Open near High, Close near Low
+            elif o > c: # Bearish candle
+                upper_shadow = h - o
+                lower_shadow = c - l
+                if upper_shadow < (body * shadow_threshold_factor) and \
+                   lower_shadow < (body * shadow_threshold_factor) and \
+                   body > 0.001 * c:
+                    is_bearish_marubozu = True
+                    pattern_type = "bearish_marubozu"
+
+            if is_bullish_marubozu or is_bearish_marubozu:
+                confidence = 0.7
+                # Compare body to average body size
+                avg_body = np.mean(np.abs(opens - closes)) if len(opens) > 1 else body
+                if body > avg_body * 1.5: confidence += 0.2 # Stronger if body is large
+                if body / candle_range > 0.98 : confidence += 0.1 # Very little shadow
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Marubozu detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("harami")
+    async def _detect_harami(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Harami patterns (reversal/indecision)
+        Small second candle body completely engulfed by the first candle's body.
+        Bullish Harami: After downtrend, Large Bearish then Small Bullish.
+        Bearish Harami: After uptrend, Large Bullish then Small Bearish.
+        Harami Cross: Second candle is a Doji.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            
+            if len(opens) < 3: # 2 for pattern, 1 for prior trend
+                return False, 0.0, ""
+
+            o1, h1, l1, c1 = opens[-2], highs[-2], lows[-2], closes[-2] # First (large) candle
+            o2, h2, l2, c2 = opens[-1], highs[-1], lows[-1], closes[-1] # Second (small, inside) candle
+            
+            body1 = abs(o1 - c1)
+            body2 = abs(o2 - c2)
+
+            avg_body_size = np.mean(np.abs(opens[:-1] - closes[:-1])) if len(opens) > 2 else 0.01
+            doji_body_threshold = avg_body_size * 0.1
+
+            # Criteria for Harami:
+            # 1. Body of C2 is smaller than body of C1 (e.g. C2 body < 50% of C1 body)
+            # 2. Body of C2 is completely within the body of C1.
+            c1_top = max(o1, c1)
+            c1_bottom = min(o1, c1)
+            c2_top = max(o2, c2)
+            c2_bottom = min(o2, c2)
+
+            is_inside_body = (c2_top < c1_top) and (c2_bottom > c1_bottom)
+            is_body2_small = body2 < (body1 * 0.6) and body1 > avg_body_size * 0.8 # C1 should be decent size
+
+            if not (is_inside_body and is_body2_small):
+                return False, 0.0, ""
+
+            pattern_type = ""
+            confidence = 0.65
+
+            # Check for Harami Cross
+            is_harami_cross = body2 <= doji_body_threshold
+
+            # Bullish Harami / Bullish Harami Cross
+            # Prior downtrend
+            is_prior_downtrend = closes[-3] > o1 if len(closes) >=3 else False
+            # C1 is bearish
+            c1_is_bearish = c1 < o1
+            # C2 is bullish (for regular Harami)
+            c2_is_bullish = c2 > o2
+
+            if is_prior_downtrend and c1_is_bearish:
+                if is_harami_cross:
+                    pattern_type = "bullish_harami_cross"
+                    confidence += 0.1 # Cross is often stronger
+                elif c2_is_bullish:
+                    pattern_type = "bullish_harami"
+                
+                if pattern_type:
+                    if body1 > avg_body_size * 1.2 : confidence += 0.1 # Larger C1
+                    return True, round(min(confidence, 1.0), 2), pattern_type
+
+            # Bearish Harami / Bearish Harami Cross
+            # Prior uptrend
+            is_prior_uptrend = closes[-3] < o1 if len(closes) >=3 else False
+            # C1 is bullish
+            c1_is_bullish = c1 > o1
+            # C2 is bearish (for regular Harami)
+            c2_is_bearish = c2 < o2
+            
+            if is_prior_uptrend and c1_is_bullish:
+                if is_harami_cross:
+                    pattern_type = "bearish_harami_cross"
+                    confidence += 0.1
+                elif c2_is_bearish:
+                    pattern_type = "bearish_harami"
+                
+                if pattern_type:
+                    if body1 > avg_body_size * 1.2 : confidence += 0.1
+                    return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Harami detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("three_black_crows")
+    async def _detect_three_black_crows(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detect Three Black Crows patterns (bearish reversal after uptrend)
+        Three consecutive long bearish candles, each opening within previous body 
+        and closing progressively lower near its low.
+        """
+        try:
+            opens = np.array(ohlcv['open'])
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            closes = np.array(ohlcv['close'])
+            pattern_type = "three_black_crows"
+
+            if len(opens) < 5: # 3 for pattern, 2 for prior uptrend
+                return False, 0.0, ""
+
+            c1_o, c1_h, c1_l, c1_c = opens[-3], highs[-3], lows[-3], closes[-3]
+            c2_o, c2_h, c2_l, c2_c = opens[-2], highs[-2], lows[-2], closes[-2]
+            c3_o, c3_h, c3_l, c3_c = opens[-1], highs[-1], lows[-1], closes[-1]
+
+            # Prior uptrend
+            is_prior_uptrend = closes[-5] < closes[-4] < c1_o # Check two candles before pattern
+
+            # All three candles are bearish
+            are_bearish = (c1_c < c1_o) and (c2_c < c2_o) and (c3_c < c3_o)
+            if not are_bearish: return False, 0.0, ""
+
+            # Each closes progressively lower
+            progressive_lows = c1_c > c2_c > c3_c
+
+            # Each opens within the body of the previous candle
+            # C2 opens < C1_O and > C1_C
+            # C3 opens < C2_O and > C2_C
+            open_in_prior_body = (c1_c < c2_o < c1_o) and \
+                                 (c2_c < c3_o < c2_o)
+            
+            # Candles should be relatively long (compared to average body) and close near their lows
+            avg_body_size = np.mean(np.abs(opens[:-3] - closes[:-3])) if len(opens) > 4 else 0.01
+            body1 = c1_o - c1_c
+            body2 = c2_o - c2_c
+            body3 = c3_o - c3_c
+            
+            are_long_bodies = (body1 > avg_body_size * 0.7) and \
+                              (body2 > avg_body_size * 0.7) and \
+                              (body3 > avg_body_size * 0.7)
+            
+            close_near_low1 = (c1_c - c1_l) < (body1 * 0.2) if body1 > 0 else True
+            close_near_low2 = (c2_c - c2_l) < (body2 * 0.2) if body2 > 0 else True
+            close_near_low3 = (c3_c - c3_l) < (body3 * 0.2) if body3 > 0 else True
+            all_close_near_lows = close_near_low1 and close_near_low2 and close_near_low3
+
+            if is_prior_uptrend and progressive_lows and open_in_prior_body and are_long_bodies and all_close_near_lows:
+                confidence = 0.8
+                # More confidence if bodies are of similar size or growing
+                if body3 >= body2 >= body1 * 0.8: confidence += 0.1
+                return True, round(min(confidence, 1.0), 2), pattern_type
+            
+            return False, 0.0, ""
+
+        except Exception as e:
+            logger.error(f"Three Black Crows detection error: {str(e)}")
+            return False, 0.0, ""
 
     def find_key_levels(self, ohlcv: dict) -> Dict[str, float]:
         """Find key price levels from detected patterns and swing points"""
