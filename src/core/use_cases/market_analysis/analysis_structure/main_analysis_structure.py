@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
-from typing import Tuple, Dict, List, Optional, Any, Union
-from dataclasses import dataclass
+from typing import Tuple, Dict, List, Optional, Any, Union, Callable
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from collections import deque
@@ -13,6 +13,7 @@ import asyncio
 from common.logger import logger
 from core.use_cases.market_analysis.detect_patterns import PatternDetector, initialized_pattern_registry
 import traceback
+import json
 
 # === Market Context Definitions ===
 class MarketScenario(Enum):
@@ -28,7 +29,7 @@ class MarketScenario(Enum):
     DISTRIBUTION = "distribution"
     HIGH_VOLATILITY = "high_volatility"
     LOW_VOLATILITY = "low_volatility"
-    UNCHANGED = "unchanged" # Added UNCHANGED
+    UNCHANGED = "unchanged"
 
 @dataclass
 class PatternInstance:
@@ -40,14 +41,14 @@ class PatternInstance:
     key_levels: Dict[str, float]
     candle_indexes: List[int]
     timestamp_start: datetime
-    timestamp_end: datetime 
+    timestamp_end: datetime
     detected_at: datetime
     exact_pattern_type: str
-    market_structure: Optional[str] = None  # Added for context
-    # In PatternInstance dataclass
-    demand_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "bounced_from"
-    supply_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "broke_through"
-    volume_confirmation_at_zone: Optional[bool] = None # True if volume confirms the zone's significance
+    market_structure: Optional[str] = None
+    # Enhancements for Demand/Supply context
+    demand_zone_interaction: Optional[Dict[str, Any]] = None  # e.g., {"type": "test", "zone_id": "dz1", "strength": 0.7}
+    supply_zone_interaction: Optional[Dict[str, Any]] = None  # e.g., {"type": "breakthrough", "zone_id": "sz2"}
+    volume_confirmation_at_zone: Optional[bool] = None # Changed to Optional[bool]
 
 
     def overlaps_with(self, other: 'PatternInstance') -> bool:
@@ -56,37 +57,60 @@ class PatternInstance:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
+        demand_interaction_processed = None
+        if self.demand_zone_interaction is not None:
+            demand_interaction_processed = {
+                k: float(v) if isinstance(v, (float, np.floating)) else v
+                for k, v in self.demand_zone_interaction.items()
+            }
+            # REMOVED: demand_interaction = json.dumps(demand_interaction_processed)
+            # Now it will be a dictionary, not a string.
+        
+        supply_interaction_processed = None
+        if self.supply_zone_interaction is not None:
+            supply_interaction_processed = {
+                k: float(v) if isinstance(v, (float, np.floating)) else v
+                for k, v in self.supply_zone_interaction.items()
+            }
+            # REMOVED: supply_interaction = json.dumps(supply_interaction_processed)
+            # Now it will be a dictionary, not a string.
+        
+        # If volume_confirmation_at_zone is now Optional[bool]
+        # The conversion to boolean is no longer needed here if it's already boolean or None.
+        # It can be directly used.
+
         return {
             "pattern": self.pattern_name,
             "start_idx": self.start_idx,
             "end_idx": self.end_idx,
-            "confidence": round(self.confidence, 2), # Round confidence
-            "key_levels": {k: round(v, 4) if isinstance(v, float) else v for k, v in self.key_levels.items()}, # Round key levels
+            "confidence": round(self.confidence, 2),
+            "key_levels": {k: round(v, 4) if isinstance(v, float) else v for k, v in self.key_levels.items()},
             "candle_indexes": self.candle_indexes,
-            "timestamp_start": self.timestamp_start,  # Add actual start timestamp
-            "timestamp_end": self.timestamp_end,   # Add actual end timestamp
+            "timestamp_start": self.timestamp_start.isoformat(),
+            "timestamp_end": self.timestamp_end.isoformat(),
             "detection_time": self.detected_at.isoformat(),
-            "exact_pattern_type": self.exact_pattern_type,  # ✅ Add this line
-            "market_structure": self.market_structure,  # Added for context
-            "demand_zone_interaction": self.demand_zone_interaction,
-            "supply_zone_interaction": self.supply_zone_interaction,
-            "volume_confirmation_at_zone": self.volume_confirmation_at_zone
+            "exact_pattern_type": self.exact_pattern_type,
+            "market_structure": self.market_structure,
+            "demand_zone_interaction": demand_interaction_processed, # Will be a dict or None
+            "supply_zone_interaction": supply_interaction_processed, # Will be a dict or None
+            "volume_confirmation_at_zone": self.volume_confirmation_at_zone # Directly use if type is Optional[bool]
         }
-
 
 @dataclass
 class MarketContext:
     """Class to represent the current market context"""
     scenario: MarketScenario
-    volatility: float  # Normalized volatility score
-    trend_strength: float  # -1.0 to 1.0 (strong down to strong up)
-    volume_profile: str  # "increasing", "decreasing", "steady", "spiking"
-    support_levels: List[float]
-    resistance_levels: List[float]
-    context: Dict[str, Any]  # Added context dictionary for enhanced analysis
-    # In MarketContext dataclass
-    demand_zones: List[Dict[str, float]] # List of dicts, e.g., [{"top": 100, "bottom": 98, "strength": 0.8, "volume_profile": "high"}]
-    supply_zones: List[Dict[str, float]] # List of dicts, e.g., [{"top": 110, "bottom": 108, "strength": 0.7, "volume_profile": "increasing"}]
+    volatility: float
+    trend_strength: float
+    volume_profile: str
+    support_levels: List[float] # Will be derived from top demand zones
+    resistance_levels: List[float] # Will be derived from bottom supply zones
+    context: Dict[str, Any]
+    # Enhancements for Demand/Supply
+    demand_zones: List[Dict[str, Any]] = field(default_factory=list) # e.g., [{"id": "dz1", "bottom": 98, "top": 100, "strength": 0.8, "touches": 3, "volume_profile": "high"}]
+    supply_zones: List[Dict[str, Any]] = field(default_factory=list) # e.g., [{"id": "sz1", "bottom": 108, "top": 110, "strength": 0.7, "touches": 2, "volume_profile": "increasing"}]
+    active_patterns: List[PatternInstance] = field(default_factory=list) # Keep track of active patterns for context
+
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
@@ -95,17 +119,18 @@ class MarketContext:
             "volatility": round(self.volatility, 2),
             "trend_strength": round(self.trend_strength, 2),
             "volume_profile": self.volume_profile,
-            "support_levels": [round(s, 2) for s in self.support_levels][:3],  # Top 3 supports
-            "resistance_levels": [round(r, 2) for r in self.resistance_levels][:3],  # Top 3 resistances
-            "context": {  # Include enhanced context information
-                "primary_pattern_type": self.context.get("primary_pattern_type", "unknown"), # Renamed key for clarity
+            "support_levels": [round(s, 4) for s in self.support_levels][:3],
+            "resistance_levels": [round(r, 4) for r in self.resistance_levels][:3],
+            "demand_zones": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in dz.items()} for dz in self.demand_zones[:3]], # Top 3 relevant
+            "supply_zones": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in sz.items()} for sz in self.supply_zones[:3]], # Top 3 relevant
+            "context": {
+                "primary_pattern_type": self.context.get("primary_pattern_type", "unknown"),
                 "market_structure": self.context.get("market_structure", "unknown"),
-                "potential_scenario": self.context.get("potential_scenario", "unknown")
+                "potential_scenario": self.context.get("potential_scenario", "unknown"),
+                "demand_supply_summary": self.context.get("demand_supply_summary", "N/A")
             },
-            "demand_zones": self.demand_zones,
-            "supply_zones": self.supply_zones
+            "active_patterns_summary": [p.to_dict() for p in self.active_patterns]
         }
-
 
 # === Market Analyzer - Core Component ===
 class MarketAnalyzer:
@@ -143,6 +168,8 @@ class MarketAnalyzer:
         "three_outside_up": "strong bullish reversal", "three_outside_down": "strong bearish reversal", # Added 3 outside
 
     }
+
+
 
     # Helper mapping for confidence levels to descriptive terms
     CONFIDENCE_LEVELS = {
@@ -199,41 +226,63 @@ class MarketAnalyzer:
         ohlcv: Dict[str, List],
         detect_patterns: List[str] = None
     ) -> Dict[str, Any]:
-        """
-        Main entry point for market analysis
-
-        Args:
-            ohlcv: Dictionary with OHLCV data
-            detect_patterns: List of pattern names to detect, defaults to all registered patterns
-
-        Returns:
-            Dictionary with analysis results, context, and forecast
-        """
         try:
-            # Convert to DataFrame for easier manipulation
             df = self._prepare_dataframe(ohlcv)
 
-            # 1. Detect patterns across different window sizes
-            detected_patterns = await self._detect_patterns_with_windows(
-                df, patterns_to_detect=detect_patterns
+            # Initialize context with zones first, so pattern detection can use them.
+            # This requires a slight refactor if _analyze_market_context relies on patterns.
+            # For now, let's assume a basic context can be formed, then patterns detected, then context refined.
+            # Simplified flow for this example:
+            # 1. Preliminary context (volatility, basic trend, zones)
+            # This part is tricky because _analyze_market_context itself calls _determine_scenario which uses patterns.
+            # Chicken-and-egg. A practical solution might be:
+            # - Calc zones independently first.
+            # - Store them in a temporary var.
+            # - Detect patterns, giving them access to these temp zones.
+            # - Then, call full _analyze_market_context which uses these patterns AND the temp zones.
+
+            # Let's refine `_analyze_market_context` to NOT call `_determine_scenario` directly,
+            # but rather `analyze_market` orchestrates this.
+            
+            # Step 1: Calculate initial features and zones
+            volatility_metric = self._calculate_volatility(df.tail(int(len(df)*0.2)))
+            trend_strength = self._calculate_trend_strength(df)
+            volume_profile = self._analyze_volume_profile(df.tail(int(len(df)*0.2)))
+            demand_zones = self._identify_demand_zones(df, lookback_period=min(len(df), 250), pivot_order=max(3, int(len(df)*0.02)))
+            supply_zones = self._identify_supply_zones(df, lookback_period=min(len(df), 250), pivot_order=max(3, int(len(df)*0.02)))
+
+            # Create a temporary context for pattern detection to use zones
+            # This is a simplified representation; a full context object might be built here
+            self.current_context = MarketContext( # Partial context
+                scenario=MarketScenario.UNDEFINED, # Will be determined later
+                volatility=volatility_metric,
+                trend_strength=trend_strength, # Placeholder
+                volume_profile=volume_profile, # Placeholder
+                support_levels=[], resistance_levels=[],
+                demand_zones=demand_zones, supply_zones=supply_zones,
+                context={}, active_patterns=[]
             )
+            
+            # Step 2: Detect patterns using the context that now contains zones
+            detected_patterns = await self._detect_patterns_with_windows(df, patterns_to_detect=detect_patterns)
 
-            # 2. Analyze market context (scenario recognition)
+            # Step 3: Finalize market context using detected patterns and initial features/zones
+            # _analyze_market_context will use the patterns and the pre-calculated zones.
             self.current_context = self._analyze_market_context(df, detected_patterns)
+            # Note: _analyze_market_context now takes patterns as an argument and uses self.current_context.demand_zones/supply_zones
+            # if they were already populated, or it recalculates them.
+            # To ensure it uses the ones from Step 1, we can pass them directly or rely on it to re-calculate consistently.
+            # For clarity, let _analyze_market_context always calculate its own zones, or be passed them explicitly.
+            # The current _analyze_market_context recalculates zones.
 
-            # 3. Prepare response
             result = {
-                "patterns": [p.to_dict() for p in detected_patterns],
+                "patterns": [p.to_dict() for p in self.current_context.active_patterns], # Use patterns from the final context
                 "market_context": self.current_context.to_dict(),
                 "analysis_timestamp": datetime.now().isoformat()
             }
-
-            # Update pattern history
-            for pattern in detected_patterns:
+            for pattern in detected_patterns: # Or self.current_context.active_patterns
                 self.pattern_history.append(pattern)
-
             return result
-
         except ValueError as ve:
             logger.error(f"Data preparation error: {str(ve)}")
             raise
@@ -284,45 +333,27 @@ class MarketAnalyzer:
         return df
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add common technical indicators to the DataFrame"""
-        # Basic returns
         df['returns'] = df['close'].pct_change()
         df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
-
-        # Moving averages
         df['sma_5'] = df['close'].rolling(window=5).mean()
         df['sma_20'] = df['close'].rolling(window=20).mean()
-        df['sma_50'] = df['close'].rolling(window=50).mean() # Added 50 SMA
-
-        # Bollinger Bands
+        df['sma_50'] = df['close'].rolling(window=50).mean()
         df['std_20'] = df['close'].rolling(window=20).std()
         df['upper_band'] = df['sma_20'] + (df['std_20'] * 2)
         df['lower_band'] = df['sma_20'] - (df['std_20'] * 2)
-
-        # Volatility
-        df['atr'] = self._calculate_atr(df)
-        df['volatility'] = df['atr'] / (df['close'] + 1e-10) # Use ATR for volatility
-
-        # Volume indicators
+        df['atr'] = self._calculate_atr(df.copy()) # Pass copy to avoid SettingWithCopyWarning
+        df['volatility'] = (df['atr'] / (df['close'] + 1e-10)) * 100 # ATR as percentage
         df['volume_sma_5'] = df['volume'].rolling(window=5).mean()
+        df['volume_sma_20'] = df['volume'].rolling(window=20).mean() # Added for longer term volume trend
         df['volume_change'] = df['volume'].pct_change()
-
-        # Trend indicators
-        df['price_change_rate'] = (df['close'] - df['close'].shift(5)) / df['close'].shift(5)
-
-        # Candlestick analysis
+        df['price_change_rate'] = (df['close'] - df['close'].shift(5)) / (df['close'].shift(5) + 1e-10)
         df['body_size'] = np.abs(df['close'] - df['open'])
         df['shadow_size'] = df['high'] - df['low'] - df['body_size']
-        df['body_to_shadow'] = df['body_size'] / (df['shadow_size'].replace(0, 1e-10)) # Avoid division by zero
+        df['body_to_shadow'] = df['body_size'] / (df['shadow_size'].replace(0, 1e-10))
         df['is_bullish'] = df['close'] > df['open']
-
-        # Momentum Indicator (for divergence)
-        df['momentum'] = df['close'].diff(10) # Added momentum indicator
-
-        # Fill missing data - crucial after indicator calculations
+        df['momentum'] = df['close'].diff(10)
         df.bfill(inplace=True)
         df.ffill(inplace=True)
-
         return df
 
     # In MarketAnalyzer class (main_analysis_structure.py)
@@ -357,108 +388,154 @@ class MarketAnalyzer:
         df: pd.DataFrame,
         patterns_to_detect: List[str] = None
     ) -> List[PatternInstance]:
-        """Enhanced pattern detection with adaptive windows and context"""
         all_detected_patterns = []
         if not patterns_to_detect:
             patterns_to_detect = list(initialized_pattern_registry.keys())
 
-        # Calculate recent volatility to adapt window sizes and confidence
-        recent_volatility = self._calculate_volatility(df.tail(50)) # Use a larger window for volatility context
-
-        # Adapt window sizes based on volatility and interval factor
+        recent_volatility = self._calculate_volatility(df.tail(50))
         interval_factor = self._get_interval_factor()
         adaptive_window_sizes = sorted(list(set(
             [max(5, int(ws * (1 + recent_volatility * 0.5) * interval_factor)) for ws in self.window_sizes] +
-            [max(10, int(len(df) * 0.1 * interval_factor))] # Add a window size relative to total data size
+            [max(10, int(len(df) * 0.1 * interval_factor))]
         )))
+        confidence_threshold = min(0.6, max(0.35, 0.4 + (recent_volatility * 0.1)))
 
+        # Global demand/supply zones for context (fetched from current_context if available)
+        # These are calculated once per analyze_market call.
+        demand_zones = self.current_context.demand_zones if self.current_context else []
+        supply_zones = self.current_context.supply_zones if self.current_context else []
 
-        # Dynamic confidence threshold
-        confidence_threshold = 0.4 + (recent_volatility * 0.1) # Slightly higher threshold in volatile markets, lower in calm
-        confidence_threshold = min(0.6, max(0.35, confidence_threshold)) # Keep threshold within reasonable bounds
+        
 
-        # For each adaptive window size
         for window_size in adaptive_window_sizes:
             if window_size > len(df) or window_size < self.min_pattern_length:
                 continue
+            step_size = max(1, window_size // (8 if window_size < 30 else 5))
 
-            # More fine-grained sliding for smaller windows, coarser for larger
-            step_size = max(1, window_size // (8 if window_size < 30 else 5)) # Adjusted step size for more overlap
-
-            # For each sliding window with appropriate overlap
             for start_idx in range(0, len(df) - window_size + 1, step_size):
                 end_idx = start_idx + window_size
                 window_data = df.iloc[start_idx:end_idx].copy()
-
-                # Skip windows with insufficient data after potential dropna in _prepare_dataframe
-                if len(window_data) < self.min_pattern_length:
+                if len(window_data) < self.min_pattern_length: continue
+                if window_data['close'].std() < df['close'].std() * 0.05 and recent_volatility > 0.3: # Reduced threshold slightly
                     continue
 
-                # Skip windows with too little price movement relative to volatility
-                # Use a more robust check for price movement
-                if window_data['close'].std() < df['close'].std() * 0.1 and recent_volatility > 0.3:
-                     continue
-
-
-                # Convert window to OHLCV format
                 window_ohlcv = {
-                    'open': window_data['open'].tolist(),
-                    'high': window_data['high'].tolist(),
-                    'low': window_data['low'].tolist(),
-                    'close': window_data['close'].tolist(),
-                    'volume': window_data['volume'].tolist(),
-                    'timestamp': window_data['timestamp'].tolist()
+                    'open': window_data['open'].tolist(), 'high': window_data['high'].tolist(),
+                    'low': window_data['low'].tolist(), 'close': window_data['close'].tolist(),
+                    'volume': window_data['volume'].tolist(), 'timestamp': window_data['timestamp'].tolist()
                 }
+                market_structure_local = self._detect_local_structure(window_data)
+                relevant_patterns = self._get_structure_relevant_patterns(market_structure_local, patterns_to_detect)
 
-
-                # More intelligent pattern matching based on context
-                market_structure = self._detect_local_structure(window_data)
-                # Ensure market_context is always a string, default to "unknown" if result is None
-                market_context_str = str(market_structure) if market_structure is not None else "unknown"
-                
-                # Choose patterns to check based on structure
-                relevant_patterns = self._get_structure_relevant_patterns(market_context_str, patterns_to_detect)
-
-                # Detect patterns in this window
                 for pattern_name in relevant_patterns:
                     detector = PatternDetector()
                     detected, confidence, pattern_type = await detector.detect(pattern_name, window_ohlcv)
 
-                    if detected and confidence > confidence_threshold:  # Use adaptive threshold
+                    if detected and confidence > confidence_threshold:
                         key_levels = detector.find_key_levels(window_ohlcv)
+                        # Adjust key levels that are indices
+                        adjusted_key_levels = {
+                            k: (v + start_idx if isinstance(v, int) and 'idx' in k else v)
+                            for k, v in key_levels.items()
+                        }
 
-                        # Adjust key levels back to global index
-                        # Correct way - only adjust indices, not price values:
-                        adjusted_key_levels = {}
-                        for k, v in key_levels.items():
-                            # Only adjust values that are actually indices
-                            if k in ['pivot_idx', 'pattern_start_idx', 'pattern_end_idx']:  # Only add to actual indices
-                                adjusted_key_levels[k] = v + start_idx
-                            else:
-                                adjusted_key_levels[k] = v  # Keep price values as they are
-
-
-                        # Modified pattern instance creation
-                        pattern = PatternInstance(
-                            pattern_name=pattern_name,
-                            start_idx=start_idx,  # Keep this as is for window tracking
-                            end_idx=end_idx,      # Don't subtract 1 - be consistent with your slicing convention
-                            confidence=confidence,
-                            key_levels=adjusted_key_levels,
-                            # Store both relative and absolute references
+                        pattern_instance = PatternInstance(
+                            pattern_name=pattern_name, start_idx=start_idx, end_idx=end_idx,
+                            confidence=confidence, key_levels=adjusted_key_levels,
                             candle_indexes=list(range(start_idx, end_idx)),
-                            timestamp_start=window_data["timestamp"].iloc[0],  # Add actual start timestamp
-                            timestamp_end=window_data["timestamp"].iloc[-1],   # Add actual end timestamp
-                            detected_at=window_data["timestamp"].iloc[-1],
-                            exact_pattern_type=pattern_type,
-                            market_structure=market_context_str
+                            timestamp_start=window_data["timestamp"].iloc[0],
+                            timestamp_end=window_data["timestamp"].iloc[-1],
+                            detected_at=window_data["timestamp"].iloc[-1], # Or use datetime.now()
+                            exact_pattern_type=pattern_type, market_structure=market_structure_local
                         )
 
-                        # Add to results with enhanced redundancy check
-                        self._add_with_smart_redundancy_check(all_detected_patterns, pattern)
+                        # --- Integrate Demand/Supply Context for the Pattern ---
+                        # Proposed Fix (Full Pattern Check)
+                        window_lows = window_data['low'].values
+                        window_highs = window_data['high'].values
+
+                                           
+                        # Check interaction with Demand Zones
+                        for dz in demand_zones:
+                            # --- Start of Fixed Zone Interaction Code ---
+                            # Get window data once per pattern
+                            window_lows = window_data['low'].values
+                            window_highs = window_data['high'].values
+                            window_volumes = window_ohlcv['volume']
+                            
+                            # Calculate volume metrics once per pattern
+                            baseline_volume = df['volume_sma_20'].iloc[-1]
+                            avg_volume_in_window = np.mean(window_volumes)
+                            volume_ratio = avg_volume_in_window / baseline_volume
+                            high_volume_candles = sum(1 for v in window_volumes if v > baseline_volume * 1.5)
+                            zone_intersection = False
+                            # Check each candle in pattern window
+                            for low, high in zip(window_lows, window_highs):
+                                if (dz['bottom'] <= high) and (dz['top'] >= low):
+                                    zone_intersection = True
+                                    break
+                            
+                            if zone_intersection:
+                                pattern_instance.demand_zone_interaction = {
+                                    "type": "test_bounce_from_demand",
+                                    "zone_id": dz['id'],
+                                    "strength": dz['strength'],
+                                    "zone_bottom": dz['bottom'],
+                                    "zone_top": dz['top']
+                                }
+                                
+                                if "bullish" in pattern_name or "bottom" in pattern_name or "inverse" in pattern_name:
+                                    pattern_instance.confidence = min(1.0, pattern_instance.confidence + (0.1 * dz['strength']))
+                            
+                                # Confirm if pattern volume is above average AND has spikes
+                                pattern_instance.volume_confirmation_at_zone = (
+                                    volume_ratio > 1.2 and  # Whole pattern volume 20% above baseline
+                                    high_volume_candles >= 2  # At least 2 standout spikes
+                                )
+                                break # Found interaction
+
+                        # Check interaction with Supply Zones
+                        for sz in supply_zones:
+                            # --- Start of Fixed Zone Interaction Code ---
+                            # Get window data once per pattern
+                            window_lows = window_data['low'].values
+                            window_highs = window_data['high'].values
+                            window_volumes = window_ohlcv['volume']
+                            
+                            # Calculate volume metrics once per pattern
+                            baseline_volume = df['volume_sma_20'].iloc[-1]
+                            avg_volume_in_window = np.mean(window_volumes)
+                            volume_ratio = avg_volume_in_window / baseline_volume
+                            high_volume_candles = sum(1 for v in window_volumes if v > baseline_volume * 1.5)
+                            zone_intersection = False
+                            # Check each candle in pattern window
+                            for low, high in zip(window_lows, window_highs):
+                                if (dz['bottom'] <= high) and (dz['top'] >= low):
+                                    zone_intersection = True
+                                    break
+                            
+                            if zone_intersection:
+                                pattern_instance.demand_zone_interaction = {
+                                    "type": "test_bounce_from_demand",
+                                    "zone_id": dz['id'],
+                                    "strength": dz['strength'],
+                                    "zone_bottom": dz['bottom'],
+                                    "zone_top": dz['top']
+                                }
+
+                            if "bearish" in pattern_name or "top" in pattern_name or "head_and_shoulder" == pattern_name and "inverse" not in pattern_name :
+                                pattern_instance.confidence = min(1.0, pattern_instance.confidence + (0.1 * sz['strength']))
+                            
+                            # Confirm if pattern volume is above average AND has spikes
+                            pattern_instance.volume_confirmation_at_zone = (
+                                volume_ratio > 1.2 and  # Whole pattern volume 20% above baseline
+                                high_volume_candles >= 2  # At least 2 standout spikes
+                            )
+                            break
+
+                        self._add_with_smart_redundancy_check(all_detected_patterns, pattern_instance)
 
         return all_detected_patterns
-
 
     def _add_if_not_redundant(
         self,
@@ -487,51 +564,11 @@ class MarketAnalyzer:
         """Determine the current market context/scenario"""
         # Get the most recent data (last 20% of the dataframe)
         recent_data = df.iloc[-int(len(df)*0.2):].copy()
-
+        trend_strength = self._calculate_trend_strength(df) # Existing method
+        
         # 1. Calculate volatility
-        volatility = self._calculate_volatility(recent_data)
-        normalized_volatility = min(1.0, volatility * 100)  # Scale to 0-1
-
-        # 2. Determine trend strength and direction
-        # Use a combination of recent price change and MA position/slope
-        if len(df) >= 50: # Need enough data for SMAs
-            # Calculate trend strength based on position relative to SMAs and their slopes
-            close_price = df['close'].iloc[-1]
-            sma_20 = df['sma_20'].iloc[-1]
-            sma_50 = df['sma_50'].iloc[-1]
-            std_20 = df['std_20'].iloc[-1] if 'std_20' in df.columns and not pd.isna(df['std_20'].iloc[-1]) else None
-
-
-            # Trend direction based on SMAs
-            if sma_20 > sma_50 and close_price > sma_20:
-                trend_direction = 1 # Uptrend
-            elif sma_20 < sma_50 and close_price < sma_20:
-                 trend_direction = -1 # Downtrend
-            else:
-                 trend_direction = 0 # Sideways/Unclear
-
-            # Trend magnitude based on distance from SMAs (normalized by std dev if available)
-            if std_20 is not None and std_20 > 1e-10: # Avoid division by zero
-                 trend_magnitude = abs(close_price - sma_20) / std_20
-                 trend_magnitude = min(1.0, trend_magnitude * 0.5) # Scale magnitude
-            else:
-                trend_magnitude = 0
-
-            # Combined trend strength
-            trend_strength = trend_direction * trend_magnitude
-
-            # Incorporate recent price change
-            if len(recent_data) > 1:
-                recent_price_change = (recent_data['close'].iloc[-1] - recent_data['close'].iloc[0]) / recent_data['close'].iloc[0]
-                trend_strength = trend_strength * 0.7 + np.sign(recent_price_change) * min(1.0, abs(recent_price_change) * 10) * 0.3 # Blend with recent price change
-                trend_strength = np.clip(trend_strength, -1.0, 1.0) # Clip to -1 to 1 range
-            else:
-                trend_strength = 0 # Not enough data for recent change
-
-        else:
-             trend_strength = 0 # Not enough data for meaningful trend analysis
-
-
+        volatility_metric = self._calculate_volatility(recent_data)
+        
         # 3. Analyze volume profile
         volume_profile = self._analyze_volume_profile(recent_data)
 
@@ -540,38 +577,60 @@ class MarketAnalyzer:
         support_levels = self._find_support_levels(df)
         resistance_levels = self._find_resistance_levels(df)
 
-        # 4a. Identify Demand and Supply Zones
-        demand_zones = self._identify_demand_zones(df) # Implement this method
-        supply_zones = self._identify_supply_zones(df) # Implement this method
+        # --- Identify Demand and Supply Zones ---
+        demand_zones = self._identify_demand_zones(df, lookback_period=min(len(df), 250), pivot_order=max(3, int(len(df)*0.02)))
+        supply_zones = self._identify_supply_zones(df, lookback_period=min(len(df), 250), pivot_order=max(3, int(len(df)*0.02)))
+
+        # Derive simple support/resistance lines from zones for backward compatibility / simple display
+        derived_supports = sorted(list(set(dz['bottom'] for dz in demand_zones))) if demand_zones else self._find_support_levels(df.tail(100)) # Fallback to old method if no zones
+        derived_resistances = sorted(list(set(sz['top'] for sz in supply_zones)), reverse=True) if supply_zones else self._find_resistance_levels(df.tail(100))
 
         # 5. Determine the market scenario
         scenario = self._determine_scenario(
             df,
             trend_strength,
-            normalized_volatility,
+            volatility_metric,
             volume_profile,
             patterns,
             demand_zones,
             supply_zones
         )
 
+        current_price = df['close'].iloc[-1]
+        demand_supply_summary = "N/A"
+        if demand_zones and supply_zones:
+            closest_dz = min(demand_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price > z['top'] else current_price - z['top']) if current_price > demand_zones[0]['top'] else demand_zones[0]
+            closest_sz = min(supply_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price < z['bottom'] else z['bottom'] - current_price) if current_price < supply_zones[0]['bottom'] else supply_zones[0]
+            demand_supply_summary = f"Nearest Demand: {closest_dz['bottom']:.2f}-{closest_dz['top']:.2f} (Str: {closest_dz['strength']}). Nearest Supply: {closest_sz['bottom']:.2f}-{closest_sz['top']:.2f} (Str: {closest_sz['strength']})."
+        elif demand_zones:
+            closest_dz = min(demand_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price > z['top'] else current_price - z['top']) if current_price > demand_zones[0]['top'] else demand_zones[0]
+            demand_supply_summary = f"Nearest Demand: {closest_dz['bottom']:.2f}-{closest_dz['top']:.2f} (Str: {closest_dz['strength']})."
+        elif supply_zones:
+            closest_sz = min(supply_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price < z['bottom'] else z['bottom'] - current_price) if current_price < supply_zones[0]['bottom'] else supply_zones[0]
+            demand_supply_summary = f"Nearest Supply: {closest_sz['bottom']:.2f}-{closest_sz['top']:.2f} (Str: {closest_sz['strength']})."
+
+
         # Enhanced context determination
-        context = {
-            "primary_pattern_type": self._determine_primary_pattern_type(patterns), # Renamed key
-            "market_structure": self._determine_market_structure(df),
-            "potential_scenario": scenario.value # Use the determined scenario
+        context_details = {
+            "primary_pattern_type": self._determine_primary_pattern_type(patterns),
+            "market_structure": self._determine_market_structure(df), # This uses swings, MAs etc.
+            "potential_scenario": scenario.value, # Redundant with MarketContext.scenario but kept for previous structure
+            "demand_supply_summary": demand_supply_summary,
+            "active_demand_zone": next((dz for dz in demand_zones if dz['bottom'] <= current_price <= dz['top']), None),
+            "active_supply_zone": next((sz for sz in supply_zones if sz['bottom'] <= current_price <= sz['top']), None),
         }
 
         return MarketContext(
             scenario=scenario,
-            context=context,
-            volatility=normalized_volatility,
+            volatility=volatility_metric, # Already normalized
             trend_strength=trend_strength,
             volume_profile=volume_profile,
-            support_levels=self._extract_levels_from_zones(demand_zones, 'bottom'), # Helper to get single levels for existing fields
-            resistance_levels=self._extract_levels_from_zones(supply_zones, 'top'), # Helper to get single levels for existing fields
+            support_levels=derived_supports,
+            resistance_levels=derived_resistances,
             demand_zones=demand_zones,
-            supply_zones=supply_zones
+            supply_zones=supply_zones,
+            context=context_details,
+            active_patterns=patterns # Store patterns used for this context
         )
 
     def _detect_local_structure(self, window_data: pd.DataFrame) -> str:
@@ -647,7 +706,29 @@ class MarketAnalyzer:
 
         # Fallback to mixed if no clear structure
         return "mixed"
+    
+    def _identify_raw_pivot_points(self, series: pd.Series, order: int, is_maxima: bool) -> pd.DataFrame:
+        if len(series) < order * 2 + 1:
+            return pd.DataFrame(columns=['idx', 'price', 'timestamp'])
 
+        comparator = np.greater if is_maxima else np.less
+        extrema_indices = argrelextrema(series.values, comparator, order=order)[0]
+
+        # Filter out extrema too close to the start/end of the series for reliable order comparison
+        extrema_indices = [idx for idx in extrema_indices if order <= idx < len(series) - order]
+
+        if not list(extrema_indices): # Convert to list before checking emptiness
+            return pd.DataFrame(columns=['idx', 'price', 'timestamp'])
+
+        # Ensure indices are within the bounds of the original DataFrame from which 'series' was derived
+        # This requires passing the original DataFrame or its index to map back timestamps.
+        # Assuming series.index holds the original DataFrame's index for these points.
+        return pd.DataFrame({
+            'idx': series.index[extrema_indices], # Global index
+            'price': series.iloc[extrema_indices].values,
+            'timestamp': series.name # This is a placeholder; you'd typically get timestamp from df.loc[series.index[extrema_indices], 'timestamp']
+        })
+    
     def _get_structure_relevant_patterns(self, market_structure: str, all_patterns: List[str]) -> List[str]:
         """
         Filter patterns based on the detected market structure
@@ -1409,120 +1490,159 @@ class MarketAnalyzer:
              return "steady"
         
     def _determine_scenario(
-        self, 
-        df: pd.DataFrame, 
-        trend_strength: float, 
-        volatility: float, 
+        self,
+        df: pd.DataFrame,
+        trend_strength: float,
+        volatility: float, # Normalized (0-1)
         volume_profile: str,
         patterns: List[PatternInstance],
-        demand_zones: List[Dict[str, float]], # New
-        supply_zones: List[Dict[str, float]]  # New
+        demand_zones: List[Dict[str, Any]], # New
+        supply_zones: List[Dict[str, Any]]  # New
     ) -> MarketScenario:
-        """
-        Determine the current market scenario with professional trader thinking
+        current_price = df['close'].iloc[-1]
+        atr_val = df['atr'].iloc[-1] if 'atr' in df.columns and not pd.isna(df['atr'].iloc[-1]) else current_price * 0.01
+
+        is_in_strong_demand = False
+        for dz in demand_zones:
+            if dz['bottom'] <= current_price <= dz['top'] + atr_val * 0.5 and dz['strength'] >= 0.6: # Allow slight overshoot for test
+                is_in_strong_demand = True
+                break
         
-        Enhanced to consider market psychology and improved pattern recognition
-        """
-        # Get most recent candles
-        recent_df = df.tail(10)
-        close = df['close'].iloc[-1]
+        is_in_strong_supply = False
+        for sz in supply_zones:
+            if sz['bottom'] - atr_val * 0.5 <= current_price <= sz['top'] and sz['strength'] >= 0.6:
+                is_in_strong_supply = True
+                break
+
+        # Trend quality and divergence (assuming these helpers exist or are simplified here)
+        trend_quality = self._calculate_trend_quality(df.tail(30)) # Existing helper
+        divergence = self._check_for_divergence(df.tail(50)) # Existing helper
+
+        # Scenario logic:
+        if abs(trend_strength) > 0.6 and trend_quality > 0.5: # Strong, good quality trend
+            if trend_strength > 0 and not is_in_strong_supply: return MarketScenario.TRENDING_UP
+            if trend_strength < 0 and not is_in_strong_demand: return MarketScenario.TRENDING_DOWN
+            # If trending into a strong zone, potential reversal or consolidation ahead
+            if trend_strength > 0 and is_in_strong_supply: return MarketScenario.REVERSAL_ZONE # Or DISTRIBUTION
+            if trend_strength < 0 and is_in_strong_demand: return MarketScenario.REVERSAL_ZONE # Or ACCUMULATION
+
+        if is_in_strong_demand:
+            if volume_profile == "increasing" and volatility < 0.3 and abs(trend_strength) < 0.3:
+                return MarketScenario.ACCUMULATION
+            if self._has_reversal_pattern_type(patterns, "bullish") or (divergence == "bullish" and volatility < 0.5):
+                return MarketScenario.REVERSAL_ZONE
         
-        # Pattern influence - check for strong pattern signals
-        pattern_signals = {p.pattern_name: p.confidence for p in patterns}
+        if is_in_strong_supply:
+            if volume_profile == "increasing" and volatility < 0.3 and abs(trend_strength) < 0.3: # Price stalling with volume
+                return MarketScenario.DISTRIBUTION
+            if self._has_reversal_pattern_type(patterns, "bearish") or (divergence == "bearish" and volatility < 0.5):
+                return MarketScenario.REVERSAL_ZONE
+
+        if volatility < 0.25 and abs(trend_strength) < 0.3: # Low vol, weak trend
+             # Check if price is between clear demand and supply
+            if demand_zones and supply_zones:
+                # Ensure zones are not too far apart and price is within them
+                closest_dz_top = max(dz['top'] for dz in demand_zones if dz['top'] < current_price) if any(dz['top'] < current_price for dz in demand_zones) else current_price - atr_val*10
+                closest_sz_bottom = min(sz['bottom'] for sz in supply_zones if sz['bottom'] > current_price) if any(sz['bottom'] > current_price for sz in supply_zones) else current_price + atr_val*10
+
+                if closest_dz_top < current_price < closest_sz_bottom and (closest_sz_bottom - closest_dz_top) < atr_val * 10: # Range width < 10 ATRs
+                     return MarketScenario.CONSOLIDATION
+
+            if self._has_breakout_pattern(patterns) or self._has_bilateral_pattern(patterns): # Building up for a move
+                return MarketScenario.BREAKOUT_BUILDUP
+            return MarketScenario.LOW_VOLATILITY # Generic low vol if no other specific signs
+
+        if volatility > 0.7: # High volatility
+            if abs(trend_strength) < 0.4: return MarketScenario.CHOPPY # High vol, no clear direction
+            return MarketScenario.HIGH_VOLATILITY # High vol with some direction
+
+        if abs(trend_strength) < 0.3 and volatility < 0.5: # Neither strong trend nor high vol
+            return MarketScenario.CONSOLIDATION
+
+        # Fallbacks
+        if trend_strength > 0.3: return MarketScenario.TRENDING_UP
+        if trend_strength < -0.3: return MarketScenario.TRENDING_DOWN
         
-        # Default to UNDEFINED
-        scenario = MarketScenario.UNDEFINED
-        
-        # ENHANCED: Calculate momentum indicators for trend quality assessment
-        trend_quality = self._calculate_trend_quality(df)
-        
-        # ENHANCED: Check for divergences (price/indicator disagreement)
-        divergence = self._check_for_divergence(df)
-        
-        # Strong trending market
-        if abs(trend_strength) > 0.7 and trend_quality > 0.6:
-            if trend_strength > 0:
-                scenario = MarketScenario.TRENDING_UP
-            else:
-                scenario = MarketScenario.TRENDING_DOWN
-        # Weak trend or potential reversal        
-        elif abs(trend_strength) > 0.5 and trend_quality < 0.4:
-            scenario = MarketScenario.REVERSAL_ZONE
-        # Consolidation
-        elif abs(trend_strength) < 0.3 and volatility < 0.4:
-            scenario = MarketScenario.CONSOLIDATION
-            
-            # Check for accumulation vs distribution
-            if volume_profile == "increasing" and trend_strength > 0:
-                scenario = MarketScenario.ACCUMULATION
-            elif volume_profile == "increasing" and trend_strength < 0:
-                scenario = MarketScenario.DISTRIBUTION
-        
-        # Breakout buildup
-        elif volatility < 0.3 and self._has_breakout_pattern(patterns):
-            scenario = MarketScenario.BREAKOUT_BUILDUP
-            
-        # Reversal zone based on divergences and candlestick patterns
-        elif divergence or self._has_reversal_pattern(patterns):
-            scenario = MarketScenario.REVERSAL_ZONE
-            
-        # High volatility
-        elif volatility > 0.7:
-            scenario = MarketScenario.HIGH_VOLATILITY
-            
-        # Low volatility
-        elif volatility < 0.2:
-            scenario = MarketScenario.LOW_VOLATILITY
-            
-        # Choppy market
-        elif abs(trend_strength) < 0.4 and volatility > 0.5:
-            scenario = MarketScenario.CHOPPY
-            
-        return scenario
+        return MarketScenario.UNDEFINED
     
-    def _calculate_trend_strength(self, df: pd.DataFrame) -> float:
+    def _calculate_trend_strength(self, df: pd.DataFrame, recent_data: Optional[pd.DataFrame] = None) -> float:
         """
         Calculate trend strength as a value between -1.0 (strong down) and 1.0 (strong up).
-        Considers MA slopes and relative price position.
+        
+        Args:
+            df: DataFrame with price and indicator data
+            recent_data: Optional DataFrame with recent price data for momentum calculation.
+                        If None, will use a subset of df for momentum calculation.
+        
+        Returns:
+            float: Trend strength value between -1.0 and 1.0
         """
-        if len(df) < 50 or 'sma_20' not in df.columns or 'sma_50' not in df.columns:
-             return 0.0
+        # Check if df is valid
+        if not isinstance(df, pd.DataFrame) or len(df) < 50 or 'sma_20' not in df.columns or 'sma_50' not in df.columns:
+            return 0.0
+        
+        # If recent_data wasn't provided, create it from df
+        if recent_data is None or not isinstance(recent_data, pd.DataFrame) or len(recent_data) < 2:
+            recent_window = min(5, len(df) // 10)  # Use 5 bars or 10% of data, whichever is smaller
+            recent_data = df.tail(recent_window)
 
+        # Rest of the function remains the same
         close_price = df['close'].iloc[-1]
         sma_20 = df['sma_20'].iloc[-1]
         sma_50 = df['sma_50'].iloc[-1]
+        std_20 = df['std_20'].iloc[-1] if 'std_20' in df.columns and not pd.isna(df['std_20'].iloc[-1]) else None
 
-        # Calculate slopes of MAs over a recent period
-        lookback_period = min(20, len(df) // 4) # Use a portion of the data for slope calculation
-        if lookback_period < 5: return 0.0 # Not enough data for slopes
+        # === STRUCTURAL TREND ===
+        # Slopes
+        lookback_period = min(20, len(df) // 4)
+        if lookback_period < 5: return 0.0
 
-        sma20_slope = (sma_20 - df['sma_20'].iloc[-lookback_period]) / (df['sma_20'].iloc[-lookback_period] + 1e-10) if df['sma_20'].iloc[-lookback_period] > 1e-10 else 0
-        sma50_slope = (sma_50 - df['sma_50'].iloc[-lookback_period]) / (df['sma_50'].iloc[-lookback_period] + 1e-10) if df['sma_50'].iloc[-lookback_period] > 1e-10 else 0
+        sma20_slope = (sma_20 - df['sma_20'].iloc[-lookback_period]) / (df['sma_20'].iloc[-lookback_period] + 1e-10)
+        sma50_slope = (sma_50 - df['sma_50'].iloc[-lookback_period]) / (df['sma_50'].iloc[-lookback_period] + 1e-10)
 
+        structure_score = 0
+        if sma_20 > sma_50: structure_score += 0.5
+        elif sma_20 < sma_50: structure_score -= 0.5
 
-        # Trend direction based on MA crossover and order
-        if sma_20 > sma_50:
-            ma_direction_score = 0.5 # Bullish alignment
-        elif sma_20 < sma_50:
-            ma_direction_score = -0.5 # Bearish alignment
+        if close_price > sma_20: structure_score += 0.5
+        elif close_price < sma_20: structure_score -= 0.5
+
+        # Slope contribution
+        structure_score += np.clip(sma20_slope * 5, -0.5, 0.5)
+        structure_score += np.clip(sma50_slope * 5, -0.5, 0.5)
+
+        # Clip structure score
+        structure_score = np.clip(structure_score, -1.0, 1.0)
+
+        # === VOLATILITY-ADJUSTED MAGNITUDE ===
+        if std_20 is not None and std_20 > 1e-10:
+            magnitude_score = abs(close_price - sma_20) / std_20
+            magnitude_score = min(1.0, magnitude_score * 0.5)
         else:
-            ma_direction_score = 0
+            magnitude_score = 0
 
-        # Add to score based on price position relative to MAs
-        if close_price > sma_20:
-            ma_direction_score += 0.5
-        elif close_price < sma_20:
-            ma_direction_score -= 0.5
+        # Apply magnitude in trend direction
+        if structure_score > 0:
+            magnitude_score *= 1
+        elif structure_score < 0:
+            magnitude_score *= -1
+        else:
+            magnitude_score = 0
 
-        # Add to score based on MA slopes
-        ma_direction_score += np.clip(sma20_slope * 5, -0.5, 0.5) # Scale slope influence
-        ma_direction_score += np.clip(sma50_slope * 5, -0.5, 0.5)
+        # === MOMENTUM (Recent Price Change) ===
+        if len(recent_data) > 1:
+            momentum_change = (recent_data['close'].iloc[-1] - recent_data['close'].iloc[0]) / recent_data['close'].iloc[0]
+            momentum_score = np.sign(momentum_change) * min(1.0, abs(momentum_change) * 10)
+        else:
+            momentum_score = 0
 
-
-        # Normalize the score to be between -1 and 1
-        trend_strength = np.clip(ma_direction_score, -1.0, 1.0)
+        # === FINAL TREND STRENGTH ===
+        # Weighted blend: structure (50%), magnitude (30%), momentum (20%)
+        trend_strength = (structure_score * 0.5) + (magnitude_score * 0.3) + (momentum_score * 0.2)
+        trend_strength = np.clip(trend_strength, -1.0, 1.0)
 
         return trend_strength
+
 
     def _is_near_key_level(self, df: pd.DataFrame, direction: Optional[str]) -> bool:
         """Check if the current price is near a significant support or resistance level."""
@@ -1725,6 +1845,167 @@ class MarketAnalyzer:
 
         return False
 
+    def _has_reversal_pattern_type(self, patterns: List[PatternInstance], pattern_type: str, min_confidence: float = 0.6) -> bool:
+        """
+        Checks for bullish or bearish reversal patterns with improved pattern categorization.
+        
+        Args:
+            patterns: List of detected pattern instances
+            pattern_type: Either "bullish" or "bearish"
+            min_confidence: Minimum confidence threshold for pattern validation (default: 0.6)
+            
+        Returns:
+            bool: True if a valid pattern of the specified type is found
+        """
+        if not patterns:
+            return False
+            
+        # Comprehensive categorization of patterns
+        bullish_patterns = {
+            # Bullish reversal patterns
+            "double_bottom", "triple_bottom", "inverse_head_and_shoulder", 
+            "morning_star", "piercing_pattern", "hammer", "inverted_hammer",
+            "tweezers_bottom", "abandoned_baby", "three_white_soldiers",
+            "three_inside_up", "three_outside_up", "bullish_engulfing",
+            
+            # Bullish continuation patterns
+            "flag_bullish", "cup_and_handle", "rising_three_methods",
+            "wedge_falling", "ascending_triangle"
+        }
+        
+        bearish_patterns = {
+            # Bearish reversal patterns
+            "double_top", "triple_top", "head_and_shoulder",
+            "evening_star", "dark_cloud_cover", "hanging_man", "shooting_star",
+            "tweezers_top", "three_black_crows", "three_inside_down",
+            "three_outside_down", "bearish_engulfing",
+            
+            # Bearish continuation patterns
+            "flag_bearish", "falling_three_methods",
+            "wedge_rising", "descending_triangle"
+        }
+        
+        # Handle dual-nature patterns that need context for interpretation
+        context_dependent_patterns = {
+            "engulfing", "harami", "doji", "spinning_top", "marubozu",
+            "island_reversal", "hikkake", "mat_hold", "triangle", "rectangle",
+            "symmetrical_triangle", "pennant"
+        }
+        
+        for p in patterns:
+            # Skip patterns with low confidence
+            if p.confidence < min_confidence:
+                continue
+                
+            pattern_name = p.pattern_name.lower()
+            
+            # Direct pattern match
+            if pattern_type == "bullish" and pattern_name in bullish_patterns:
+                return True
+            if pattern_type == "bearish" and pattern_name in bearish_patterns:
+                return True
+                
+            # Handle context-dependent patterns by checking their direction property
+            # (assuming PatternInstance has a direction or trend attribute)
+            if pattern_name in context_dependent_patterns:
+                if hasattr(p, 'direction'):
+                    if pattern_type == "bullish" and p.direction == "up":
+                        return True
+                    if pattern_type == "bearish" and p.direction == "down":
+                        return True
+                # If no direction attribute, look for indicators in the name
+                else:
+                    if pattern_type == "bullish" and ("bullish" in pattern_name or "bottom" in pattern_name):
+                        return True
+                    if pattern_type == "bearish" and ("bearish" in pattern_name or "top" in pattern_name):
+                        return True
+        
+        return False
+
+    def get_pattern_strength(self, patterns: List[PatternInstance]) -> Dict[str, float]:
+        """
+        Calculate the overall bullish and bearish strength based on pattern confidence.
+        
+        Args:
+            patterns: List of detected pattern instances
+            
+        Returns:
+            Dict with keys 'bullish' and 'bearish', values are strength scores
+        """
+        bullish_strength = 0.0
+        bearish_strength = 0.0
+        
+        for p in patterns:
+            if p.confidence < 0.4:  # Ignore very low confidence patterns
+                continue
+                
+            # Check if pattern is bullish
+            if self._is_bullish_pattern(p):
+                bullish_strength += p.confidence
+            
+            # Check if pattern is bearish
+            if self._is_bearish_pattern(p):
+                bearish_strength += p.confidence
+        
+        return {
+            "bullish": bullish_strength,
+            "bearish": bearish_strength
+        }
+
+    def _is_bullish_pattern(self, pattern: PatternInstance) -> bool:
+        """Helper method to determine if a pattern is bullish"""
+        bullish_patterns = {
+            "double_bottom", "triple_bottom", "inverse_head_and_shoulder", 
+            "morning_star", "piercing_pattern", "hammer", "inverted_hammer",
+            "tweezers_bottom", "abandoned_baby", "three_white_soldiers",
+            "three_inside_up", "three_outside_up", "bullish_engulfing",
+            "flag_bullish", "cup_and_handle", "rising_three_methods",
+            "wedge_falling", "ascending_triangle"
+        }
+        
+        pattern_name = pattern.pattern_name.lower()
+        
+        # Direct match
+        if pattern_name in bullish_patterns:
+            return True
+            
+        # Check for bullish indicators in name
+        if "bullish" in pattern_name or "bottom" in pattern_name:
+            return True
+            
+        # Check for direction attribute if available
+        if hasattr(pattern, 'direction') and pattern.direction == "up":
+            return True
+            
+        return False
+
+    def _is_bearish_pattern(self, pattern: PatternInstance) -> bool:
+        """Helper method to determine if a pattern is bearish"""
+        bearish_patterns = {
+            "double_top", "triple_top", "head_and_shoulder",
+            "evening_star", "dark_cloud_cover", "hanging_man", "shooting_star",
+            "tweezers_top", "three_black_crows", "three_inside_down",
+            "three_outside_down", "bearish_engulfing",
+            "flag_bearish", "falling_three_methods",
+            "wedge_rising", "descending_triangle"
+        }
+        
+        pattern_name = pattern.pattern_name.lower()
+        
+        # Direct match
+        if pattern_name in bearish_patterns:
+            return True
+            
+        # Check for bearish indicators in name
+        if "bearish" in pattern_name or "top" in pattern_name:
+            return True
+            
+        # Check for direction attribute if available
+        if hasattr(pattern, 'direction') and pattern.direction == "down":
+            return True
+            
+        return False
+
     def _has_continuation_pattern(self, patterns: List[PatternInstance]) -> bool:
         """
         Check if any continuation patterns are present with sufficient confidence.
@@ -1825,81 +2106,256 @@ class MarketAnalyzer:
         
         return trend_quality
     
-
-    def _identify_demand_zones(self, df: pd.DataFrame, lookback_period: int = 200, zone_proximity_factor: float = 0.01) -> List[Dict[str, float]]:
-        if len(df) < 20: return []
-        df_subset = df.tail(lookback_period)
-        
-        # Find significant lows (potential demand points)
-        # Using argrelextrema or other swing point detection
-        order = max(5, int(len(df_subset) * 0.05))
-        low_indices = argrelextrema(df_subset['low'].values, np.less_equal, order=order)[0]
-        
-        potential_zones_points = df_subset.iloc[low_indices][['low', 'volume', 'timestamp']]
-        
-        if potential_zones_points.empty:
+    def _cluster_and_form_zones(self, df: pd.DataFrame, pivot_points_df: pd.DataFrame, zone_type: str, price_proximity_pct: float = 0.005, min_touches_for_strong_zone: int = 2) -> List[Dict[str, Any]]:
+        if pivot_points_df.empty:
             return []
 
-        identified_zones = []
-        # Logic to cluster nearby lows into zones
-        # For each cluster, define top/bottom, assess volume, and strength
-        # Simplified example:
-        # Sort points by price
-        sorted_lows = potential_zones_points.sort_values(by='low').to_dict('records')
+        zones = []
+        # Sort pivots by price to find clusters
+        sorted_pivots = pivot_points_df.sort_values(by='price').to_dict('records')
+        if not sorted_pivots: return []
+
+        current_cluster = [sorted_pivots[0]]
+        for i in range(1, len(sorted_pivots)):
+            pivot = sorted_pivots[i]
+            # If current pivot is close to the last pivot in the cluster
+            if abs(pivot['price'] - current_cluster[-1]['price']) <= current_cluster[-1]['price'] * price_proximity_pct:
+                current_cluster.append(pivot)
+            else:
+                # Form a zone from the current_cluster
+                if len(current_cluster) >= 1: # Min 1 touch to be considered a potential zone start
+                    zone_prices = [p['price'] for p in current_cluster]
+                    zone_low = min(zone_prices)
+                    zone_high = max(zone_prices)
+                    
+                    # Define zone depth based on ATR or fixed percentage if ATR is not reliable
+                    avg_price_in_cluster = np.mean(zone_prices)
+                    
+                    # FIX: Safe extraction of ATR value
+                    try:
+                        idx = current_cluster[0]['idx']
+                        # Check if idx is directly usable as integer position
+                        if isinstance(idx, int) and 0 <= idx < len(df) and 'atr' in df.columns:
+                            atr_at_avg_pivot_time = df['atr'].iloc[idx]
+                        # Check if idx is a value in the index
+                        elif idx in df.index and 'atr' in df.columns:
+                            atr_at_avg_pivot_time = df.loc[idx, 'atr']
+                        else:
+                            atr_at_avg_pivot_time = avg_price_in_cluster * 0.002
+                    except (KeyError, TypeError, IndexError):
+                        atr_at_avg_pivot_time = avg_price_in_cluster * 0.002
+                    
+                    if zone_type == "demand":
+                        # For demand, zone_low is the pivot, zone_high is pivot + buffer (e.g., ATR or fixed %)
+                        zone_bottom = zone_low
+                        zone_top = zone_high + atr_at_avg_pivot_time * 0.5 # Buffer for zone width
+                    else: # Supply
+                        zone_bottom = zone_low - atr_at_avg_pivot_time * 0.5 # Buffer
+                        zone_top = zone_high
+
+                    # Volume analysis for the zone (average volume during formation/tests)
+                    touch_timestamps = [p['timestamp'] for p in current_cluster]
+                    
+                    # Placeholder for volume analysis
+                    avg_volume_strength = 1.0 # Needs proper calculation
+
+                    strength = round(min(1.0, (len(current_cluster) / min_touches_for_strong_zone) * avg_volume_strength), 2)
+
+                    # Get current ATR for buffer
+                    current_atr = df['atr'].iloc[-1] if 'atr' in df.columns else 0
+
+                    # Apply buffer to zone boundaries
+                    buffer = current_atr * 0.3  # 30% of ATR
+                    if zone_type == "demand":
+                        zone_top += buffer  # Expand top for demand zones
+                    else:
+                        zone_bottom -= buffer  # Expand bottom for supply zones
+
+                    zones.append({
+                        "id": f"{zone_type[:1]}z{len(zones)+1}",
+                        "bottom": float(round(zone_bottom, 4)),
+                        "top": float(round(zone_top, 4)),
+                        "strength": strength,
+                        "touches": len(current_cluster),
+                        "touch_timestamps": touch_timestamps, # Store timestamps of touches
+                        "avg_price": round(np.mean(zone_prices), 4)
+                    })
+                current_cluster = [pivot]
+
+        # Process the last cluster
+        if len(current_cluster) >= 1:
+            zone_prices = [p['price'] for p in current_cluster]
+            zone_low = min(zone_prices)
+            zone_high = max(zone_prices)
+            avg_price_in_cluster = np.mean(zone_prices)
+            
+            # FIX: Safe extraction of ATR value (same fix as above)
+            try:
+                idx = current_cluster[0]['idx']
+                # Check if idx is directly usable as integer position
+                if isinstance(idx, int) and 0 <= idx < len(df) and 'atr' in df.columns:
+                    atr_at_avg_pivot_time = df['atr'].iloc[idx]
+                # Check if idx is a value in the index
+                elif idx in df.index and 'atr' in df.columns:
+                    atr_at_avg_pivot_time = df.loc[idx, 'atr']
+                else:
+                    atr_at_avg_pivot_time = avg_price_in_cluster * 0.002
+            except (KeyError, TypeError, IndexError):
+                atr_at_avg_pivot_time = avg_price_in_cluster * 0.002
+
+            if zone_type == "demand":
+                zone_bottom = zone_low
+                zone_top = zone_high + atr_at_avg_pivot_time * 0.5
+            else: # Supply
+                zone_bottom = zone_low - atr_at_avg_pivot_time * 0.5
+                zone_top = zone_high
+            
+            strength = round(min(1.0, (len(current_cluster) / min_touches_for_strong_zone)), 2) # Simplified strength
+
+            zones.append({
+                "id": f"{zone_type[:1]}z{len(zones)+1}",
+                "bottom": round(zone_bottom, 4),
+                "top": round(zone_top, 4),
+                "strength": strength,
+                "touches": len(current_cluster),
+                "touch_timestamps": [p['timestamp'] for p in current_cluster],
+                "avg_price": round(np.mean(zone_prices), 4)
+            })
+
+        # Return top 5 zones sorted by strength
+        return sorted(zones, key=lambda z: z['strength'], reverse=True)[:5]
+    
+    # Fixed version - both methods aligned
+    def _identify_demand_zones(self, df: pd.DataFrame, lookback_period: int = 200, zone_proximity_factor: float = 0.01, pivot_order: int = 5) -> List[Dict[str, Any]]:
+        """
+        Identify demand zones based on significant lows in price.
+        Now accepts pivot_order parameter for consistency with _identify_supply_zones.
+        Fixed the unhashable type error by avoiding the use of lists in tuple conversion.
+        Added avg_price to be consistent with supply zones and fix KeyError.
+        """
+        if len(df) < 20: return []
+        
+        # Create df_subset (consistent with supply zones method)
+        if len(df) < lookback_period:
+            df_subset = df.copy()
+        else:
+            df_subset = df.tail(lookback_period).copy()
+        
+        # Exit early if we don't have enough data points
+        if df_subset.empty or len(df_subset) < pivot_order * 2 + 1: return []
+        
+        # Find significant lows using argrelextrema with pivot_order
+        low_indices_relative = argrelextrema(df_subset['low'].values, np.less_equal, order=pivot_order)[0]
+        pivot_global_indices = df_subset.index[low_indices_relative]
+        
+        if not list(pivot_global_indices): return []
+        
+        # Extract data for identified pivot points
+        pivot_points_data = {
+            'idx': pivot_global_indices,
+            'price': df_subset['low'].loc[pivot_global_indices].values,
+            'timestamp': df_subset['timestamp'].loc[pivot_global_indices].values,
+            'volume': df_subset['volume'].loc[pivot_global_indices].values
+        }
+        pivot_points_df = pd.DataFrame(pivot_points_data)
+        
+        # Option: Use _cluster_and_form_zones for consistency with supply zones
+        # return self._cluster_and_form_zones(df_subset, pivot_points_df, "demand", price_proximity_pct=zone_proximity_factor)
+        
+        # Keep the existing algorithm for demand zones but with proper pivot point detection
+        if pivot_points_df.empty:
+            return []
+            
+        # Use the existing logic for demand zones
+        sorted_lows = pivot_points_df.sort_values(by='price').to_dict('records')
         
         if not sorted_lows: return []
 
         current_zone_base = sorted_lows[0]
         zone_candles = [current_zone_base]
+        identified_zones = []
 
         for i in range(1, len(sorted_lows)):
             point = sorted_lows[i]
-            # If point is close to the current zone's base low
-            if abs(point['low'] - current_zone_base['low']) < (current_zone_base['low'] * zone_proximity_factor):
+            # If point is close to the current zone's base price
+            if abs(point['price'] - current_zone_base['price']) < (current_zone_base['price'] * zone_proximity_factor):
                 zone_candles.append(point)
             else:
                 # Finalize previous zone
-                if len(zone_candles) > 0: # Require at least one candle for a zone
-                    zone_low = min(c['low'] for c in zone_candles)
-                    # Zone top could be the high of the candles forming the low, or a fixed percentage
-                    zone_top = zone_low * (1 + zone_proximity_factor * 0.5) # Simplistic top
-                    avg_volume = np.mean([c['volume'] for c in zone_candles])
-                    # Strength: combination of touches (len(zone_candles)), volume, recency
+                if len(zone_candles) > 0:
+                    zone_low = min(c['price'] for c in zone_candles)
+                    zone_top = zone_low * (1 + zone_proximity_factor * 0.5)
+                    avg_volume = np.mean([c.get('volume', 0) for c in zone_candles])
                     strength = min(1.0, (len(zone_candles) / 5.0) * (avg_volume / (df_subset['volume'].mean() + 1e-9)))
                     
+                    zone_id = f"dz{len(identified_zones)+1}"
+                    
                     identified_zones.append({
-                        "bottom": round(zone_low, 4),
-                        "top": round(zone_top, 4),
+                        "id": zone_id,
+                        "bottom": float(round(zone_low, 4)),
+                        "top": float(round(zone_top, 4)),
                         "strength": round(strength, 2),
                         "avg_volume_at_formation": round(avg_volume, 2),
                         "touch_count": len(zone_candles),
-                        "last_timestamp": zone_candles[-1]['timestamp'] # Timestamp of the last touch in this cluster
+                        "last_timestamp": zone_candles[-1]['timestamp'],  # Use last_timestamp instead of touch_timestamps to avoid list
+                        "avg_price": round(np.mean([c['price'] for c in zone_candles]), 4)  # Add avg_price to be consistent with supply zones
                     })
                 current_zone_base = point
                 zone_candles = [current_zone_base]
         
         # Add the last processing zone
         if len(zone_candles) > 0:
-            zone_low = min(c['low'] for c in zone_candles)
+            zone_low = min(c['price'] for c in zone_candles)
             zone_top = zone_low * (1 + zone_proximity_factor * 0.5)
-            avg_volume = np.mean([c['volume'] for c in zone_candles])
+            avg_volume = np.mean([c.get('volume', 0) for c in zone_candles])
             strength = min(1.0, (len(zone_candles) / 5.0) * (avg_volume / (df_subset['volume'].mean() + 1e-9)))
+            
+            zone_id = f"dz{len(identified_zones)+1}"
+            
             identified_zones.append({
-                "bottom": round(zone_low, 4),
-                "top": round(zone_top, 4),
-                "strength": round(strength, 2),
+                "id": zone_id,
+                "bottom": float(round(zone_low, 4)),
+                "top": float(round(zone_top, 4)),
+                "strength": float(round(strength, 2)),
                 "avg_volume_at_formation": round(avg_volume, 2),
                 "touch_count": len(zone_candles),
-                "last_timestamp": zone_candles[-1]['timestamp']
+                "last_timestamp": zone_candles[-1]['timestamp'],  # Use last_timestamp instead of touch_timestamps to avoid list
+                "avg_price": round(np.mean([c['price'] for c in zone_candles]), 4)  # Add avg_price to be consistent with supply zones
             })
 
-        # Further filter/merge overlapping zones and sort by strength or price level
-        identified_zones = sorted([dict(t) for t in {tuple(d.items()) for d in identified_zones}], key=lambda x: x['bottom']) # Remove duplicates
-        # Merging logic would go here
+        # Sort by strength without trying to deduplicate (which caused the unhashable type error)
+        identified_zones = sorted(identified_zones, key=lambda x: x['strength'], reverse=True)
         
-        return identified_zones[:5] # Return top 5 strongest/most relevant
+        return identified_zones[:5]  # Return top 5 strongest zones
 
-    # _identify_supply_zones would be analogous, using highs.
+    def _identify_supply_zones(self, df: pd.DataFrame, lookback_period: int = 200, pivot_order: int = 5) -> List[Dict[str, Any]]:
+        """
+        Identify supply zones based on significant highs in price.
+        """
+        if len(df) < lookback_period:
+            df_subset = df.copy()
+        else:
+            df_subset = df.tail(lookback_period).copy()
+
+        if df_subset.empty or len(df_subset) < pivot_order * 2 + 1: return []
+
+        extrema_indices_relative = argrelextrema(df_subset['high'].values, np.greater, order=pivot_order)[0]
+        pivot_global_indices = df_subset.index[extrema_indices_relative]
+
+        if not list(pivot_global_indices):
+            return []
+                
+        pivot_points_data = {
+            'idx': pivot_global_indices,
+            'price': df_subset['high'].loc[pivot_global_indices].values,
+            'timestamp': df_subset['timestamp'].loc[pivot_global_indices].values
+        }
+        pivot_points_df = pd.DataFrame(pivot_points_data)
+        
+        zones = self._cluster_and_form_zones(df_subset, pivot_points_df, "supply", price_proximity_pct=0.005)
+        
+        return zones
+
     # Helper method in MarketAnalyzer (optional, for populating existing support_levels)
     def _extract_levels_from_zones(self, zones: List[Dict[str, float]], key: str) -> List[float]:
         return sorted([zone[key] for zone in zones if key in zone])[:3]

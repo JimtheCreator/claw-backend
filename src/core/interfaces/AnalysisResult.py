@@ -18,8 +18,8 @@ class PatternResult(BaseModel):
     exact_pattern_type: str
     market_structure: Optional[str] = None  # Added for context
     # In PatternInstance dataclass
-    demand_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "bounced_from"
-    supply_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "broke_through"
+    demand_zone_interaction: Optional[Dict[str, Any]] = None  # e.g., {"type": "test", "zone_id": "dz1", "strength": 0.7}
+    supply_zone_interaction: Optional[Dict[str, Any]] = None  # e.g., {"type": "breakthrough", "zone_id": "sz2"}
     volume_confirmation_at_zone: Optional[bool] = None # True if volume confirms the zone's significance
 
 class MarketContextResult(BaseModel):
