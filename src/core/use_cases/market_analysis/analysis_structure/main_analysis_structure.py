@@ -39,9 +39,15 @@ class PatternInstance:
     confidence: float
     key_levels: Dict[str, float]
     candle_indexes: List[int]
+    timestamp_start: datetime
+    timestamp_end: datetime 
     detected_at: datetime
     exact_pattern_type: str
     market_structure: Optional[str] = None  # Added for context
+    # In PatternInstance dataclass
+    demand_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "bounced_from"
+    supply_zone_interaction: Optional[str] = None  # e.g., "approaching", "testing", "rejected_from", "broke_through"
+    volume_confirmation_at_zone: Optional[bool] = None # True if volume confirms the zone's significance
 
 
     def overlaps_with(self, other: 'PatternInstance') -> bool:
@@ -56,9 +62,15 @@ class PatternInstance:
             "end_idx": self.end_idx,
             "confidence": round(self.confidence, 2), # Round confidence
             "key_levels": {k: round(v, 4) if isinstance(v, float) else v for k, v in self.key_levels.items()}, # Round key levels
+            "candle_indexes": self.candle_indexes,
+            "timestamp_start": self.timestamp_start,  # Add actual start timestamp
+            "timestamp_end": self.timestamp_end,   # Add actual end timestamp
             "detection_time": self.detected_at.isoformat(),
             "exact_pattern_type": self.exact_pattern_type,  # ✅ Add this line
             "market_structure": self.market_structure,  # Added for context
+            "demand_zone_interaction": self.demand_zone_interaction,
+            "supply_zone_interaction": self.supply_zone_interaction,
+            "volume_confirmation_at_zone": self.volume_confirmation_at_zone
         }
 
 
@@ -72,6 +84,9 @@ class MarketContext:
     support_levels: List[float]
     resistance_levels: List[float]
     context: Dict[str, Any]  # Added context dictionary for enhanced analysis
+    # In MarketContext dataclass
+    demand_zones: List[Dict[str, float]] # List of dicts, e.g., [{"top": 100, "bottom": 98, "strength": 0.8, "volume_profile": "high"}]
+    supply_zones: List[Dict[str, float]] # List of dicts, e.g., [{"top": 110, "bottom": 108, "strength": 0.7, "volume_profile": "increasing"}]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
@@ -86,7 +101,9 @@ class MarketContext:
                 "primary_pattern_type": self.context.get("primary_pattern_type", "unknown"), # Renamed key for clarity
                 "market_structure": self.context.get("market_structure", "unknown"),
                 "potential_scenario": self.context.get("potential_scenario", "unknown")
-            }
+            },
+            "demand_zones": self.demand_zones,
+            "supply_zones": self.supply_zones
         }
 
 
@@ -411,21 +428,30 @@ class MarketAnalyzer:
                         key_levels = detector.find_key_levels(window_ohlcv)
 
                         # Adjust key levels back to global index
-                        adjusted_key_levels = {k: (v if k in ['type', 'direction'] else v + start_idx)
-                                               for k, v in key_levels.items()}
+                        # Correct way - only adjust indices, not price values:
+                        adjusted_key_levels = {}
+                        for k, v in key_levels.items():
+                            # Only adjust values that are actually indices
+                            if k in ['pivot_idx', 'pattern_start_idx', 'pattern_end_idx']:  # Only add to actual indices
+                                adjusted_key_levels[k] = v + start_idx
+                            else:
+                                adjusted_key_levels[k] = v  # Keep price values as they are
 
 
-                        # Create pattern instance
+                        # Modified pattern instance creation
                         pattern = PatternInstance(
                             pattern_name=pattern_name,
-                            start_idx=start_idx,
-                            end_idx=end_idx-1, # end_idx is exclusive in slicing, so -1 for the last candle index
+                            start_idx=start_idx,  # Keep this as is for window tracking
+                            end_idx=end_idx,      # Don't subtract 1 - be consistent with your slicing convention
                             confidence=confidence,
-                            key_levels=adjusted_key_levels, # Use adjusted key levels
+                            key_levels=adjusted_key_levels,
+                            # Store both relative and absolute references
                             candle_indexes=list(range(start_idx, end_idx)),
+                            timestamp_start=window_data["timestamp"].iloc[0],  # Add actual start timestamp
+                            timestamp_end=window_data["timestamp"].iloc[-1],   # Add actual end timestamp
                             detected_at=window_data["timestamp"].iloc[-1],
                             exact_pattern_type=pattern_type,
-                            market_structure=market_context_str  # Add market structure context
+                            market_structure=market_context_str
                         )
 
                         # Add to results with enhanced redundancy check
@@ -514,13 +540,19 @@ class MarketAnalyzer:
         support_levels = self._find_support_levels(df)
         resistance_levels = self._find_resistance_levels(df)
 
+        # 4a. Identify Demand and Supply Zones
+        demand_zones = self._identify_demand_zones(df) # Implement this method
+        supply_zones = self._identify_supply_zones(df) # Implement this method
+
         # 5. Determine the market scenario
         scenario = self._determine_scenario(
             df,
             trend_strength,
             normalized_volatility,
             volume_profile,
-            patterns
+            patterns,
+            demand_zones,
+            supply_zones
         )
 
         # Enhanced context determination
@@ -536,10 +568,11 @@ class MarketAnalyzer:
             volatility=normalized_volatility,
             trend_strength=trend_strength,
             volume_profile=volume_profile,
-            support_levels=support_levels,
-            resistance_levels=resistance_levels
+            support_levels=self._extract_levels_from_zones(demand_zones, 'bottom'), # Helper to get single levels for existing fields
+            resistance_levels=self._extract_levels_from_zones(supply_zones, 'top'), # Helper to get single levels for existing fields
+            demand_zones=demand_zones,
+            supply_zones=supply_zones
         )
-
 
     def _detect_local_structure(self, window_data: pd.DataFrame) -> str:
         """
@@ -1381,7 +1414,9 @@ class MarketAnalyzer:
         trend_strength: float, 
         volatility: float, 
         volume_profile: str,
-        patterns: List[PatternInstance]
+        patterns: List[PatternInstance],
+        demand_zones: List[Dict[str, float]], # New
+        supply_zones: List[Dict[str, float]]  # New
     ) -> MarketScenario:
         """
         Determine the current market scenario with professional trader thinking
@@ -1789,6 +1824,85 @@ class MarketAnalyzer:
         trend_quality = min(1.0, (max_consecutive/10) + ma_alignment + price_pattern)
         
         return trend_quality
+    
+
+    def _identify_demand_zones(self, df: pd.DataFrame, lookback_period: int = 200, zone_proximity_factor: float = 0.01) -> List[Dict[str, float]]:
+        if len(df) < 20: return []
+        df_subset = df.tail(lookback_period)
+        
+        # Find significant lows (potential demand points)
+        # Using argrelextrema or other swing point detection
+        order = max(5, int(len(df_subset) * 0.05))
+        low_indices = argrelextrema(df_subset['low'].values, np.less_equal, order=order)[0]
+        
+        potential_zones_points = df_subset.iloc[low_indices][['low', 'volume', 'timestamp']]
+        
+        if potential_zones_points.empty:
+            return []
+
+        identified_zones = []
+        # Logic to cluster nearby lows into zones
+        # For each cluster, define top/bottom, assess volume, and strength
+        # Simplified example:
+        # Sort points by price
+        sorted_lows = potential_zones_points.sort_values(by='low').to_dict('records')
+        
+        if not sorted_lows: return []
+
+        current_zone_base = sorted_lows[0]
+        zone_candles = [current_zone_base]
+
+        for i in range(1, len(sorted_lows)):
+            point = sorted_lows[i]
+            # If point is close to the current zone's base low
+            if abs(point['low'] - current_zone_base['low']) < (current_zone_base['low'] * zone_proximity_factor):
+                zone_candles.append(point)
+            else:
+                # Finalize previous zone
+                if len(zone_candles) > 0: # Require at least one candle for a zone
+                    zone_low = min(c['low'] for c in zone_candles)
+                    # Zone top could be the high of the candles forming the low, or a fixed percentage
+                    zone_top = zone_low * (1 + zone_proximity_factor * 0.5) # Simplistic top
+                    avg_volume = np.mean([c['volume'] for c in zone_candles])
+                    # Strength: combination of touches (len(zone_candles)), volume, recency
+                    strength = min(1.0, (len(zone_candles) / 5.0) * (avg_volume / (df_subset['volume'].mean() + 1e-9)))
+                    
+                    identified_zones.append({
+                        "bottom": round(zone_low, 4),
+                        "top": round(zone_top, 4),
+                        "strength": round(strength, 2),
+                        "avg_volume_at_formation": round(avg_volume, 2),
+                        "touch_count": len(zone_candles),
+                        "last_timestamp": zone_candles[-1]['timestamp'] # Timestamp of the last touch in this cluster
+                    })
+                current_zone_base = point
+                zone_candles = [current_zone_base]
+        
+        # Add the last processing zone
+        if len(zone_candles) > 0:
+            zone_low = min(c['low'] for c in zone_candles)
+            zone_top = zone_low * (1 + zone_proximity_factor * 0.5)
+            avg_volume = np.mean([c['volume'] for c in zone_candles])
+            strength = min(1.0, (len(zone_candles) / 5.0) * (avg_volume / (df_subset['volume'].mean() + 1e-9)))
+            identified_zones.append({
+                "bottom": round(zone_low, 4),
+                "top": round(zone_top, 4),
+                "strength": round(strength, 2),
+                "avg_volume_at_formation": round(avg_volume, 2),
+                "touch_count": len(zone_candles),
+                "last_timestamp": zone_candles[-1]['timestamp']
+            })
+
+        # Further filter/merge overlapping zones and sort by strength or price level
+        identified_zones = sorted([dict(t) for t in {tuple(d.items()) for d in identified_zones}], key=lambda x: x['bottom']) # Remove duplicates
+        # Merging logic would go here
+        
+        return identified_zones[:5] # Return top 5 strongest/most relevant
+
+    # _identify_supply_zones would be analogous, using highs.
+    # Helper method in MarketAnalyzer (optional, for populating existing support_levels)
+    def _extract_levels_from_zones(self, zones: List[Dict[str, float]], key: str) -> List[float]:
+        return sorted([zone[key] for zone in zones if key in zone])[:3]
 
 
 # === Extended pattern API ===
