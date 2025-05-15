@@ -17,6 +17,7 @@ from common.logger import configure_logging, logger
 from infrastructure.database.redis.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool
 from backend_function_tests.market_analysis.test_analysis import router
+from presentation.api.routes.auth_routes import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -55,11 +56,12 @@ app.add_middleware(
 app.include_router(market_data.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1/test")
+app.include_router(auth_router, prefix="/api/v1")
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
-
+ 
 
 # Add this block to run the server
 if __name__ == "__main__":
