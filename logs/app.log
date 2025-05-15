@@ -562,3 +562,571 @@ UnboundLocalError: cannot access local variable 'pattern_instance' where it is n
 UnboundLocalError: cannot access local variable 'pattern_instance' where it is not associated with a value
 
 2025-05-13 20:01:26,892 - ClawBackend - INFO - [app.py:36] - Shutting down application...
+2025-05-13 20:02:00,235 - ClawBackend - INFO - [app.py:26] - Starting application...
+2025-05-13 20:02:37,361 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:02:37,439 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-13 20:02:37,443 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for ETHUSDT (1h), fetching from Binance
+2025-05-13 20:02:41,599 - ClawBackend - INFO - [market_data.py:379] - Returning 168 records from Binance for page 1
+2025-05-13 20:02:41,803 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,014 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:02:42,031 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,064 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,071 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,125 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,248 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,287 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,384 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,419 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:02:42,451 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:02:42,628 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:02:42,675 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,938 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:02:42,950 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:42,968 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,019 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,074 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,086 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:02:43,181 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:02:43,202 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,351 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:02:43,425 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,712 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,722 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,770 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,800 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,888 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,964 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:02:43,972 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:31,281 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:03:31,352 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-13 20:03:31,353 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for ETHUSDT (1h), fetching from Binance
+2025-05-13 20:03:34,266 - ClawBackend - INFO - [market_data.py:379] - Returning 168 records from Binance for page 1
+2025-05-13 20:03:34,314 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,416 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:03:34,431 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,456 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,465 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,486 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,513 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,529 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,592 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,602 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:03:34,617 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:03:34,706 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:03:34,731 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,908 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:03:34,918 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,932 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:34,986 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,018 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,027 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:03:35,096 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:03:35,121 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,214 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:03:35,230 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,415 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,426 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,466 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,487 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,542 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,599 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:03:35,613 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:13,210 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:12:13,350 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-13 20:12:13,350 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for BTCUSDT (1h), fetching from Binance
+2025-05-13 20:12:16,441 - ClawBackend - INFO - [market_data.py:379] - Returning 168 records from Binance for page 1
+2025-05-13 20:12:17,334 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,341 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,386 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,410 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,423 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,486 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,516 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,522 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,527 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:17,605 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,635 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,654 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,664 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,710 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:12:17,722 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:17,813 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,839 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,893 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:17,908 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,911 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,931 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:17,976 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,042 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,080 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,225 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,230 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,288 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:18,375 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,526 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:18,594 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,629 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,897 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:18,930 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,026 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,057 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,127 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,159 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,176 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,209 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:19,243 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,246 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,260 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:12:19,275 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:12:19,288 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:36:52,095 - ClawBackend - INFO - [market_data.py:189] - Searching cryptos with query: BNB
+2025-05-13 20:36:53,746 - ClawBackend - ERROR - [crypto_repository.py:69] - Supabase search error: [Errno 11001] getaddrinfo failed
+2025-05-13 20:36:57,777 - ClawBackend - ERROR - [crypto_repository.py:162] - Error in bulk save to Supabase: [Errno 11001] getaddrinfo failed
+2025-05-13 20:36:58,771 - ClawBackend - INFO - [market_data.py:189] - Searching cryptos with query: BTC
+2025-05-13 20:36:58,783 - ClawBackend - ERROR - [crypto_repository.py:69] - Supabase search error: [Errno 11001] getaddrinfo failed
+2025-05-13 20:37:01,197 - ClawBackend - INFO - [market_data.py:189] - Searching cryptos with query: BTCUSDT
+2025-05-13 20:37:01,204 - ClawBackend - ERROR - [crypto_repository.py:69] - Supabase search error: [Errno 11001] getaddrinfo failed
+2025-05-13 20:37:02,575 - ClawBackend - ERROR - [crypto_repository.py:162] - Error in bulk save to Supabase: [Errno 11001] getaddrinfo failed
+2025-05-13 20:37:03,904 - ClawBackend - ERROR - [crypto_repository.py:162] - Error in bulk save to Supabase: [Errno 11001] getaddrinfo failed
+2025-05-13 20:37:13,443 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:37:13,642 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-13 20:37:13,644 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for BTCUSDT (1m), fetching from Binance
+2025-05-13 20:37:16,902 - ClawBackend - INFO - [market_data.py:379] - Returning 1000 records from Binance for page 1
+2025-05-13 20:37:18,271 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:18,399 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:18,532 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:18,641 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:18,963 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:19,199 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:19,211 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:20,686 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:20,992 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:21,048 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:21,137 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:21,269 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:21,415 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:21,494 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:21,504 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:21,664 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:21,721 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:21,750 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:21,871 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:21,952 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:22,071 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:22,344 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:22,470 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:22,559 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:22,672 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:23,396 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:23,530 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:23,712 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:23,782 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:24,127 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:24,245 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:24,331 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:24,471 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:24,701 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:24,794 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:24,810 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:24,836 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:24,896 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:25,002 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,051 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:25,136 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,152 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,166 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,246 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,281 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,317 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,450 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,487 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,545 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,576 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,598 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,619 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,629 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,644 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,685 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,697 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,722 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,728 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:25,743 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:25,747 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,794 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:25,850 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:25,937 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:25,945 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:26,038 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,103 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:26,136 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,388 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,584 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:26,694 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:26,814 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,817 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,827 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:26,847 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:26,902 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:26,919 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:26,923 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:26,988 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,053 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,059 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:27,099 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,154 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:27,167 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,245 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:27,275 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,303 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:27,313 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:27,403 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:27,467 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:27,471 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:27,835 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,006 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:28,038 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:28,119 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,221 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:28,352 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:28,413 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:28,421 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,515 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,552 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,564 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:28,684 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:28,771 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:28,854 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:29,040 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:29,130 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:29,149 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:29,168 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:29,386 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:29,458 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:29,622 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:29,644 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:29,848 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:29,888 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:29,929 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:30,002 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,135 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,196 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:30,220 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,239 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:30,282 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:30,394 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:30,478 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:30,578 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,627 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,669 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,802 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,847 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:30,866 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,002 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,051 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,097 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,132 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,167 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,205 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,220 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,265 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,354 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,366 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,452 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,470 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:31,521 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:31,568 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,653 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:31,776 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:31,961 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:31,979 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:32,088 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:32,213 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:32,293 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:32,530 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:32,785 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:32,889 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:33,129 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:33,166 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:33,200 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,221 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,321 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:33,353 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,369 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:33,503 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,632 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,638 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:33,688 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:33,833 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:33,868 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,035 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,230 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,562 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,576 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,671 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,737 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,836 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:34,879 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:34,935 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,054 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,292 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,312 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:35,463 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:35,518 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,745 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:35,769 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,878 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:35,964 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:36,086 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:36,243 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:36,349 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:36,395 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:36,402 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:36,422 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:36,539 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:36,671 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:36,721 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,162 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,280 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:37,384 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:37,496 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,618 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,628 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,742 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:37,860 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:38,145 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,296 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,451 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,551 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,557 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,614 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:38,648 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,772 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:38,783 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:38,799 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:38,938 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:38,988 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:39,269 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:39,334 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,431 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,470 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:39,487 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,604 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:39,788 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,803 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,914 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:39,994 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,049 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,069 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,101 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,139 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,199 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,205 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,253 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,302 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,333 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,355 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:40,480 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,535 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:40,599 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,793 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:40,870 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:40,911 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:41,030 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:41,037 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,071 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,150 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:41,167 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,261 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,344 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,386 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,483 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,744 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,767 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,820 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:41,921 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:42,022 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:42,031 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:42,183 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:42,190 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:42,315 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:42,401 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:42,437 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected dragonfly_doji pattern
+2025-05-13 20:37:42,535 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:42,745 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:42,954 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:43,050 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:43,167 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:43,234 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected standard_doji pattern
+2025-05-13 20:37:43,546 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:43,588 - ClawBackend - INFO - [detect_patterns.py:2423] - Detected bullish_kicker kicker pattern
+2025-05-13 20:37:43,636 - ClawBackend - INFO - [detect_patterns.py:1238] - Detected gravestone_doji pattern
+2025-05-13 20:37:44,382 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:37:44,561 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-13 20:37:44,563 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for BTCUSDT (1m), fetching from Binance
+2025-05-13 20:37:44,612 - ClawBackend - INFO - [market_data.py:241] - New WebSocket connection for BTCUSDT (1m)
+2025-05-13 20:37:44,631 - ClawBackend - INFO - [market_data.py:241] - New WebSocket connection for BTCUSDT (1m)
+2025-05-13 20:37:46,916 - ClawBackend - INFO - [market_data.py:369] - Initiating background task to get and save full historical data
+2025-05-13 20:37:46,922 - ClawBackend - INFO - [market_data.py:379] - Returning 100 records from Binance for page 1
+2025-05-13 20:37:46,963 - ClawBackend - INFO - [market_data.py:399] - Started background task to fetch full history for BTCUSDT (1m)
+2025-05-13 20:37:47,005 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-13 20:37:50,412 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-13 10:17:00+00:00 (1000 total records saved)
+2025-05-13 20:37:51,582 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-14 02:57:00+00:00 (2000 total records saved)
+2025-05-13 20:37:52,777 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-14 19:37:00+00:00 (3000 total records saved)
+2025-05-13 20:37:53,244 - ClawBackend - INFO - [market_data.py:338] - Client disconnected for BTCUSDT
+2025-05-13 20:37:53,245 - ClawBackend - INFO - [market_data.py:343] - Closing connection for BTCUSDT
+2025-05-13 20:37:53,246 - ClawBackend - INFO - [market_data.py:338] - Client disconnected for BTCUSDT
+2025-05-13 20:37:53,247 - ClawBackend - INFO - [market_data.py:343] - Closing connection for BTCUSDT
+2025-05-13 20:37:53,929 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-15 12:17:00+00:00 (4000 total records saved)
+2025-05-13 20:37:55,040 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-16 04:57:00+00:00 (5000 total records saved)
+2025-05-13 20:37:57,505 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-16 21:37:00+00:00 (6000 total records saved)
+2025-05-13 20:37:58,732 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-17 14:17:00+00:00 (7000 total records saved)
+2025-05-13 20:37:59,834 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-18 06:57:00+00:00 (8000 total records saved)
+2025-05-13 20:38:00,929 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-18 23:37:00+00:00 (9000 total records saved)
+2025-05-13 20:38:02,027 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-19 16:17:00+00:00 (10000 total records saved)
+2025-05-13 20:38:03,167 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-20 08:57:00+00:00 (11000 total records saved)
+2025-05-13 20:38:06,043 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-21 01:37:00+00:00 (12000 total records saved)
+2025-05-13 20:38:07,133 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-21 18:17:00+00:00 (13000 total records saved)
+2025-05-13 20:38:08,193 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-22 10:57:00+00:00 (14000 total records saved)
+2025-05-13 20:38:09,264 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-23 03:37:00+00:00 (15000 total records saved)
+2025-05-13 20:38:10,338 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-23 20:17:00+00:00 (16000 total records saved)
+2025-05-13 20:38:12,805 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-24 12:57:00+00:00 (17000 total records saved)
+2025-05-13 20:38:13,863 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-25 05:37:00+00:00 (18000 total records saved)
+2025-05-13 20:38:14,987 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-25 22:17:00+00:00 (19000 total records saved)
+2025-05-13 20:38:16,093 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-26 14:57:00+00:00 (20000 total records saved)
+2025-05-13 20:38:17,317 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-27 07:37:00+00:00 (21000 total records saved)
+2025-05-13 20:38:19,354 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-28 00:17:00+00:00 (22000 total records saved)
+2025-05-13 20:38:20,532 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-28 16:57:00+00:00 (23000 total records saved)
+2025-05-13 20:38:22,244 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-01 09:37:00+00:00 (24000 total records saved)
+2025-05-13 20:38:23,351 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-02 02:17:00+00:00 (25000 total records saved)
+2025-05-13 20:38:24,417 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-02 18:57:00+00:00 (26000 total records saved)
+2025-05-13 20:38:25,646 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-03 11:37:00+00:00 (27000 total records saved)
+2025-05-13 20:38:28,011 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-04 04:17:00+00:00 (28000 total records saved)
+2025-05-13 20:38:29,122 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-04 20:57:00+00:00 (29000 total records saved)
+2025-05-13 20:38:30,231 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-05 13:37:00+00:00 (30000 total records saved)
+2025-05-13 20:38:31,305 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-06 06:17:00+00:00 (31000 total records saved)
+2025-05-13 20:38:32,404 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-06 22:57:00+00:00 (32000 total records saved)
+2025-05-13 20:38:33,532 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-07 15:37:00+00:00 (33000 total records saved)
+2025-05-13 20:38:34,683 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-08 08:17:00+00:00 (34000 total records saved)
+2025-05-13 20:38:35,788 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-09 00:57:00+00:00 (35000 total records saved)
+2025-05-13 20:38:37,002 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-09 17:37:00+00:00 (36000 total records saved)
+2025-05-13 20:38:38,237 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-10 10:17:00+00:00 (37000 total records saved)
+2025-05-13 20:38:39,408 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-11 02:57:00+00:00 (38000 total records saved)
+2025-05-13 20:38:41,803 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-11 19:37:00+00:00 (39000 total records saved)
+2025-05-13 20:38:44,132 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-12 12:17:00+00:00 (40000 total records saved)
+2025-05-13 20:38:45,225 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-13 04:57:00+00:00 (41000 total records saved)
+2025-05-13 20:38:46,330 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-13 21:37:00+00:00 (42000 total records saved)
+2025-05-13 20:38:47,469 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-14 14:17:00+00:00 (43000 total records saved)
+2025-05-13 20:38:48,550 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-15 06:57:00+00:00 (44000 total records saved)
+2025-05-13 20:38:49,949 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-15 23:37:00+00:00 (45000 total records saved)
+2025-05-13 20:38:51,016 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-16 16:17:00+00:00 (46000 total records saved)
+2025-05-13 20:38:52,242 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-17 08:57:00+00:00 (47000 total records saved)
+2025-05-13 20:38:54,584 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-18 01:37:00+00:00 (48000 total records saved)
+2025-05-13 20:38:55,678 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-18 18:17:00+00:00 (49000 total records saved)
+2025-05-13 20:38:56,833 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-19 10:57:00+00:00 (50000 total records saved)
+2025-05-13 20:38:57,916 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-20 03:37:00+00:00 (51000 total records saved)
+2025-05-13 20:39:00,271 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-20 20:17:00+00:00 (52000 total records saved)
+2025-05-13 20:39:01,360 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-21 12:57:00+00:00 (53000 total records saved)
+2025-05-13 20:39:03,689 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-22 05:37:00+00:00 (54000 total records saved)
+2025-05-13 20:39:06,108 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-22 22:17:00+00:00 (55000 total records saved)
+2025-05-13 20:39:07,262 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-23 14:57:00+00:00 (56000 total records saved)
+2025-05-13 20:39:08,469 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-24 07:37:00+00:00 (57000 total records saved)
+2025-05-13 20:39:10,204 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-25 00:17:00+00:00 (58000 total records saved)
+2025-05-13 20:39:11,341 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-25 16:57:00+00:00 (59000 total records saved)
+2025-05-13 20:39:12,443 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-26 09:37:00+00:00 (60000 total records saved)
+2025-05-13 20:39:14,812 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-27 02:17:00+00:00 (61000 total records saved)
+2025-05-13 20:39:15,943 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-27 18:57:00+00:00 (62000 total records saved)
+2025-05-13 20:39:17,033 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-28 11:37:00+00:00 (63000 total records saved)
+2025-05-13 20:39:18,114 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-29 04:17:00+00:00 (64000 total records saved)
+2025-05-13 20:39:19,205 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-29 20:57:00+00:00 (65000 total records saved)
+2025-05-13 20:39:20,304 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-30 13:37:00+00:00 (66000 total records saved)
+2025-05-13 20:39:21,516 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-31 06:17:00+00:00 (67000 total records saved)
+2025-05-13 20:39:22,612 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-31 22:57:00+00:00 (68000 total records saved)
+2025-05-13 20:39:23,707 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-01 15:37:00+00:00 (69000 total records saved)
+2025-05-13 20:39:24,854 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-02 08:17:00+00:00 (70000 total records saved)
+2025-05-13 20:39:25,960 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-03 00:57:00+00:00 (71000 total records saved)
+2025-05-13 20:39:27,090 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-03 17:37:00+00:00 (72000 total records saved)
+2025-05-13 20:39:28,246 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-04 10:17:00+00:00 (73000 total records saved)
+2025-05-13 20:39:29,339 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-05 02:57:00+00:00 (74000 total records saved)
+2025-05-13 20:39:30,443 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-05 19:37:00+00:00 (75000 total records saved)
+2025-05-13 20:39:31,630 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-06 12:17:00+00:00 (76000 total records saved)
+2025-05-13 20:39:32,721 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-07 04:57:00+00:00 (77000 total records saved)
+2025-05-13 20:39:34,270 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-07 21:37:00+00:00 (78000 total records saved)
+2025-05-13 20:39:35,403 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-08 14:17:00+00:00 (79000 total records saved)
+2025-05-13 20:39:36,520 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-09 06:57:00+00:00 (80000 total records saved)
+2025-05-13 20:39:37,656 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-09 23:37:00+00:00 (81000 total records saved)
+2025-05-13 20:39:38,765 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-10 16:17:00+00:00 (82000 total records saved)
+2025-05-13 20:39:39,882 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-11 08:57:00+00:00 (83000 total records saved)
+2025-05-13 20:39:40,995 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-12 01:37:00+00:00 (84000 total records saved)
+2025-05-13 20:39:42,191 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-12 18:17:00+00:00 (85000 total records saved)
+2025-05-13 20:39:43,305 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-13 10:57:00+00:00 (86000 total records saved)
+2025-05-13 20:39:45,757 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-14 03:37:00+00:00 (87000 total records saved)
+2025-05-13 20:39:46,851 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-14 20:17:00+00:00 (88000 total records saved)
+2025-05-13 20:39:48,103 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-15 12:57:00+00:00 (89000 total records saved)
+2025-05-13 20:39:50,484 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-16 05:37:00+00:00 (90000 total records saved)
+2025-05-13 20:39:51,627 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-16 22:17:00+00:00 (91000 total records saved)
+2025-05-13 20:39:52,729 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-17 14:57:00+00:00 (92000 total records saved)
+2025-05-13 20:39:53,826 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-18 07:37:00+00:00 (93000 total records saved)
+2025-05-13 20:39:54,935 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-19 00:17:00+00:00 (94000 total records saved)
+2025-05-13 20:39:57,314 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-19 16:57:00+00:00 (95000 total records saved)
+2025-05-13 20:39:58,399 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-20 09:37:00+00:00 (96000 total records saved)
+2025-05-13 20:39:59,609 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-21 02:17:00+00:00 (97000 total records saved)
+2025-05-13 20:40:00,739 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-21 18:57:00+00:00 (98000 total records saved)
+2025-05-13 20:40:01,943 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-22 11:37:00+00:00 (99000 total records saved)
+2025-05-13 20:40:03,054 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-23 04:17:00+00:00 (100000 total records saved)
+2025-05-13 20:40:04,187 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-23 20:57:00+00:00 (101000 total records saved)
+2025-05-13 20:40:05,291 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-24 13:37:00+00:00 (102000 total records saved)
+2025-05-13 20:40:06,523 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-25 06:17:00+00:00 (103000 total records saved)
+2025-05-13 20:40:07,624 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-25 22:57:00+00:00 (104000 total records saved)
+2025-05-13 20:40:08,737 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-26 15:37:00+00:00 (105000 total records saved)
+2025-05-13 20:40:11,052 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-27 08:17:00+00:00 (106000 total records saved)
+2025-05-13 20:40:12,270 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-28 00:57:00+00:00 (107000 total records saved)
+2025-05-13 20:40:13,395 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-28 17:37:00+00:00 (108000 total records saved)
+2025-05-13 20:40:14,488 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-29 10:17:00+00:00 (109000 total records saved)
+2025-05-13 20:40:15,660 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-30 02:57:00+00:00 (110000 total records saved)
+2025-05-13 20:40:17,013 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-30 19:37:00+00:00 (111000 total records saved)
+2025-05-13 20:40:18,139 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-01 12:17:00+00:00 (112000 total records saved)
+2025-05-13 20:40:19,253 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-02 04:57:00+00:00 (113000 total records saved)
+2025-05-13 20:40:21,572 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-02 21:37:00+00:00 (114000 total records saved)
+2025-05-13 20:40:22,665 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-03 14:17:00+00:00 (115000 total records saved)
+2025-05-13 20:40:23,757 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-04 06:57:00+00:00 (116000 total records saved)
+2025-05-13 20:40:24,849 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-04 23:37:00+00:00 (117000 total records saved)
+2025-05-13 20:40:26,041 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-05 16:17:00+00:00 (118000 total records saved)
+2025-05-13 20:40:27,163 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-06 08:57:00+00:00 (119000 total records saved)
+2025-05-13 20:40:28,277 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-07 01:37:00+00:00 (120000 total records saved)
+2025-05-13 20:40:29,997 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-07 18:17:00+00:00 (121000 total records saved)
+2025-05-13 20:40:31,146 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-08 10:57:00+00:00 (122000 total records saved)
+2025-05-13 20:40:32,303 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-09 03:37:00+00:00 (123000 total records saved)
+2025-05-13 20:40:33,437 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-09 20:17:00+00:00 (124000 total records saved)
+2025-05-13 20:40:34,589 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-10 12:57:00+00:00 (125000 total records saved)
+2025-05-13 20:40:35,725 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-11 05:37:00+00:00 (126000 total records saved)
+2025-05-13 20:40:36,829 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-11 22:17:00+00:00 (127000 total records saved)
+2025-05-13 20:40:38,781 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-12 14:57:00+00:00 (128000 total records saved)
+2025-05-13 20:40:41,101 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-13 07:37:00+00:00 (129000 total records saved)
+2025-05-13 20:40:42,244 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 600 records. Progress: 2025-05-13 17:37:00+00:00 (129600 total records saved)
+2025-05-13 20:40:43,138 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for BTCUSDT (1m)
+2025-05-13 20:40:43,398 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for BTCUSDT (1m)
+2025-05-13 20:40:43,520 - ClawBackend - INFO - [app.py:36] - Shutting down application...
+2025-05-15 03:17:26,259 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 03:23:35,207 - ClawBackend - ERROR - [crypto_repository.py:78] - Error registering user dishutch@gmail.com: {}
+2025-05-15 03:36:02,053 - ClawBackend - INFO - [crypto_repository.py:67] - Successfully registered user: dishutch@gmail.com
+2025-05-15 03:47:42,858 - ClawBackend - ERROR - [crypto_repository.py:78] - Error registering user michael@gmail.com: Email address "michael@gmail.com" is invalid
+2025-05-15 03:47:43,004 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 03:48:27,914 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 03:51:17,924 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 03:51:56,068 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 03:52:46,035 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 03:52:51,645 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 03:55:39,218 - ClawBackend - INFO - [crypto_repository.py:66] - Successfully registered user: MikeyGoolang@gmail.com
+2025-05-15 03:55:39,280 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 03:55:53,825 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 03:58:49,543 - ClawBackend - ERROR - [crypto_repository.py:110] - Error logging in user MikeyGoolang@gmail.com: Email not confirmed
+2025-05-15 04:00:29,815 - ClawBackend - INFO - [crypto_repository.py:67] - Successfully registered user: thecreatorjim@gmail.com
+2025-05-15 04:05:58,586 - ClawBackend - INFO - [crypto_repository.py:67] - Successfully registered user: mappedvision@gmail.com
+2025-05-15 04:15:05,695 - ClawBackend - INFO - [crypto_repository.py:67] - Successfully registered user: bamburitilapia@gmail.com
+2025-05-15 04:15:05,931 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 04:15:50,281 - ClawBackend - INFO - [app.py:27] - Starting application...
+2025-05-15 04:17:59,033 - ClawBackend - ERROR - [crypto_repository.py:78] - Error registering user bamburitilapia@gmail.com: {'code': '23505', 'details': 'Key (id)=(6f60ad08-e8c0-4e0d-b345-afbf2132e6dc) already exists.', 'hint': None, 'message': 'duplicate key value violates unique constraint "users_pkey"'}
+2025-05-15 04:18:34,197 - ClawBackend - INFO - [crypto_repository.py:67] - Successfully registered user: paywithwire@gmail.com
+2025-05-15 04:20:25,124 - ClawBackend - ERROR - [crypto_repository.py:110] - Error logging in user MikeyGoolang@gmail.com: Email not confirmed
+2025-05-15 04:25:01,041 - ClawBackend - INFO - [app.py:37] - Shutting down application...
+2025-05-15 04:25:44,863 - ClawBackend - INFO - [app.py:27] - Starting application...
