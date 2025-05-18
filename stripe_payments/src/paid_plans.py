@@ -161,6 +161,7 @@ def get_stripe_price_id(plan_identifier: str) -> str:
         
     # If it's neither, default to test_drive
     logger.warning(f"Unknown plan identifier: {plan_identifier}, defaulting to test_drive")
+    
     return PLAN_PRICE_IDS["test_drive"]
 
 def is_subscription_plan(plan_type: str) -> bool:
