@@ -3,16 +3,22 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, EmailStr
-from core.services.auth_service import AuthService
+from archived_code.user_accounts.auth_service import AuthService
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
-from dependencies import get_auth_service
-from core.interfaces.account_auth_interface import (
+from archived_code.user_accounts.dependencies import get_auth_service
+from archived_code.user_accounts.account_auth_interface import (
     UserRegistration,
     UserLogin,
     TelegramAuth,
     EmailRequest,
     ProfileUpdate
 )
+import hashlib
+import hmac
+import os
+import time
+import firebase_admin
+from firebase_admin import credentials, auth, db
 
 router = APIRouter(
     prefix="/auth",
@@ -60,35 +66,165 @@ async def login(
     
     return result
 
-@router.get("/google/login")
-async def google_login(
-    redirect_url: str,
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """Generate Google OAuth URL for sign in"""
-    result = await auth_service.google_sign_in(redirect_url)
-    
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    
-    # Return the URL that the client should redirect to
-    return {"provider_url": result["provider_url"]}
+# Initialize Firebase Admin SDK
+cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "firebase/secrets/firebase-credentials.json")
 
-@router.post("/telegram/login", response_model=Dict[str, Any])
-async def telegram_login(
-    telegram_data: TelegramAuth,
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """Login or register with Telegram data"""
-    # Convert pydantic model to dict
-    telegram_dict = telegram_data.model_dump()
+cred = credentials.Certificate(cred_path)
+
+firebase_admin.initialize_app(cred, {
+    'databaseURL': os.environ.get("FIREBASE_DATABASE_URL")
+})
+
+# Your Telegram Bot Token - keep this secret!
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+
+class TelegramAuthData(BaseModel):
+    id: str
+    email: str
+    first_name: Optional[str] = ""
+    last_name: Optional[str] = ""
+    username: Optional[str] = ""
+    photo_url: Optional[str] = ""
+    auth_date: str
+    hash: str
+
+def verify_telegram_auth_data(auth_data: Dict[str, Any]) -> bool:
+    """
+    Verify that the auth data actually came from Telegram.
+    https://core.telegram.org/widgets/login#checking-authorization
+    """
+    if not TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=500, detail="Telegram bot token not configured")
     
-    result = await auth_service.telegram_sign_in(telegram_dict)
+    # Remove hash from the data before checking
+    received_hash = auth_data.pop('hash', None)
+    if not received_hash:
+        return False
     
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
+    # Check auth_date is not too old (within 1 day)
+    auth_date = int(auth_data.get('auth_date', '0'))
+    if time.time() - auth_date > 86400:  # 24 hours
+        return False
     
-    return result
+    # Sort the remaining data alphabetically
+    data_check_string = '\n'.join([f"{k}={v}" for k, v in sorted(auth_data.items())])
+    
+    # Create secret key from bot token
+    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+    
+    # Generate hash and compare
+    computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    
+    # Return auth data for further use with added hash
+    auth_data['hash'] = received_hash
+    
+    return computed_hash == received_hash
+
+@router.post("/telegram")
+async def telegram_auth(auth_data: Dict[str, str]):
+    """
+    Verify Telegram auth data and return a Firebase custom token
+    """
+    try:
+        # Verify the Telegram auth data
+        if not verify_telegram_auth_data(dict(auth_data)):
+            return {
+                "success": False, 
+                "message": "Invalid or expired authentication data"
+            }
+        
+        # Auth data is valid, get or create the user in Firebase
+        telegram_id = auth_data.get('id')
+        
+        # Try to find existing user by custom claims
+        try:
+            existing_users = auth.list_users().iterate_all()
+            firebase_user = None
+            
+            for user in existing_users:
+                claims = user.custom_claims or {}
+                if claims.get('telegramId') == telegram_id:
+                    firebase_user = user
+                    break
+        except:
+            firebase_user = None
+            
+        # Create or update the user
+        if firebase_user:
+            # User exists, update if needed
+            user_record = firebase_user
+        else:
+            # Create new user
+            # Before creating the custom token, check if the user has a verified email
+            if auth_data.get('email'):
+                # Check if this is a valid email or matches certain criteria
+                user_email = auth_data.get('email')
+                # Add your validation logic here
+                
+                # You could also store the real email instead of the generated one
+                email = user_email
+            else:
+                # Fall back to the generated email
+                email = f"telegram_{telegram_id}@telegram.login"
+
+            password = auth.generate_password_hash(f"telegram_{telegram_id}_{int(time.time())}")
+            
+            try:
+                user_record = auth.create_user(
+                    email=email,
+                    password=password,
+                    display_name=f"{auth_data.get('first_name', '')} {auth_data.get('last_name', '')}".strip()
+                )
+                
+                # Set custom claims for Telegram ID
+                auth.set_custom_user_claims(user_record.uid, {'telegramId': telegram_id})
+            except Exception as e:
+                return {"success": False, "message": f"Failed to create Firebase user: {str(e)}"}
+        
+        # Create user data for the Realtime Database
+        firstname = auth_data.get('first_name', '')
+        lastname = auth_data.get('last_name', '')
+        display_name = f"{firstname} {lastname}".strip()
+        if not display_name and auth_data.get('username'):
+            display_name = auth_data.get('username')
+            
+        user_data = {
+            "uuid": user_record.uid,
+            "email": user_record.email,
+            "firstname": firstname,
+            "secondname": lastname,
+            "displayName": display_name,
+            "avatarUrl": auth_data.get('photo_url', ''),
+            "createdTime": str(int(time.time() * 1000)),
+            "subscriptionType": "free",
+            "isUsingTestDrive": False,
+            "telegramId": telegram_id,
+            "telegramUsername": auth_data.get('username', '')
+        }
+        
+        # Save to Firebase Realtime Database
+        try:
+            ref = db.reference(f'/users/{user_record.uid}')
+            ref.update(user_data)
+        except Exception as e:
+            return {"success": False, "message": f"Failed to save user data: {str(e)}"}
+        
+        # Create a custom token for the user
+        try:
+            custom_token = auth.create_custom_token(user_record.uid)
+        except Exception as e:
+            return {"success": False, "message": f"Failed to create custom token: {str(e)}"}
+        
+        # Return success with token and user data
+        return {
+            "success": True,
+            "message": "Authentication successful",
+            "firebaseToken": custom_token.decode('utf-8'),
+            "user": user_data
+        }
+        
+    except Exception as e:
+        return {"success": False, "message": f"Authentication failed: {str(e)}"}
 
 @router.post("/reset-password")
 async def reset_password(
@@ -155,7 +291,7 @@ async def logout(
         # This is a placeholder; actual implementation would depend on client-side logic
         return JSONResponse(content={"status": "logged_out"}, status_code=200)
     
-    return {"status": "logged_out"}
+    raise HTTPException(status_code=400, detail="Logout failed")
 
 @router.get("/user/{user_id}", response_model=Dict[str, Any])
 async def get_user_profile(
@@ -188,7 +324,7 @@ async def update_user_profile(
     return result
 
 
-@router.get("/callback")
+@router.get("/supabase-callback")
 async def auth_callback():
     """Handle authentication callback from Supabase
     

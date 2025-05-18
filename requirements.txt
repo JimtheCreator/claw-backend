@@ -23,3 +23,5 @@ psycopg2
 orjson
 scipy
 pydantic[email]
+firebase_admin
+stripe

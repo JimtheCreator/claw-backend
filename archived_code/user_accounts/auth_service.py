@@ -1,6 +1,6 @@
 # src/core/services/auth_service.py
 from typing import Dict, Any, Optional
-from core.interfaces.auth_repository import AuthRepository
+from archived_code.user_accounts.auth_repository import AuthRepository
 
 class AuthService:
     def __init__(self, auth_repository: AuthRepository):

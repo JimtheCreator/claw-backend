@@ -1,6 +1,6 @@
 # src/presentation/api/routes/market_data.py
 from fastapi import WebSocket, WebSocketDisconnect
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,8 +19,6 @@ from fastapi.responses import StreamingResponse
 
 from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
 from core.use_cases.market.market_data import delete_market_data
-# src/api/v1/routes/market_data.py
-from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from datetime import datetime, timezone
 from typing import Optional
 import websockets

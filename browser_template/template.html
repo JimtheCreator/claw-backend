@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Stripe Subscribe</title>
+</head>
+<body>
+  <h1>Test Stripe Subscribe Endpoint</h1>
+  <form id="subscribe-form">
+    <label>User ID:</label><br />
+    <input type="text" name="user_id" value="8bgHrh3Xt9SiJtbvsTOctG2CjrI3" /><br /><br />
+
+    <label>Plan ID:</label><br />
+    <input type="text" name="plan_id" value="test_drive" /><br /><br />
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <h3>Response:</h3>
+  <pre id="response">Waiting...</pre>
+
+  <script>
+    document.getElementById('subscribe-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = e.target.id.value;
+      const plan_id = e.target.plan_id.value;
+
+      try {
+        const response = await fetch('https://stable-wholly-crappie.ngrok-free.app/api/v1/stripe/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id, plan_id })
+        });
+
+        const result = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        document.getElementById('response').textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
