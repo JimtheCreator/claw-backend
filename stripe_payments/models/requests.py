@@ -15,11 +15,6 @@ class SubscribeRequest(BaseModel):
             raise ValueError('Invalid user_id format. Must be 28–36 characters long (Firebase ID).')
         return v
 
-    # @field_validator('plan_id')
-    # @classmethod
-    # def validate_plan_id(cls, v):
-    #     if not v.startswith("price_") and not re.fullmatch(r'[a-zA-Z0-9_-]+', v):
-    #         raise ValueError('Invalid plan_id. Must be a valid Stripe price ID or custom slug (e.g., "starter_plan").')
-    #     return v
-
-    
+class CancelRequest(BaseModel):
+    subscription_id: str
+    user_id: str
