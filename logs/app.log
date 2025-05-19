@@ -3216,3 +3216,197 @@ AttributeError: payment_intent
 2025-05-19 17:52:34,991 - ClawBackend - INFO - [paid_plans.py:337] - Processing webhook event: invoice.payment_succeeded
 2025-05-19 17:52:34,999 - ClawBackend - INFO - [paid_plans.py:337] - Processing webhook event: invoice.paid
 2025-05-19 17:52:36,039 - ClawBackend - INFO - [paid_plans.py:337] - Processing webhook event: invoice.upcoming
+2025-05-19 18:12:41,885 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 18:14:16,554 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:14:55,777 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:14:56,052 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:14:56,053 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:14:57,184 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:14:58,782 - ClawBackend - ERROR - [paid_plans.py:424] - Stripe error for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): Request req_14oDX0Id5NCuPv: This property cannot be expanded because it doesn't exist: payment_intent.
+2025-05-19 18:15:00,017 - ClawBackend - INFO - [paid_plans.py:462] - Processing webhook event: payment_intent.created
+2025-05-19 18:15:00,329 - ClawBackend - INFO - [paid_plans.py:462] - Processing webhook event: invoice.finalized
+2025-05-19 18:15:00,333 - ClawBackend - INFO - [paid_plans.py:462] - Processing webhook event: customer.subscription.created
+2025-05-19 18:15:00,349 - ClawBackend - INFO - [paid_plans.py:462] - Processing webhook event: invoice.created
+2025-05-19 18:17:41,675 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:17:50,165 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:17:50,471 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:17:50,473 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:17:52,704 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:17:54,262 - ClawBackend - ERROR - [paid_plans.py:429] - Stripe error for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): Request req_Bfhl780Spt46M7: This property cannot be expanded because it doesn't exist: payment_intent.
+2025-05-19 18:17:55,457 - ClawBackend - INFO - [paid_plans.py:467] - Processing webhook event: payment_intent.created
+2025-05-19 18:17:55,562 - ClawBackend - INFO - [paid_plans.py:467] - Processing webhook event: customer.subscription.created
+2025-05-19 18:17:55,615 - ClawBackend - INFO - [paid_plans.py:467] - Processing webhook event: invoice.created
+2025-05-19 18:17:55,661 - ClawBackend - INFO - [paid_plans.py:467] - Processing webhook event: invoice.finalized
+2025-05-19 18:21:30,966 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 18:22:11,498 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:22:28,796 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:22:29,104 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:22:29,106 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:22:30,438 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_weekly, price_id price_1RPu2ZDIeiQ55dB6rpiPHkSu
+2025-05-19 18:22:31,871 - ClawBackend - ERROR - [paid_plans.py:435] - Stripe error for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu2ZDIeiQ55dB6rpiPHkSu): Request req_hfYJoHwIpBGKnJ: This property cannot be expanded because it doesn't exist: payment_intent.
+2025-05-19 18:22:33,150 - ClawBackend - INFO - [paid_plans.py:473] - Processing webhook event: payment_intent.created
+2025-05-19 18:22:33,354 - ClawBackend - INFO - [paid_plans.py:473] - Processing webhook event: customer.subscription.created
+2025-05-19 18:22:33,472 - ClawBackend - INFO - [paid_plans.py:473] - Processing webhook event: invoice.created
+2025-05-19 18:22:33,477 - ClawBackend - INFO - [paid_plans.py:473] - Processing webhook event: invoice.finalized
+2025-05-19 18:24:12,937 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:24:13,247 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:24:13,248 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:24:15,089 - ClawBackend - INFO - [paid_plans.py:370] - Creating PaymentIntent for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan test_drive, price_id price_1RPtxqDIeiQ55dB6qarRb0ys
+2025-05-19 18:24:16,720 - ClawBackend - INFO - [paid_plans.py:473] - Processing webhook event: payment_intent.created
+2025-05-19 18:26:46,181 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 18:27:11,100 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:27:33,643 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:27:33,957 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:27:33,957 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:27:35,180 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:27:36,653 - ClawBackend - ERROR - [paid_plans.py:440] - Error initiating payment for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): 'str' object has no attribute 'payment_intent'
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 411, in initiate_payment_intent_or_subscription
+    if subscription.latest_invoice and subscription.latest_invoice.payment_intent:
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'payment_intent'
+2025-05-19 18:27:37,743 - ClawBackend - INFO - [paid_plans.py:472] - Processing webhook event: payment_intent.created
+2025-05-19 18:27:38,039 - ClawBackend - INFO - [paid_plans.py:472] - Processing webhook event: customer.subscription.created
+2025-05-19 18:27:38,154 - ClawBackend - INFO - [paid_plans.py:472] - Processing webhook event: invoice.created
+2025-05-19 18:27:38,176 - ClawBackend - INFO - [paid_plans.py:472] - Processing webhook event: invoice.finalized
+2025-05-19 18:29:49,040 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 18:30:25,487 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:30:30,694 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:30:31,001 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:30:31,002 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:30:33,357 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:30:34,802 - ClawBackend - ERROR - [paid_plans.py:414] - No payment intent found in latest_invoice — possibly a free trial or misconfigured plan
+2025-05-19 18:30:34,805 - ClawBackend - INFO - [paid_plans.py:417] - Creating PaymentIntent for subscription sub_1RQVe9DIeiQ55dB6gKIrngzW
+2025-05-19 18:30:34,806 - ClawBackend - ERROR - [paid_plans.py:439] - Error initiating payment for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): 'NoneType' object has no attribute 'client_secret'
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 420, in initiate_payment_intent_or_subscription
+    client_secret=payment_intent.client_secret,
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'client_secret'
+2025-05-19 18:30:36,111 - ClawBackend - INFO - [paid_plans.py:471] - Processing webhook event: payment_intent.created
+2025-05-19 18:30:36,293 - ClawBackend - INFO - [paid_plans.py:471] - Processing webhook event: invoice.created
+2025-05-19 18:30:36,313 - ClawBackend - INFO - [paid_plans.py:471] - Processing webhook event: invoice.finalized
+2025-05-19 18:30:36,323 - ClawBackend - INFO - [paid_plans.py:471] - Processing webhook event: customer.subscription.created
+2025-05-19 18:45:06,715 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 18:46:59,615 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 18:47:08,383 - ClawBackend - INFO - [repository.py:46] - User W0Pu7AV4dnVp037yVmtk0MhTtq42 exists in Firebase
+2025-05-19 18:47:08,663 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:47:08,665 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=jimmyodhiambo10@gmail.com, name=jimmy odhiambo
+2025-05-19 18:47:12,732 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user W0Pu7AV4dnVp037yVmtk0MhTtq42, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:47:14,428 - ClawBackend - ERROR - [paid_plans.py:432] - Stripe error for user W0Pu7AV4dnVp037yVmtk0MhTtq42 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): Request req_O67BhI1kC9mCC4: This property cannot be expanded because it doesn't exist: payment_intent.
+2025-05-19 18:47:15,520 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: payment_intent.created
+2025-05-19 18:47:15,913 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: invoice.created
+2025-05-19 18:47:15,925 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: customer.subscription.created
+2025-05-19 18:47:15,931 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: invoice.finalized
+2025-05-19 18:50:21,204 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 18:50:21,510 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 18:50:21,512 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 18:50:23,253 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 18:50:24,815 - ClawBackend - ERROR - [paid_plans.py:432] - Stripe error for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): Request req_3SbUKyUMk9fLkd: This property cannot be expanded because it doesn't exist: payment_intent.
+2025-05-19 18:50:25,343 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: customer.created
+2025-05-19 18:50:26,075 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: customer.updated
+2025-05-19 18:50:26,251 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: payment_intent.created
+2025-05-19 18:50:26,382 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: invoice.created
+2025-05-19 18:50:26,392 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: customer.subscription.created
+2025-05-19 18:50:26,433 - ClawBackend - INFO - [paid_plans.py:470] - Processing webhook event: invoice.finalized
+2025-05-19 19:12:11,003 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 19:12:19,288 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-19 19:12:32,793 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 19:12:33,131 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:12:33,132 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:12:34,290 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 19:12:35,864 - ClawBackend - ERROR - [paid_plans.py:424] - Error initiating payment for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 (Plan: price_1RPu76DIeiQ55dB6S32S2sVP): 1 validation error for NativeCheckoutResponseSchema
+client_secret
+  Input should be a valid string [type=string_type, input_value=<ConfirmationSecret at 0x...ype": "payment_intent"
+}, input_type=Invoice.ConfirmationSecret]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 406, in initiate_payment_intent_or_subscription
+    return NativeCheckoutResponseSchema(
+        client_secret=confirmation_secret,
+    ...<6 lines>...
+        mode=mode
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\pydantic\main.py", line 243, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 1 validation error for NativeCheckoutResponseSchema
+client_secret
+  Input should be a valid string [type=string_type, input_value=<ConfirmationSecret at 0x...ype": "payment_intent"
+}, input_type=Invoice.ConfirmationSecret]
+    For further information visit https://errors.pydantic.dev/2.11/v/string_type
+2025-05-19 19:12:36,661 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: payment_intent.created
+2025-05-19 19:12:36,998 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: customer.subscription.created
+2025-05-19 19:12:37,000 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.created
+2025-05-19 19:12:37,044 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.finalized
+2025-05-19 19:16:06,522 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 19:16:51,130 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 19:16:54,213 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 19:16:54,500 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:16:54,500 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:16:56,372 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 19:16:58,751 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: payment_intent.created
+2025-05-19 19:16:58,992 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: customer.subscription.created
+2025-05-19 19:16:59,045 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.created
+2025-05-19 19:16:59,152 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.finalized
+2025-05-19 19:17:13,920 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 19:17:14,198 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:17:14,199 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:17:15,342 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan starter_monthly, price_id price_1RPu76DIeiQ55dB6S32S2sVP
+2025-05-19 19:17:17,749 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: payment_intent.created
+2025-05-19 19:17:17,995 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: customer.subscription.created
+2025-05-19 19:17:18,057 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.created
+2025-05-19 19:17:18,135 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.finalized
+2025-05-19 19:17:55,594 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: charge.succeeded
+2025-05-19 19:17:56,088 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: payment_method.attached
+2025-05-19 19:17:56,232 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.updated
+2025-05-19 19:17:56,236 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: customer.subscription.updated
+2025-05-19 19:17:56,237 - ClawBackend - INFO - [paid_plans.py:556] - Processing subscription status change to active for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan starter_monthly
+2025-05-19 19:17:57,935 - ClawBackend - INFO - [repository.py:62] - Firebase updated for Zdu406N3OoNDb1Pm2NyqCL4D9Tl2
+2025-05-19 19:18:05,275 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2: starter_monthly
+2025-05-19 19:18:05,279 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: payment_intent.succeeded
+2025-05-19 19:18:05,281 - ClawBackend - WARNING - [paid_plans.py:467] - Missing metadata in payment_intent.succeeded event. Cannot update subscription.
+2025-05-19 19:18:05,829 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.paid
+2025-05-19 19:18:05,833 - ClawBackend - INFO - [paid_plans.py:456] - Processing webhook event: invoice.payment_succeeded
+2025-05-19 19:21:17,953 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 19:22:19,291 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 19:22:33,777 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 19:22:47,309 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-19 19:23:37,113 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 19:23:39,352 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:23:39,353 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:23:44,472 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan pro_weekly, price_id price_1RPu9CDIeiQ55dB6dGFWoQAC
+2025-05-19 19:23:49,225 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: payment_intent.created
+2025-05-19 19:23:49,227 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.created
+2025-05-19 19:23:49,229 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.finalized
+2025-05-19 19:23:49,231 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: customer.subscription.created
+2025-05-19 19:25:05,012 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: payment_intent.succeeded
+2025-05-19 19:25:05,013 - ClawBackend - WARNING - [paid_plans.py:468] - Missing metadata in payment_intent.succeeded event. Cannot update subscription.
+2025-05-19 19:25:05,036 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: charge.succeeded
+2025-05-19 19:25:05,315 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.paid
+2025-05-19 19:25:05,319 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.updated
+2025-05-19 19:25:05,322 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: customer.subscription.updated
+2025-05-19 19:25:05,363 - ClawBackend - INFO - [paid_plans.py:557] - Processing subscription status change to active for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan pro_weekly
+2025-05-19 19:25:11,924 - ClawBackend - INFO - [repository.py:62] - Firebase updated for Zdu406N3OoNDb1Pm2NyqCL4D9Tl2
+2025-05-19 19:25:15,151 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2: pro_weekly
+2025-05-19 19:25:15,155 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.payment_succeeded
+2025-05-19 19:25:15,713 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.upcoming
+2025-05-19 19:27:06,568 - ClawBackend - INFO - [repository.py:46] - User Zdu406N3OoNDb1Pm2NyqCL4D9Tl2 exists in Firebase
+2025-05-19 19:27:06,915 - ClawBackend - INFO - [paid_plans.py:155] - User details from Firebase Database: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:27:06,917 - ClawBackend - INFO - [paid_plans.py:333] - User details from get_user_details FUNCTION: email=dishutch@gmail.com, name=Dishutch
+2025-05-19 19:27:08,770 - ClawBackend - INFO - [paid_plans.py:394] - Creating Subscription for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan pro_monthly, price_id price_1RPuBDDIeiQ55dB6deQ4BKqk
+2025-05-19 19:27:11,283 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: payment_intent.created
+2025-05-19 19:27:11,474 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: customer.subscription.created
+2025-05-19 19:27:11,626 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.created
+2025-05-19 19:27:11,691 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.finalized
+2025-05-19 19:27:23,270 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: charge.succeeded
+2025-05-19 19:27:23,274 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: customer.subscription.updated
+2025-05-19 19:27:23,276 - ClawBackend - INFO - [paid_plans.py:557] - Processing subscription status change to active for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2, plan pro_monthly
+2025-05-19 19:27:23,809 - ClawBackend - INFO - [repository.py:62] - Firebase updated for Zdu406N3OoNDb1Pm2NyqCL4D9Tl2
+2025-05-19 19:27:25,403 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user Zdu406N3OoNDb1Pm2NyqCL4D9Tl2: pro_monthly
+2025-05-19 19:27:25,406 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: payment_intent.succeeded
+2025-05-19 19:27:25,407 - ClawBackend - WARNING - [paid_plans.py:468] - Missing metadata in payment_intent.succeeded event. Cannot update subscription.
+2025-05-19 19:27:25,408 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.updated
+2025-05-19 19:27:25,414 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.payment_succeeded
+2025-05-19 19:27:25,416 - ClawBackend - INFO - [paid_plans.py:457] - Processing webhook event: invoice.paid
+2025-05-19 19:32:40,183 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-19 19:33:25,775 - ClawBackend - INFO - [app.py:28] - Starting application...

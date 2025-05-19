@@ -172,6 +172,7 @@ async def get_user_details(user_id: str, firebase_repo: FirebaseRepository) -> d
 
     return {"email": email, "name": name}
 
+
 @router.post("/stripe/initiate-payment", response_model=NativeCheckoutResponseSchema)
 async def initiate_payment_intent_or_subscription(
     request: SubscribeRequest,
@@ -253,45 +254,19 @@ async def initiate_payment_intent_or_subscription(
                 items=[{"price": price_id}],
                 payment_behavior="default_incomplete",
                 payment_settings={"save_default_payment_method": "on_subscription"},
-                metadata={
-                    "user_id": request.user_id,
-                    "plan_type": plan_type_for_response,
-                    "price_id": price_id
-                }
+                expand=["latest_invoice.confirmation_secret"],
+                metadata={"user_id": request.user_id, "plan_type": plan_type_for_response}
             )
 
-            client_secret_for_sdk = None
-            intent_type_for_sdk = None
-            payment_intent_id_for_sdk = None
-            setup_intent_id_for_sdk = None
-
-            logger.info(f"Creating SetupIntent for subscription {subscription.id}")
-            try:
-                setup_intent = stripe.SetupIntent.create(
-                    customer=customer_id_to_use,
-                    payment_method_types=["card"],
-                    usage="off_session",
-                    metadata={ 
-                        "subscription_id": subscription.id,
-                        "user_id": request.user_id,
-                        "plan_type": plan_type_for_response
-                    }
-                )
-
-                client_secret_for_sdk = setup_intent.client_secret
-                intent_type_for_sdk = "setup_intent"
-                setup_intent_id_for_sdk = setup_intent.id
-            except Exception as e_setup:
-                logger.error(f"Failed to create SetupIntent: {str(e_setup)}")
-                raise HTTPException(status_code=500, detail="Failed to initialize subscription payment method. Please try again or contact support.")
+            confirmation_secret = subscription.latest_invoice.confirmation_secret.client_secret
+            intent_type = subscription.latest_invoice.confirmation_secret.type
 
             return NativeCheckoutResponseSchema(
-                client_secret=client_secret_for_sdk,
+                client_secret=confirmation_secret,
                 publishable_key=STRIPE_PUBLISHABLE_KEY,
-                intent_type=intent_type_for_sdk,
+                intent_type=intent_type,
                 customer_id=customer_id_to_use,
                 ephemeral_key_secret=ephemeral_key_secret_to_use,
-                setup_intent_id=setup_intent_id_for_sdk,
                 subscription_id=subscription.id,
                 plan_type=plan_type_for_response,
                 mode=mode
@@ -306,6 +281,8 @@ async def initiate_payment_intent_or_subscription(
     except Exception as e:
         logger.error(f"Error initiating payment for user {request.user_id} (Plan: {request.plan_id}): {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error initiating payment: {str(e)}")
+    
+
 
 
 @router.post("/stripe/webhook")
