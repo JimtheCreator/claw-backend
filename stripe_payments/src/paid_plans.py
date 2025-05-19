@@ -284,7 +284,6 @@ async def initiate_payment_intent_or_subscription(
     
 
 
-
 @router.post("/stripe/webhook")
 async def stripe_webhook(
     request: Request,
@@ -324,6 +323,16 @@ async def stripe_webhook(
             else:
                 logger.warning(f"Missing metadata in payment_intent.succeeded event. Cannot update subscription.")
 
+        elif event.type == "payment_intent.payment_failed":
+            # Handle one-time payment failure
+            payment_intent = event_object
+            user_id = payment_intent.metadata.get("user_id")
+            if user_id:
+                logger.error(f"Payment intent failed for user {user_id}: {payment_intent.last_payment_error.message if payment_intent.last_payment_error else 'Unknown error'}")
+                await firebase_repo.update_subscription(user_id, "payment_failed")
+            else:
+                logger.warning("Could not determine user_id for payment_intent.payment_failed event")
+
         elif event.type == "checkout.session.completed":
             session = event_object
             user_id = session.metadata.get("user_id")
@@ -334,6 +343,16 @@ async def stripe_webhook(
                 logger.info(f"Processing checkout.session.completed for user {user_id}, plan {plan_type}")
                 await firebase_repo.update_subscription(user_id, plan_type)
                 await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
+
+        elif event.type == "checkout.session.async_payment_failed" or event.type == "checkout.session.expired":
+            # Handle checkout session payment failure
+            session = event_object
+            user_id = session.metadata.get("user_id")
+            if user_id:
+                logger.error(f"Checkout session failed for user {user_id}, event: {event.type}")
+                await firebase_repo.update_subscription(user_id, "payment_failed")
+            else:
+                logger.warning(f"Could not determine user_id for {event.type} event")
 
         elif event.type == "invoice.payment_succeeded":
             invoice = event_object
@@ -385,7 +404,16 @@ async def stripe_webhook(
                     
                     await firebase_repo.update_subscription(user_id, "payment_failed")
                     raise HTTPException(status_code=500, detail=str(e))
-                
+        
+        elif event.type == "setup_intent.setup_failed":
+            # Handle setup intent failure
+            setup_intent = event_object
+            user_id = setup_intent.metadata.get("user_id")
+            if user_id:
+                logger.error(f"Setup intent failed for user {user_id}: {setup_intent.last_setup_error.message if setup_intent.last_setup_error else 'Unknown error'}")
+                await firebase_repo.update_subscription(user_id, "payment_failed")
+            else:
+                logger.warning("Could not determine user_id for setup_intent.setup_failed event")
 
         elif event.type == "invoice.payment_failed":
             invoice = event_object
@@ -416,6 +444,17 @@ async def stripe_webhook(
                     await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
                 else:
                     logger.warning(f"Cannot update subscription that changed to active: user_id={user_id}, plan_type={plan_type}")
+            elif current_status in ["past_due", "unpaid", "incomplete_expired"]:
+                # Handle subscription status changes that indicate payment problems
+                user_id = subscription.metadata.get("user_id")
+                if not user_id:
+                    customer = stripe.Customer.retrieve(subscription.get("customer"))
+                    user_id = customer.metadata.get("user_id")
+                if user_id:
+                    logger.error(f"Subscription status changed to {current_status} for user {user_id}")
+                    await firebase_repo.update_subscription(user_id, "payment_failed")
+                else:
+                    logger.warning(f"Could not determine user_id for subscription status change to {current_status}")
 
         elif event.type == "customer.subscription.deleted":
             subscription = event_object
