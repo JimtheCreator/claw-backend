@@ -509,6 +509,7 @@ async def cancel_subscription(
     5. Returns cancellation details
     """
     try:
+        logger.info(f"Request body: {dict(request)}")
         user_id = request.user_id
         subscription_id = request.subscription_id
         # Default to canceling at period end unless explicitly set to False
@@ -570,8 +571,8 @@ async def cancel_subscription(
                     success=True,
                     subscription_id=subscription_id,
                     cancellation_status="already_scheduled",
-                    cancellation_date=datetime.fromtimestamp(current_subscription.current_period_end).isoformat(),
-                    message=f"Subscription was already scheduled to cancel at the end of the billing period ({datetime.fromtimestamp(current_subscription.current_period_end).isoformat()})"
+                    cancellation_date=datetime.fromtimestamp(current_subscription.cancel_at_period_end).isoformat(),
+                    message=f"Subscription was already scheduled to cancel at the end of the billing period ({datetime.fromtimestamp(current_subscription.cancel_at_period_end).isoformat()})"
                 )
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error retrieving subscription {subscription_id}: {str(e)}")
@@ -590,7 +591,13 @@ async def cancel_subscription(
                     }
                 )
                 cancellation_status = "scheduled"
-                cancellation_date = datetime.fromtimestamp(canceled_subscription.current_period_end)
+
+                logger.info(f"Object for 'current_period_end' for {subscription_id}: {dict(canceled_subscription)}")
+                try:
+                    cancellation_date = datetime.fromtimestamp(canceled_subscription.cancel_at_period_end)
+                except AttributeError as e:
+                    logger.error(f"Subscription object missing 'current_period_end' for {subscription_id}: {dict(canceled_subscription)}")
+                    raise
                 
                 # Don't downgrade to free plan yet - will happen via webhook when subscription actually ends
                 logger.info(f"Scheduled cancellation for subscription {subscription_id} at period end: {cancellation_date.isoformat()}")

@@ -7761,3 +7761,188 @@ Traceback (most recent call last):
 SyntaxError: invalid syntax
 2025-05-22 05:31:07,261 - ClawBackend - INFO - [app.py:28] - Starting application...
 2025-05-22 05:32:20,761 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 17:52:05,538 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 17:53:02,189 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-22 17:54:03,955 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-22 17:54:04,259 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-22 17:54:04,669 - ClawBackend - INFO - [repository.py:85] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 has subscription type: pro_weekly
+2025-05-22 17:54:07,132 - ClawBackend - INFO - [paid_plans.py:283] - Attempting to upgrade subscription sub_1RROTVDIeiQ55dB69uksZIVK to price_id price_1RPuBDDIeiQ55dB6deQ4BKqk
+2025-05-22 17:54:07,898 - ClawBackend - INFO - [paid_plans.py:321] - Upgrade requires payment of 2276 gbp. Creating PaymentIntent before modifying subscription.
+2025-05-22 17:54:09,577 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: payment_intent.created
+2025-05-22 17:54:20,748 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: payment_intent.succeeded
+2025-05-22 17:54:20,748 - ClawBackend - INFO - [paid_plans.py:696] - Payment succeeded for pending upgrade. Modifying subscription sub_1RROTVDIeiQ55dB69uksZIVK for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2 to price price_1RPuBDDIeiQ55dB6deQ4BKqk.
+2025-05-22 17:54:21,671 - ClawBackend - INFO - [paid_plans.py:704] - Canceling existing subscription schedule sub_sched_1RROUIDIeiQ55dB67xhJF2Il before paid upgrade
+2025-05-22 17:54:25,974 - ClawBackend - INFO - [repository.py:63] - Firebase updated for H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 17:54:28,018 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: pro_monthly
+2025-05-22 17:54:28,019 - ClawBackend - INFO - [paid_plans.py:716] - Subscription sub_1RROTVDIeiQ55dB69uksZIVK successfully upgraded to pro_monthly for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2 after payment.
+2025-05-22 17:54:28,025 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: charge.succeeded
+2025-05-22 17:54:30,140 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: customer.subscription.updated
+2025-05-22 17:54:30,160 - ClawBackend - INFO - [paid_plans.py:877] - Processing subscription status change to active for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2, plan pro_weekly
+2025-05-22 17:54:30,576 - ClawBackend - INFO - [repository.py:63] - Firebase updated for H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 17:54:32,374 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: pro_weekly
+2025-05-22 17:54:32,378 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: subscription_schedule.updated
+2025-05-22 17:54:32,380 - ClawBackend - WARNING - [paid_plans.py:917] - Webhook subscription_schedule.updated: No subscription ID found in schedule: sub_sched_1RROUIDIeiQ55dB67xhJF2Il. Event ID: evt_1RRaVoDIeiQ55dB6fKkP1GqD
+2025-05-22 17:54:32,385 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: subscription_schedule.released
+2025-05-22 17:54:32,392 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: payment_intent.succeeded
+2025-05-22 17:54:32,395 - ClawBackend - WARNING - [paid_plans.py:741] - Missing metadata in payment_intent.succeeded event. PI: pi_3RRaVqDIeiQ55dB60RJ8UtzU
+2025-05-22 17:54:32,399 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: invoice.payment_succeeded
+2025-05-22 17:54:32,402 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: invoice.paid
+2025-05-22 17:54:32,407 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: charge.updated
+2025-05-22 17:54:32,410 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: payment_intent.created
+2025-05-22 17:54:32,414 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: invoice.finalized
+2025-05-22 17:54:32,417 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: customer.subscription.updated
+2025-05-22 17:54:32,418 - ClawBackend - INFO - [paid_plans.py:877] - Processing subscription status change to active for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2, plan pro_monthly
+2025-05-22 17:54:32,832 - ClawBackend - INFO - [repository.py:63] - Firebase updated for H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 17:54:34,165 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: pro_monthly
+2025-05-22 17:54:34,169 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: charge.succeeded
+2025-05-22 17:54:34,173 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: invoiceitem.created
+2025-05-22 17:54:34,177 - ClawBackend - INFO - [paid_plans.py:680] - Processing webhook event: invoice.created
+2025-05-22 17:58:10,355 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-22 18:09:37,182 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 18:10:25,745 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 18:21:54,920 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-22 18:22:48,819 - ClawBackend - INFO - [paid_plans.py:512] - Request body: {'user_id': 'H8f8rfV7vzfQZTaFNL6CTBOMSiO2', 'subscription_id': None, 'cancel_at_period_end': True}
+2025-05-22 18:22:50,955 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-22 18:22:51,275 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-22 18:22:51,276 - ClawBackend - INFO - [paid_plans.py:528] - No subscription ID provided, looking up by customer for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:22:52,559 - ClawBackend - INFO - [paid_plans.py:560] - Found subscription sub_1RROTVDIeiQ55dB69uksZIVK for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:22:53,750 - ClawBackend - ERROR - [logger.py:75] - Error canceling subscription for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: current_period_end | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err
+Traceback (most recent call last):
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 170, in __getattr__
+    return self[k]
+           ~~~~^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 212, in __getitem__
+    raise err
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 200, in __getitem__
+    return super(StripeObject, self).__getitem__(k)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+KeyError: 'current_period_end'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 594, in cancel_subscription
+    cancellation_date = datetime.fromtimestamp(canceled_subscription.current_period_end)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 172, in __getattr__
+    raise AttributeError(*err.args) from err
+AttributeError: current_period_end
+2025-05-22 18:22:54,499 - ClawBackend - INFO - [paid_plans.py:681] - Processing webhook event: customer.subscription.updated
+2025-05-22 18:22:54,500 - ClawBackend - INFO - [paid_plans.py:878] - Processing subscription status change to active for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2, plan pro_monthly
+2025-05-22 18:22:55,100 - ClawBackend - INFO - [repository.py:63] - Firebase updated for H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:22:57,023 - ClawBackend - INFO - [crypto_repository.py:61] - Supabase subscription updated for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: pro_monthly
+2025-05-22 18:30:00,490 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 18:31:15,136 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 18:31:23,963 - ClawBackend - INFO - [paid_plans.py:512] - Request body: {'user_id': 'H8f8rfV7vzfQZTaFNL6CTBOMSiO2', 'subscription_id': None, 'cancel_at_period_end': True}
+2025-05-22 18:31:25,779 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-22 18:31:26,351 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-22 18:31:26,352 - ClawBackend - INFO - [paid_plans.py:528] - No subscription ID provided, looking up by customer for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:31:28,383 - ClawBackend - INFO - [paid_plans.py:560] - Found subscription sub_1RROTVDIeiQ55dB69uksZIVK for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:31:29,195 - ClawBackend - ERROR - [logger.py:75] - Error canceling subscription for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: current_period_end | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err
+Traceback (most recent call last):
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 170, in __getattr__
+    return self[k]
+           ~~~~^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 212, in __getitem__
+    raise err
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 200, in __getitem__
+    return super(StripeObject, self).__getitem__(k)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+KeyError: 'current_period_end'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 574, in cancel_subscription
+    cancellation_date=datetime.fromtimestamp(current_subscription.current_period_end).isoformat(),
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 172, in __getattr__
+    raise AttributeError(*err.args) from err
+AttributeError: current_period_end
+2025-05-22 18:33:33,491 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 18:33:38,828 - ClawBackend - ERROR - [logger.py:77] - Uncaught exception
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=5668, pipe_handle=844)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "d:\ClawInc\Claw-Backend\src\app.py", line 20, in <module>
+    from stripe_payments.src.paid_plans import router as paid_plans_router
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 597
+    cancellation_date = datetime.fromtimestamp(canceled_subscription.)
+                                                                     ^
+SyntaxError: invalid syntax
+2025-05-22 18:33:42,167 - ClawBackend - ERROR - [logger.py:77] - Uncaught exception
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=5668, pipe_handle=1112)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "d:\ClawInc\Claw-Backend\src\app.py", line 20, in <module>
+    from stripe_payments.src.paid_plans import router as paid_plans_router
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 597
+    cancellation_date = datetime.fromtimestamp(canceled_subscription.)
+                                                                     ^
+SyntaxError: invalid syntax
+2025-05-22 18:33:56,696 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 18:34:40,481 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 18:34:46,129 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 18:35:15,011 - ClawBackend - INFO - [paid_plans.py:512] - Request body: {'user_id': 'H8f8rfV7vzfQZTaFNL6CTBOMSiO2', 'subscription_id': None, 'cancel_at_period_end': True}
+2025-05-22 18:35:16,124 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-22 18:35:16,438 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-22 18:35:16,439 - ClawBackend - INFO - [paid_plans.py:528] - No subscription ID provided, looking up by customer for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:35:17,997 - ClawBackend - INFO - [paid_plans.py:560] - Found subscription sub_1RROTVDIeiQ55dB69uksZIVK for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:35:18,455 - ClawBackend - ERROR - [logger.py:75] - Error canceling subscription for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2: current_period_end | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err | Exception: AttributeError: current_period_end at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py:172 in __getattr__ | Code: raise AttributeError(*err.args) from err
+Traceback (most recent call last):
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 170, in __getattr__
+    return self[k]
+           ~~~~^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 212, in __getitem__
+    raise err
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 200, in __getitem__
+    return super(StripeObject, self).__getitem__(k)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+KeyError: 'current_period_end'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\stripe_payments\src\paid_plans.py", line 574, in cancel_subscription
+    cancellation_date=datetime.fromtimestamp(current_subscription.current_period_end).isoformat(),
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\stripe\_stripe_object.py", line 172, in __getattr__
+    raise AttributeError(*err.args) from err
+AttributeError: current_period_end
+2025-05-22 18:37:25,423 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-22 18:37:45,542 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-22 18:38:16,081 - ClawBackend - INFO - [paid_plans.py:512] - Request body: {'user_id': 'H8f8rfV7vzfQZTaFNL6CTBOMSiO2', 'subscription_id': None, 'cancel_at_period_end': True}
+2025-05-22 18:38:17,365 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-22 18:38:17,666 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-22 18:38:17,667 - ClawBackend - INFO - [paid_plans.py:528] - No subscription ID provided, looking up by customer for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
+2025-05-22 18:38:19,219 - ClawBackend - INFO - [paid_plans.py:560] - Found subscription sub_1RROTVDIeiQ55dB69uksZIVK for user H8f8rfV7vzfQZTaFNL6CTBOMSiO2
