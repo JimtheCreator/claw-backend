@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class PriceResponse(BaseModel):
     id: str
@@ -24,9 +24,9 @@ class CheckoutResponse(BaseModel):
     checkout_url: str
 
 class NativeCheckoutResponseSchema(BaseModel):
-    client_secret: str
+    client_secret: Optional[str] = None
+    intent_type: Optional[str] = None
     publishable_key: str
-    intent_type: str  # "payment_intent" or "setup_intent"
     customer_id: Optional[str] = None
     ephemeral_key_secret: Optional[str] = None
     payment_intent_id: Optional[str] = None # Still useful for reference
@@ -34,3 +34,16 @@ class NativeCheckoutResponseSchema(BaseModel):
     subscription_id: Optional[str] = None
     plan_type: str
     mode: str
+    payment_required: bool = True  # Indicates if payment sheet is needed
+    message: Optional[str] = None  # Success message when no payment is required
+
+# Response Schema for Subscription Cancellation
+class CancellationResponseSchema(BaseModel):
+    success: bool = Field(..., description="Whether the cancellation was successful")
+    subscription_id: str = Field(..., description="The Stripe subscription ID that was canceled")
+    cancellation_status: str = Field(..., description="Either 'immediate' or 'scheduled'")
+    cancellation_date: str = Field(..., description="ISO-formatted date of actual or scheduled cancellation")
+    message: str = Field(..., description="Human-readable message about the cancellation")
+
+class UpgradeSuccessSchema(BaseModel):
+    message: str

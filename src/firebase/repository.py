@@ -54,7 +54,8 @@ class FirebaseRepository:
             updates = {
                 'subscriptionType': plan_type,
                 'usingTestDrive': plan_type == "test_drive",
-                'updatedAt': datetime.now(timezone.utc).isoformat()
+                'updatedAt': datetime.now(timezone.utc).isoformat(),
+                'userPaid': True,
             }
             
             # Secure write operation with validation
@@ -64,3 +65,25 @@ class FirebaseRepository:
         except Exception as e:
             logger.error(f"Firebase error: {str(e)}")
             raise HTTPException(500, "Database update failed")
+        
+    async def get_user_subscription(self, user_id: str) -> str:
+        """Retrieve the current subscription type for a user from Firebase."""
+        try:
+            user_ref = self.db.child(user_id).get()
+            
+            # Handle whether user_ref is a DataSnapshot or direct data
+            if hasattr(user_ref, 'val'):
+                user_data = user_ref.val()
+            else:
+                user_data = user_ref
+                
+            if user_data is None:
+                logger.error(f"User {user_id} not found in Firebase")
+                raise HTTPException(status_code=404, detail=f"User {user_id} not found in Firebase")
+            
+            subscription_type = user_data.get('subscriptionType', 'free')
+            logger.info(f"User {user_id} has subscription type: {subscription_type}")
+            return subscription_type
+        except Exception as e:
+            logger.error(f"Firebase error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Database access failed")
