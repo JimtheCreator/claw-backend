@@ -245,6 +245,7 @@ async def initiate_payment_intent_or_subscription(
                 customer_data["name"] = name
             customer = stripe.Customer.create(**customer_data)
             customer_id = customer.id
+        
 
         ephemeral_key = stripe.EphemeralKey.create(customer=customer_id, stripe_version="2023-10-16")
         ephemeral_key_secret = ephemeral_key.secret
@@ -259,9 +260,23 @@ async def initiate_payment_intent_or_subscription(
                 intent_type="payment_intent", customer_id=customer_id, ephemeral_key_secret=ephemeral_key_secret,
                 payment_intent_id=payment_intent.id, plan_type=selected_plan, mode=mode
             )
-        else:  # Subscription plans
+        else:
+              # Subscription plans
             subscriptions_response = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
             subscriptions = subscriptions_response.data
+
+            for sub in subscriptions:
+                if sub.cancel_at_period_end:
+                    return NativeCheckoutResponseSchema(
+                        publishable_key=STRIPE_PUBLISHABLE_KEY,
+                        customer_id=customer_id,
+                        ephemeral_key_secret=ephemeral_key_secret,
+                        plan_type=selected_plan,
+                        mode="subscription",
+                        payment_required=False,
+                        message="Cannot proceed with subscription action because there is an active subscription set to be cancelled."
+                    )
+                
             if subscriptions and current_plan != "free" and change_type != "lateral":
                 subscription = subscriptions[0]
                 # Safely get subscription items regardless of response type (dict or object)
