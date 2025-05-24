@@ -7965,3 +7965,68 @@ fastapi.exceptions.HTTPException: 400: Cannot proceed with subscription action b
 2025-05-22 19:10:09,816 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
 2025-05-22 19:10:10,138 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
 2025-05-22 19:10:10,450 - ClawBackend - INFO - [repository.py:85] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 has subscription type: pro_monthly
+2025-05-22 19:14:09,924 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-23 21:49:45,983 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-23 21:49:45,997 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-23 21:51:12,966 - ClawBackend - INFO - [repository.py:46] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 exists in Firebase
+2025-05-23 21:51:13,273 - ClawBackend - INFO - [paid_plans.py:158] - User details from Firebase Database: email=wireworkscreation@gmail.com, name=Wire Works
+2025-05-23 21:51:13,683 - ClawBackend - INFO - [repository.py:85] - User H8f8rfV7vzfQZTaFNL6CTBOMSiO2 has subscription type: pro_monthly
+2025-05-23 21:51:27,310 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 21:59:28,699 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:02:33,545 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-23 22:03:39,196 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-23 22:04:55,012 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:06:58,479 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:08:33,552 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:08:35,778 - ClawBackend - INFO - [app.py:43] - Shutting down application...
+2025-05-23 22:09:39,432 - ClawBackend - INFO - [app.py:28] - Starting application...
+2025-05-23 22:12:30,462 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:14:59,341 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:26:52,058 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:30:49,772 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:33:33,116 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:37:08,749 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:44:40,037 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:46:08,704 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:49:37,115 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:50:18,155 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 22:53:14,338 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:06:39,798 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:13:13,520 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:14:53,726 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:25:01,942 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:28:32,956 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:30:01,582 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:31:45,516 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:41:35,012 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:44:15,215 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:44:27,181 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:45:52,759 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:46:02,974 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:47:51,009 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:49:11,211 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:53:26,143 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:54:56,259 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:57:14,881 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-23 23:59:02,951 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:00:48,370 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:02:45,484 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:05:40,717 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:10:04,487 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:11:05,524 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:11:26,202 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:11:48,733 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:13:06,297 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:13:29,905 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:14:22,462 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:16:18,563 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:16:35,838 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:23:59,383 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:24:17,080 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:24:37,428 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:26:23,979 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:26:42,277 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:29:21,425 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:29:40,248 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:29:58,429 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-24 00:33:31,286 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB

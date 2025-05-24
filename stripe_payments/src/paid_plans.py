@@ -176,6 +176,17 @@ async def get_user_details(user_id: str, firebase_repo: FirebaseRepository) -> d
     return {"email": email, "name": name}
 
 
+@router.get("/subscriptions/{user_id}/limits")
+async def get_subscription_limits(user_id: str, supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+    try:
+        result = await supabase_repo.get_subscription_limits(user_id)
+        return result
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching subscription limits: {str(e)}")
+    
+
 @router.post("/stripe/initiate-payment", response_model=NativeCheckoutResponseSchema)
 async def initiate_payment_intent_or_subscription(
     request: SubscribeRequest,

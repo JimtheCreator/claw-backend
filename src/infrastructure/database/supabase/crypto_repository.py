@@ -64,6 +64,42 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Supabase update error for user {user_id}: {str(e)}")
             raise
 
+    async def get_subscription_limits(self, user_id: str) -> dict:
+        """Fetch subscription limits and usage data for a user from Supabase"""
+        try:
+            # Fetch subscription data
+            result = self.client.table(self.subscription_table).select("*").eq("user_id", user_id).execute()
+            if not result.data or len(result.data) == 0:
+                logger.error(f"No subscription data found for user {user_id}")
+                raise HTTPException(status_code=404, detail="Subscription not found for user")
+
+            subscription = result.data[0]
+            limits = {
+                "plan_type": subscription["plan_type"],
+                "price_alerts_limit": subscription["price_alerts_limit"],
+                "pattern_detection_limit": subscription["pattern_detection_limit"],
+                "watchlist_limit": subscription["watchlist_limit"],
+                "market_analysis_limit": subscription["market_analysis_limit"],
+                "journaling_enabled": subscription["journaling_enabled"],
+                "video_download_limit": subscription["video_download_limit"]
+            }
+
+            # Placeholder for usage counts (assuming separate tables exist)
+            # In a real app, you’d query these from respective tables
+            usage = {
+                "price_alerts_used": 0,  # Replace with actual query, e.g., count from price_alerts table
+                "pattern_detection_used": 0,
+                "watchlist_used": 0,
+                "market_analysis_used": 0,
+                "video_downloads_used": 0
+            }
+            
+            return {**limits, **usage}
+        
+        except Exception as e:
+            logger.error(f"Error fetching subscription limits for user {user_id}: {str(e)}")
+            raise
+
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
         """Retrieve a crypto by symbol with error handling"""
         try:
