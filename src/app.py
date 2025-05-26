@@ -19,6 +19,7 @@ from core.services.crypto_list import initialize_binance_connection_pool
 from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
+from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -64,6 +65,7 @@ app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1/test")
 app.include_router(paid_plans_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
+app.include_router(watchlist_router, prefix="/api/v1")
 
 
 @app.get("/health")

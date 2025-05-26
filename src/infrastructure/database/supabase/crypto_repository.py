@@ -22,15 +22,12 @@ class SupabaseCryptoRepository(CryptoRepository):
 
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
-
+        self.watchlist_table = "watchlist"
 
     async def update_subscription(self, user_id: str, plan_type: str, PLAN_LIMITS: dict) -> bool:
         """Update or insert user subscription data in Supabase"""
         try:
-            # Get limits based on plan type
             limits = PLAN_LIMITS.get(plan_type, PLAN_LIMITS["test_drive"])
-            
-            # Prepare data for Supabase
             subscription_data = {
                 "user_id": user_id,
                 "plan_type": plan_type,
@@ -42,22 +39,15 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "video_download_limit": limits["video_download_limit"],
                 "updated_at": datetime.now().isoformat()
             }
-            
-            # Check if record exists
             result = self.client.table(self.subscription_table).select("*").eq("user_id", user_id).execute()
             if hasattr(result, 'error') and result.error:
                 logger.error(f"Supabase query error: {result.error}")
                 raise HTTPException(status_code=500, detail="Database access failed")
-
-
             if len(result.data) > 0:
-                # Update existing record
                 self.client.table("subscriptions").update(subscription_data).eq("user_id", user_id).execute()
             else:
-                # Insert new record
                 subscription_data["created_at"] = datetime.now().isoformat()
                 self.client.table("subscriptions").insert(subscription_data).execute()
-            
             logger.info(f"Supabase subscription updated for user {user_id}: {plan_type}")
             return True, limits
         except Exception as e:
@@ -67,12 +57,10 @@ class SupabaseCryptoRepository(CryptoRepository):
     async def get_subscription_limits(self, user_id: str) -> dict:
         """Fetch subscription limits and usage data for a user from Supabase"""
         try:
-            # Fetch subscription data
             result = self.client.table(self.subscription_table).select("*").eq("user_id", user_id).execute()
             if not result.data or len(result.data) == 0:
                 logger.error(f"No subscription data found for user {user_id}")
                 raise HTTPException(status_code=404, detail="Subscription not found for user")
-
             subscription = result.data[0]
             limits = {
                 "plan_type": subscription["plan_type"],
@@ -83,21 +71,60 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "journaling_enabled": subscription["journaling_enabled"],
                 "video_download_limit": subscription["video_download_limit"]
             }
-
-            # Placeholder for usage counts (assuming separate tables exist)
-            # In a real app, you’d query these from respective tables
             usage = {
-                "price_alerts_used": 0,  # Replace with actual query, e.g., count from price_alerts table
+                "price_alerts_used": 0,
                 "pattern_detection_used": 0,
                 "watchlist_used": 0,
                 "market_analysis_used": 0,
                 "video_downloads_used": 0
             }
-            
             return {**limits, **usage}
-        
         except Exception as e:
             logger.error(f"Error fetching subscription limits for user {user_id}: {str(e)}")
+            raise
+
+    async def get_watchlist_count(self, user_id: str) -> int:
+        """Get the current number of symbols in the user's watchlist."""
+        try:
+            result = self.client.table(self.watchlist_table).select("id", count="exact").eq("user_id", user_id).execute()
+            return result.count
+        except Exception as e:
+            logger.error(f"Error getting watchlist count for user {user_id}: {str(e)}")
+            raise
+
+    async def add_to_watchlist(self, user_id: str, symbol: str, base_asset: str, quote_asset: str, source: str):
+        """Add a symbol to the user's watchlist."""
+        try:
+            data = {
+                "user_id": user_id,
+                "symbol": symbol,
+                "base_asset": base_asset,
+                "quote_asset": quote_asset,
+                "source": source,
+                "added_at": datetime.now(timezone.utc).isoformat()
+            }
+            self.client.table("watchlist").insert(data).execute()
+        except Exception as e:
+            if "duplicate key value violates unique constraint" in str(e):
+                raise HTTPException(status_code=409, detail="Symbol already in watchlist")
+            logger.error(f"Error adding to watchlist: {str(e)}")
+            raise
+
+    async def remove_from_watchlist(self, user_id: str, symbol: str):
+        """Remove a symbol from the user's watchlist."""
+        try:
+            self.client.table("watchlist").delete().eq("user_id", user_id).eq("symbol", symbol).execute()
+        except Exception as e:
+            logger.error(f"Error removing from watchlist: {str(e)}")
+            raise
+
+    async def get_watchlist_status(self, user_id: str, symbol: str) -> bool:
+        """Check if a symbol is in the user's watchlist."""
+        try:
+            result = self.client.table("watchlist").select("id").eq("user_id", user_id).eq("symbol", symbol).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Error checking watchlist status: {str(e)}")
             raise
 
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:

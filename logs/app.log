@@ -8030,3 +8030,571 @@ fastapi.exceptions.HTTPException: 400: Cannot proceed with subscription action b
 2025-05-24 00:29:40,248 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
 2025-05-24 00:29:58,429 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
 2025-05-24 00:33:31,286 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:25:53,321 - ClawBackend - INFO - [app.py:29] - Starting application...
+2025-05-26 02:37:51,499 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:39:06,124 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:41:42,897 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:42:21,283 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTC
+2025-05-26 02:42:22,990 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:42:23,415 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:42:54,558 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for WBTCUSDT (1m)
+2025-05-26 02:42:54,592 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for WBTCUSDT (1m)
+2025-05-26 02:42:57,288 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:42:58,063 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-26 02:42:58,065 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for WBTCUSDT (1m), fetching from Binance
+2025-05-26 02:43:02,429 - ClawBackend - INFO - [market_data.py:369] - Initiating background task to get and save full historical data
+2025-05-26 02:43:02,436 - ClawBackend - INFO - [market_data.py:379] - Returning 82 records from Binance for page 1
+2025-05-26 02:43:02,474 - ClawBackend - INFO - [market_data.py:399] - Started background task to fetch full history for WBTCUSDT (1m)
+2025-05-26 02:43:02,489 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:43:07,094 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 998 records. Progress: 2025-02-25 16:23:00+00:00 (998 total records saved)
+2025-05-26 02:43:08,404 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 984 records. Progress: 2025-02-26 09:03:00+00:00 (1982 total records saved)
+2025-05-26 02:43:09,706 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 996 records. Progress: 2025-02-27 01:42:00+00:00 (2978 total records saved)
+2025-05-26 02:43:10,934 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 987 records. Progress: 2025-02-27 18:22:00+00:00 (3965 total records saved)
+2025-05-26 02:43:12,263 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 984 records. Progress: 2025-02-28 11:02:00+00:00 (4949 total records saved)
+2025-05-26 02:43:13,561 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-01 03:42:00+00:00 (5949 total records saved)
+2025-05-26 02:43:15,212 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-01 20:22:00+00:00 (6949 total records saved)
+2025-05-26 02:43:16,713 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-02 13:02:00+00:00 (7949 total records saved)
+2025-05-26 02:43:18,831 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-03 05:42:00+00:00 (8949 total records saved)
+2025-05-26 02:43:20,255 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-03 22:22:00+00:00 (9949 total records saved)
+2025-05-26 02:43:20,640 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for WBTCUSDT
+2025-05-26 02:43:20,645 - ClawBackend - INFO - [market_data.py:341] - Closing connection for WBTCUSDT
+2025-05-26 02:43:22,299 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 998 records. Progress: 2025-03-04 15:02:00+00:00 (10947 total records saved)
+2025-05-26 02:43:23,727 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 996 records. Progress: 2025-03-05 07:42:00+00:00 (11943 total records saved)
+2025-05-26 02:43:25,167 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 997 records. Progress: 2025-03-06 00:22:00+00:00 (12940 total records saved)
+2025-05-26 02:43:26,805 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 986 records. Progress: 2025-03-06 17:02:00+00:00 (13926 total records saved)
+2025-05-26 02:43:28,226 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 969 records. Progress: 2025-03-07 09:42:00+00:00 (14895 total records saved)
+2025-05-26 02:43:29,663 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 990 records. Progress: 2025-03-08 02:22:00+00:00 (15885 total records saved)
+2025-05-26 02:43:31,397 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 942 records. Progress: 2025-03-08 19:02:00+00:00 (16827 total records saved)
+2025-05-26 02:43:32,724 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 876 records. Progress: 2025-03-09 11:42:00+00:00 (17703 total records saved)
+2025-05-26 02:43:34,163 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 988 records. Progress: 2025-03-10 04:22:00+00:00 (18691 total records saved)
+2025-05-26 02:43:35,402 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 997 records. Progress: 2025-03-10 21:02:00+00:00 (19688 total records saved)
+2025-05-26 02:43:36,641 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 977 records. Progress: 2025-03-11 13:42:00+00:00 (20665 total records saved)
+2025-05-26 02:43:39,070 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 962 records. Progress: 2025-03-12 06:22:00+00:00 (21627 total records saved)
+2025-05-26 02:43:40,304 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 966 records. Progress: 2025-03-12 23:02:00+00:00 (22593 total records saved)
+2025-05-26 02:43:41,519 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 949 records. Progress: 2025-03-13 15:42:00+00:00 (23542 total records saved)
+2025-05-26 02:43:43,192 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 950 records. Progress: 2025-03-14 08:22:00+00:00 (24492 total records saved)
+2025-05-26 02:43:44,406 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 873 records. Progress: 2025-03-15 01:02:00+00:00 (25365 total records saved)
+2025-05-26 02:43:45,928 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 758 records. Progress: 2025-03-15 17:42:00+00:00 (26123 total records saved)
+2025-05-26 02:43:47,478 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 656 records. Progress: 2025-03-16 10:22:00+00:00 (26779 total records saved)
+2025-05-26 02:43:49,135 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 847 records. Progress: 2025-03-17 03:02:00+00:00 (27626 total records saved)
+2025-05-26 02:43:50,372 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 845 records. Progress: 2025-03-17 19:42:00+00:00 (28471 total records saved)
+2025-05-26 02:43:51,971 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 789 records. Progress: 2025-03-18 12:22:00+00:00 (29260 total records saved)
+2025-05-26 02:43:53,845 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 831 records. Progress: 2025-03-19 05:01:00+00:00 (30091 total records saved)
+2025-05-26 02:43:58,965 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 844 records. Progress: 2025-03-19 21:41:00+00:00 (30935 total records saved)
+2025-05-26 02:44:00,231 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 772 records. Progress: 2025-03-20 14:21:00+00:00 (31707 total records saved)
+2025-05-26 02:44:01,862 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 809 records. Progress: 2025-03-21 07:01:00+00:00 (32516 total records saved)
+2025-05-26 02:44:03,248 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 741 records. Progress: 2025-03-21 23:41:00+00:00 (33257 total records saved)
+2025-05-26 02:44:05,139 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 647 records. Progress: 2025-03-22 16:21:00+00:00 (33904 total records saved)
+2025-05-26 02:44:06,839 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 512 records. Progress: 2025-03-23 09:00:00+00:00 (34416 total records saved)
+2025-05-26 02:44:08,613 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 663 records. Progress: 2025-03-24 01:40:00+00:00 (35079 total records saved)
+2025-05-26 02:44:12,092 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 857 records. Progress: 2025-03-24 18:20:00+00:00 (35936 total records saved)
+2025-05-26 02:44:13,540 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 811 records. Progress: 2025-03-25 11:00:00+00:00 (36747 total records saved)
+2025-05-26 02:44:15,159 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 837 records. Progress: 2025-03-26 03:40:00+00:00 (37584 total records saved)
+2025-05-26 02:44:16,988 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 822 records. Progress: 2025-03-26 20:20:00+00:00 (38406 total records saved)
+2025-05-26 02:44:20,309 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 831 records. Progress: 2025-03-27 12:58:00+00:00 (39237 total records saved)
+2025-05-26 02:44:21,593 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 893 records. Progress: 2025-03-28 05:38:00+00:00 (40130 total records saved)
+2025-05-26 02:44:22,988 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 901 records. Progress: 2025-03-28 22:18:00+00:00 (41031 total records saved)
+2025-05-26 02:44:24,347 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 881 records. Progress: 2025-03-29 14:58:00+00:00 (41912 total records saved)
+2025-05-26 02:44:26,462 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 774 records. Progress: 2025-03-30 07:38:00+00:00 (42686 total records saved)
+2025-05-26 02:44:28,327 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 789 records. Progress: 2025-03-31 00:18:00+00:00 (43475 total records saved)
+2025-05-26 02:44:30,025 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 893 records. Progress: 2025-03-31 16:58:00+00:00 (44368 total records saved)
+2025-05-26 02:44:31,332 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 819 records. Progress: 2025-04-01 09:37:00+00:00 (45187 total records saved)
+2025-05-26 02:44:32,756 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 891 records. Progress: 2025-04-02 02:17:00+00:00 (46078 total records saved)
+2025-05-26 02:44:34,322 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 887 records. Progress: 2025-04-02 18:57:00+00:00 (46965 total records saved)
+2025-05-26 02:44:36,034 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 957 records. Progress: 2025-04-03 11:37:00+00:00 (47922 total records saved)
+2025-05-26 02:44:37,882 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 867 records. Progress: 2025-04-04 04:17:00+00:00 (48789 total records saved)
+2025-05-26 02:44:39,177 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 949 records. Progress: 2025-04-04 20:55:00+00:00 (49738 total records saved)
+2025-05-26 02:44:40,520 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 743 records. Progress: 2025-04-05 13:35:00+00:00 (50481 total records saved)
+2025-05-26 02:44:42,072 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 780 records. Progress: 2025-04-06 06:14:00+00:00 (51261 total records saved)
+2025-05-26 02:44:43,292 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 853 records. Progress: 2025-04-06 22:54:00+00:00 (52114 total records saved)
+2025-05-26 02:44:45,500 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 993 records. Progress: 2025-04-07 15:34:00+00:00 (53107 total records saved)
+2025-05-26 02:44:47,079 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 950 records. Progress: 2025-04-08 08:14:00+00:00 (54057 total records saved)
+2025-05-26 02:44:48,712 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 947 records. Progress: 2025-04-09 00:54:00+00:00 (55004 total records saved)
+2025-05-26 02:44:50,378 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 955 records. Progress: 2025-04-09 17:34:00+00:00 (55959 total records saved)
+2025-05-26 02:44:51,605 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 872 records. Progress: 2025-04-10 10:14:00+00:00 (56831 total records saved)
+2025-05-26 02:44:53,219 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 925 records. Progress: 2025-04-11 02:54:00+00:00 (57756 total records saved)
+2025-05-26 02:44:55,031 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 942 records. Progress: 2025-04-11 19:34:00+00:00 (58698 total records saved)
+2025-05-26 02:44:56,607 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 825 records. Progress: 2025-04-12 12:14:00+00:00 (59523 total records saved)
+2025-05-26 02:44:57,931 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 874 records. Progress: 2025-04-13 04:54:00+00:00 (60397 total records saved)
+2025-05-26 02:44:59,685 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 819 records. Progress: 2025-04-13 21:34:00+00:00 (61216 total records saved)
+2025-05-26 02:45:01,087 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 855 records. Progress: 2025-04-14 14:14:00+00:00 (62071 total records saved)
+2025-05-26 02:45:02,435 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 844 records. Progress: 2025-04-15 06:54:00+00:00 (62915 total records saved)
+2025-05-26 02:45:03,889 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 832 records. Progress: 2025-04-15 23:33:00+00:00 (63747 total records saved)
+2025-05-26 02:45:09,302 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 805 records. Progress: 2025-04-16 16:13:00+00:00 (64552 total records saved)
+2025-05-26 02:45:10,646 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 829 records. Progress: 2025-04-17 08:53:00+00:00 (65381 total records saved)
+2025-05-26 02:45:12,023 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 740 records. Progress: 2025-04-18 01:30:00+00:00 (66121 total records saved)
+2025-05-26 02:45:13,403 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 663 records. Progress: 2025-04-18 18:09:00+00:00 (66784 total records saved)
+2025-05-26 02:45:14,894 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 627 records. Progress: 2025-04-19 10:49:00+00:00 (67411 total records saved)
+2025-05-26 02:45:16,752 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 674 records. Progress: 2025-04-20 03:29:00+00:00 (68085 total records saved)
+2025-05-26 02:45:18,040 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 636 records. Progress: 2025-04-20 20:09:00+00:00 (68721 total records saved)
+2025-05-26 02:45:19,521 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 737 records. Progress: 2025-04-21 12:47:00+00:00 (69458 total records saved)
+2025-05-26 02:45:20,746 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 756 records. Progress: 2025-04-22 05:26:00+00:00 (70214 total records saved)
+2025-05-26 02:45:22,197 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 909 records. Progress: 2025-04-22 22:06:00+00:00 (71123 total records saved)
+2025-05-26 02:45:23,395 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 932 records. Progress: 2025-04-23 14:46:00+00:00 (72055 total records saved)
+2025-05-26 02:45:24,626 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 948 records. Progress: 2025-04-24 07:26:00+00:00 (73003 total records saved)
+2025-05-26 02:45:26,029 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 946 records. Progress: 2025-04-25 00:06:00+00:00 (73949 total records saved)
+2025-05-26 02:45:27,407 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 957 records. Progress: 2025-04-25 16:46:00+00:00 (74906 total records saved)
+2025-05-26 02:45:29,016 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 918 records. Progress: 2025-04-26 09:25:00+00:00 (75824 total records saved)
+2025-05-26 02:45:30,757 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 858 records. Progress: 2025-04-27 02:05:00+00:00 (76682 total records saved)
+2025-05-26 02:45:32,037 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 878 records. Progress: 2025-04-27 18:44:00+00:00 (77560 total records saved)
+2025-05-26 02:45:34,302 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 912 records. Progress: 2025-04-28 11:23:00+00:00 (78472 total records saved)
+2025-05-26 02:45:35,622 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 943 records. Progress: 2025-04-29 04:03:00+00:00 (79415 total records saved)
+2025-05-26 02:45:37,046 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 957 records. Progress: 2025-04-29 20:43:00+00:00 (80372 total records saved)
+2025-05-26 02:45:38,471 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 899 records. Progress: 2025-04-30 13:23:00+00:00 (81271 total records saved)
+2025-05-26 02:45:39,683 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 913 records. Progress: 2025-05-01 06:03:00+00:00 (82184 total records saved)
+2025-05-26 02:45:40,899 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 888 records. Progress: 2025-05-01 22:41:00+00:00 (83072 total records saved)
+2025-05-26 02:45:42,685 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 912 records. Progress: 2025-05-02 15:21:00+00:00 (83984 total records saved)
+2025-05-26 02:45:44,431 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 841 records. Progress: 2025-05-03 08:01:00+00:00 (84825 total records saved)
+2025-05-26 02:45:45,700 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 836 records. Progress: 2025-05-04 00:41:00+00:00 (85661 total records saved)
+2025-05-26 02:45:47,362 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 879 records. Progress: 2025-05-04 17:21:00+00:00 (86540 total records saved)
+2025-05-26 02:45:48,708 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 875 records. Progress: 2025-05-05 10:01:00+00:00 (87415 total records saved)
+2025-05-26 02:45:50,157 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 921 records. Progress: 2025-05-06 02:40:00+00:00 (88336 total records saved)
+2025-05-26 02:45:51,606 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 906 records. Progress: 2025-05-06 19:20:00+00:00 (89242 total records saved)
+2025-05-26 02:45:53,259 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 924 records. Progress: 2025-05-07 12:00:00+00:00 (90166 total records saved)
+2025-05-26 02:45:54,588 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 948 records. Progress: 2025-05-08 04:40:00+00:00 (91114 total records saved)
+2025-05-26 02:45:56,637 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 945 records. Progress: 2025-05-08 21:20:00+00:00 (92059 total records saved)
+2025-05-26 02:45:58,225 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 980 records. Progress: 2025-05-09 14:00:00+00:00 (93039 total records saved)
+2025-05-26 02:45:59,586 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 932 records. Progress: 2025-05-10 06:40:00+00:00 (93971 total records saved)
+2025-05-26 02:46:00,902 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 982 records. Progress: 2025-05-10 23:20:00+00:00 (94953 total records saved)
+2025-05-26 02:46:02,135 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 945 records. Progress: 2025-05-11 16:00:00+00:00 (95898 total records saved)
+2025-05-26 02:46:03,610 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 932 records. Progress: 2025-05-12 08:40:00+00:00 (96830 total records saved)
+2025-05-26 02:46:05,113 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 955 records. Progress: 2025-05-13 01:20:00+00:00 (97785 total records saved)
+2025-05-26 02:46:05,121 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for WBTCUSDT
+2025-05-26 02:46:05,122 - ClawBackend - INFO - [market_data.py:341] - Closing connection for WBTCUSDT
+2025-05-26 02:46:06,543 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 949 records. Progress: 2025-05-13 18:00:00+00:00 (98734 total records saved)
+2025-05-26 02:46:08,296 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 974 records. Progress: 2025-05-14 10:40:00+00:00 (99708 total records saved)
+2025-05-26 02:46:10,196 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 919 records. Progress: 2025-05-15 03:20:00+00:00 (100627 total records saved)
+2025-05-26 02:46:11,614 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 968 records. Progress: 2025-05-15 20:00:00+00:00 (101595 total records saved)
+2025-05-26 02:46:13,098 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 976 records. Progress: 2025-05-16 12:40:00+00:00 (102571 total records saved)
+2025-05-26 02:46:14,347 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 953 records. Progress: 2025-05-17 05:20:00+00:00 (103524 total records saved)
+2025-05-26 02:46:15,743 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 900 records. Progress: 2025-05-17 21:59:00+00:00 (104424 total records saved)
+2025-05-26 02:46:17,156 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 865 records. Progress: 2025-05-18 14:39:00+00:00 (105289 total records saved)
+2025-05-26 02:46:18,727 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 987 records. Progress: 2025-05-19 07:19:00+00:00 (106276 total records saved)
+2025-05-26 02:46:20,039 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 966 records. Progress: 2025-05-19 23:59:00+00:00 (107242 total records saved)
+2025-05-26 02:46:21,574 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 940 records. Progress: 2025-05-20 16:38:00+00:00 (108182 total records saved)
+2025-05-26 02:46:23,266 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 965 records. Progress: 2025-05-21 09:18:00+00:00 (109147 total records saved)
+2025-05-26 02:46:25,593 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 974 records. Progress: 2025-05-22 01:58:00+00:00 (110121 total records saved)
+2025-05-26 02:46:27,310 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 983 records. Progress: 2025-05-22 18:38:00+00:00 (111104 total records saved)
+2025-05-26 02:46:28,661 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 958 records. Progress: 2025-05-23 11:18:00+00:00 (112062 total records saved)
+2025-05-26 02:46:30,144 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 939 records. Progress: 2025-05-24 03:58:00+00:00 (113001 total records saved)
+2025-05-26 02:46:31,543 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 786 records. Progress: 2025-05-24 20:38:00+00:00 (113787 total records saved)
+2025-05-26 02:46:32,981 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 765 records. Progress: 2025-05-25 13:18:00+00:00 (114552 total records saved)
+2025-05-26 02:46:34,396 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 481 records. Progress: 2025-05-25 23:43:00+00:00 (115033 total records saved)
+2025-05-26 02:46:35,607 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for WBTCUSDT (1m)
+2025-05-26 02:46:35,844 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for WBTCUSDT (1m)
+2025-05-26 02:46:40,659 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:47:05,933 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTXU
+2025-05-26 02:47:09,427 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:47:25,047 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:47:25,059 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:47:26,493 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:47:26,723 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-26 02:47:26,725 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for BTCUSDT (1m), fetching from Binance
+2025-05-26 02:47:29,066 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:47:29,203 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:47:29,679 - ClawBackend - INFO - [market_data.py:369] - Initiating background task to get and save full historical data
+2025-05-26 02:47:29,682 - ClawBackend - INFO - [market_data.py:379] - Returning 100 records from Binance for page 1
+2025-05-26 02:47:29,716 - ClawBackend - INFO - [market_data.py:399] - Started background task to fetch full history for BTCUSDT (1m)
+2025-05-26 02:47:29,735 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:47:30,351 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:47:30,352 - ClawBackend - INFO - [market_data.py:190] - Background task active for BTCUSDT (1m), checking if we can fetch from InfluxDB
+2025-05-26 02:47:33,980 - ClawBackend - INFO - [market_data.py:204] - No recent data, fetching from Binance for BTCUSDT (1m)
+2025-05-26 02:47:36,628 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:47:36,631 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:47:37,848 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-25 16:27:00+00:00 (1000 total records saved)
+2025-05-26 02:47:38,381 - ClawBackend - INFO - [market_data.py:254] - Fetched 100 records from Binance for BTCUSDT (1m)
+2025-05-26 02:47:39,114 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-26 09:07:00+00:00 (2000 total records saved)
+2025-05-26 02:47:40,699 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-27 01:47:00+00:00 (3000 total records saved)
+2025-05-26 02:47:43,018 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-27 18:27:00+00:00 (4000 total records saved)
+2025-05-26 02:47:44,433 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-02-28 11:07:00+00:00 (5000 total records saved)
+2025-05-26 02:47:45,685 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-01 03:47:00+00:00 (6000 total records saved)
+2025-05-26 02:47:48,629 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-01 20:27:00+00:00 (7000 total records saved)
+2025-05-26 02:47:49,868 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-02 13:07:00+00:00 (8000 total records saved)
+2025-05-26 02:47:52,053 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-03 05:47:00+00:00 (9000 total records saved)
+2025-05-26 02:47:53,458 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-03 22:27:00+00:00 (10000 total records saved)
+2025-05-26 02:47:54,890 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-04 15:07:00+00:00 (11000 total records saved)
+2025-05-26 02:47:56,443 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-05 07:47:00+00:00 (12000 total records saved)
+2025-05-26 02:47:57,765 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-06 00:27:00+00:00 (13000 total records saved)
+2025-05-26 02:47:59,036 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-06 17:07:00+00:00 (14000 total records saved)
+2025-05-26 02:48:00,466 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-07 09:47:00+00:00 (15000 total records saved)
+2025-05-26 02:48:01,723 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-08 02:27:00+00:00 (16000 total records saved)
+2025-05-26 02:48:03,152 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-08 19:07:00+00:00 (17000 total records saved)
+2025-05-26 02:48:04,436 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-09 11:47:00+00:00 (18000 total records saved)
+2025-05-26 02:48:07,002 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-10 04:27:00+00:00 (19000 total records saved)
+2025-05-26 02:48:08,859 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-10 21:07:00+00:00 (20000 total records saved)
+2025-05-26 02:48:10,255 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-11 13:47:00+00:00 (21000 total records saved)
+2025-05-26 02:48:11,618 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-12 06:27:00+00:00 (22000 total records saved)
+2025-05-26 02:48:13,523 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-12 23:07:00+00:00 (23000 total records saved)
+2025-05-26 02:48:17,325 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-13 15:47:00+00:00 (24000 total records saved)
+2025-05-26 02:48:19,558 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-14 08:27:00+00:00 (25000 total records saved)
+2025-05-26 02:48:21,561 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-15 01:07:00+00:00 (26000 total records saved)
+2025-05-26 02:48:23,325 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-15 17:47:00+00:00 (27000 total records saved)
+2025-05-26 02:48:24,755 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-16 10:27:00+00:00 (28000 total records saved)
+2025-05-26 02:48:27,034 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-17 03:07:00+00:00 (29000 total records saved)
+2025-05-26 02:48:28,265 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-17 19:47:00+00:00 (30000 total records saved)
+2025-05-26 02:48:32,511 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-18 12:27:00+00:00 (31000 total records saved)
+2025-05-26 02:48:34,805 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-19 05:07:00+00:00 (32000 total records saved)
+2025-05-26 02:48:36,308 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-19 21:47:00+00:00 (33000 total records saved)
+2025-05-26 02:48:37,746 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-20 14:27:00+00:00 (34000 total records saved)
+2025-05-26 02:48:39,714 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-21 07:07:00+00:00 (35000 total records saved)
+2025-05-26 02:48:41,344 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-21 23:47:00+00:00 (36000 total records saved)
+2025-05-26 02:48:42,830 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-22 16:27:00+00:00 (37000 total records saved)
+2025-05-26 02:48:44,261 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-23 09:07:00+00:00 (38000 total records saved)
+2025-05-26 02:48:45,850 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-24 01:47:00+00:00 (39000 total records saved)
+2025-05-26 02:48:47,294 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-24 18:27:00+00:00 (40000 total records saved)
+2025-05-26 02:48:48,613 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-25 11:07:00+00:00 (41000 total records saved)
+2025-05-26 02:48:50,065 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-26 03:47:00+00:00 (42000 total records saved)
+2025-05-26 02:48:52,048 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-26 20:27:00+00:00 (43000 total records saved)
+2025-05-26 02:48:54,236 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-27 13:07:00+00:00 (44000 total records saved)
+2025-05-26 02:48:55,528 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-28 05:47:00+00:00 (45000 total records saved)
+2025-05-26 02:48:57,041 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-28 22:27:00+00:00 (46000 total records saved)
+2025-05-26 02:48:58,387 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-29 15:07:00+00:00 (47000 total records saved)
+2025-05-26 02:48:59,812 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-30 07:47:00+00:00 (48000 total records saved)
+2025-05-26 02:49:04,546 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-31 00:27:00+00:00 (49000 total records saved)
+2025-05-26 02:49:06,104 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-31 17:07:00+00:00 (50000 total records saved)
+2025-05-26 02:49:08,011 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-01 09:47:00+00:00 (51000 total records saved)
+2025-05-26 02:49:09,344 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-02 02:27:00+00:00 (52000 total records saved)
+2025-05-26 02:49:10,598 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-02 19:07:00+00:00 (53000 total records saved)
+2025-05-26 02:49:11,991 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-03 11:47:00+00:00 (54000 total records saved)
+2025-05-26 02:49:13,680 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-04 04:27:00+00:00 (55000 total records saved)
+2025-05-26 02:49:15,867 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-04 21:07:00+00:00 (56000 total records saved)
+2025-05-26 02:49:17,519 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-05 13:47:00+00:00 (57000 total records saved)
+2025-05-26 02:49:19,068 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-06 06:27:00+00:00 (58000 total records saved)
+2025-05-26 02:49:20,314 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-06 23:07:00+00:00 (59000 total records saved)
+2025-05-26 02:49:21,839 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-07 15:47:00+00:00 (60000 total records saved)
+2025-05-26 02:49:23,167 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-08 08:27:00+00:00 (61000 total records saved)
+2025-05-26 02:49:25,332 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-09 01:07:00+00:00 (62000 total records saved)
+2025-05-26 02:49:26,751 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-09 17:47:00+00:00 (63000 total records saved)
+2025-05-26 02:49:28,196 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-10 10:27:00+00:00 (64000 total records saved)
+2025-05-26 02:49:29,540 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-11 03:07:00+00:00 (65000 total records saved)
+2025-05-26 02:49:30,873 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-11 19:47:00+00:00 (66000 total records saved)
+2025-05-26 02:49:32,589 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-12 12:27:00+00:00 (67000 total records saved)
+2025-05-26 02:49:33,842 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-13 05:07:00+00:00 (68000 total records saved)
+2025-05-26 02:49:36,186 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-13 21:47:00+00:00 (69000 total records saved)
+2025-05-26 02:49:41,707 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-14 14:27:00+00:00 (70000 total records saved)
+2025-05-26 02:49:43,565 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-15 07:07:00+00:00 (71000 total records saved)
+2025-05-26 02:49:46,503 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-15 23:47:00+00:00 (72000 total records saved)
+2025-05-26 02:49:48,004 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-16 16:27:00+00:00 (73000 total records saved)
+2025-05-26 02:49:49,273 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-17 09:07:00+00:00 (74000 total records saved)
+2025-05-26 02:49:50,507 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-18 01:47:00+00:00 (75000 total records saved)
+2025-05-26 02:49:52,097 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-18 18:27:00+00:00 (76000 total records saved)
+2025-05-26 02:49:53,860 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-19 11:07:00+00:00 (77000 total records saved)
+2025-05-26 02:49:55,520 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-20 03:47:00+00:00 (78000 total records saved)
+2025-05-26 02:49:57,176 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-20 20:27:00+00:00 (79000 total records saved)
+2025-05-26 02:49:57,839 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:49:57,841 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:49:59,403 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-21 13:07:00+00:00 (80000 total records saved)
+2025-05-26 02:49:59,795 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:49:59,798 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:50:01,144 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-22 05:47:00+00:00 (81000 total records saved)
+2025-05-26 02:50:01,639 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:50:01,640 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:50:02,597 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-22 22:27:00+00:00 (82000 total records saved)
+2025-05-26 02:50:04,017 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-23 15:07:00+00:00 (83000 total records saved)
+2025-05-26 02:50:05,674 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-24 07:47:00+00:00 (84000 total records saved)
+2025-05-26 02:50:07,095 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-25 00:27:00+00:00 (85000 total records saved)
+2025-05-26 02:50:08,752 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-25 17:07:00+00:00 (86000 total records saved)
+2025-05-26 02:50:10,305 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-26 09:47:00+00:00 (87000 total records saved)
+2025-05-26 02:50:11,715 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-27 02:27:00+00:00 (88000 total records saved)
+2025-05-26 02:50:13,179 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-27 19:07:00+00:00 (89000 total records saved)
+2025-05-26 02:50:14,558 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-28 11:47:00+00:00 (90000 total records saved)
+2025-05-26 02:50:17,115 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-29 04:27:00+00:00 (91000 total records saved)
+2025-05-26 02:50:18,483 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-29 21:07:00+00:00 (92000 total records saved)
+2025-05-26 02:50:19,887 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-30 13:47:00+00:00 (93000 total records saved)
+2025-05-26 02:50:21,543 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-01 06:27:00+00:00 (94000 total records saved)
+2025-05-26 02:50:22,876 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-01 23:07:00+00:00 (95000 total records saved)
+2025-05-26 02:50:24,408 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-02 15:47:00+00:00 (96000 total records saved)
+2025-05-26 02:50:26,047 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-03 08:27:00+00:00 (97000 total records saved)
+2025-05-26 02:50:27,450 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-04 01:07:00+00:00 (98000 total records saved)
+2025-05-26 02:50:28,724 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-04 17:47:00+00:00 (99000 total records saved)
+2025-05-26 02:50:30,133 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-05 10:27:00+00:00 (100000 total records saved)
+2025-05-26 02:50:31,697 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-06 03:07:00+00:00 (101000 total records saved)
+2025-05-26 02:50:33,217 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-06 19:47:00+00:00 (102000 total records saved)
+2025-05-26 02:50:34,681 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-07 12:27:00+00:00 (103000 total records saved)
+2025-05-26 02:50:36,288 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-08 05:07:00+00:00 (104000 total records saved)
+2025-05-26 02:50:36,736 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:50:37,535 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-08 21:47:00+00:00 (105000 total records saved)
+2025-05-26 02:50:38,978 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-09 14:27:00+00:00 (106000 total records saved)
+2025-05-26 02:50:40,379 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-10 07:07:00+00:00 (107000 total records saved)
+2025-05-26 02:50:42,620 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-10 23:47:00+00:00 (108000 total records saved)
+2025-05-26 02:50:44,372 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-11 16:27:00+00:00 (109000 total records saved)
+2025-05-26 02:50:45,799 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-12 09:07:00+00:00 (110000 total records saved)
+2025-05-26 02:50:47,033 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-13 01:47:00+00:00 (111000 total records saved)
+2025-05-26 02:50:48,570 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-13 18:27:00+00:00 (112000 total records saved)
+2025-05-26 02:50:49,997 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-14 11:07:00+00:00 (113000 total records saved)
+2025-05-26 02:50:51,428 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-15 03:47:00+00:00 (114000 total records saved)
+2025-05-26 02:50:54,714 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-15 20:27:00+00:00 (115000 total records saved)
+2025-05-26 02:50:56,183 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-16 13:07:00+00:00 (116000 total records saved)
+2025-05-26 02:50:57,760 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-17 05:47:00+00:00 (117000 total records saved)
+2025-05-26 02:50:59,286 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-17 22:27:00+00:00 (118000 total records saved)
+2025-05-26 02:51:00,878 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-18 15:07:00+00:00 (119000 total records saved)
+2025-05-26 02:51:02,227 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-19 07:47:00+00:00 (120000 total records saved)
+2025-05-26 02:51:03,513 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-20 00:27:00+00:00 (121000 total records saved)
+2025-05-26 02:51:03,519 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BT
+2025-05-26 02:51:05,397 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-20 17:07:00+00:00 (122000 total records saved)
+2025-05-26 02:51:06,628 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-21 09:47:00+00:00 (123000 total records saved)
+2025-05-26 02:51:06,898 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:51:08,196 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:51:10,178 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-22 02:27:00+00:00 (124000 total records saved)
+2025-05-26 02:51:11,610 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-22 19:07:00+00:00 (125000 total records saved)
+2025-05-26 02:51:12,936 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-23 11:47:00+00:00 (126000 total records saved)
+2025-05-26 02:51:14,178 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-24 04:27:00+00:00 (127000 total records saved)
+2025-05-26 02:51:15,389 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-24 21:07:00+00:00 (128000 total records saved)
+2025-05-26 02:51:16,861 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-05-25 13:47:00+00:00 (129000 total records saved)
+2025-05-26 02:51:18,252 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 600 records. Progress: 2025-05-25 23:47:00+00:00 (129600 total records saved)
+2025-05-26 02:51:19,461 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for BTCUSDT (1m)
+2025-05-26 02:51:19,511 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 02:53:05,772 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:53:20,131 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSD
+2025-05-26 02:53:21,320 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:55:24,113 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 02:55:40,194 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSD
+2025-05-26 02:55:41,614 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 02:55:58,368 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:55:58,655 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:56:00,896 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:56:01,494 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-05-26 02:56:01,496 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-05-26 02:56:01,523 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:56:01,527 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:56:02,048 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:56:02,171 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-05-26 02:56:02,172 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-05-26 02:56:05,825 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-05-26 02:56:05,891 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-05-26 02:56:05,893 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-05-26 02:56:09,756 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-05-26 02:56:09,776 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 02:56:09,811 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:56:09,812 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:56:09,813 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-05-26 02:56:09,857 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-05-26 02:56:09,858 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-05-26 02:56:10,009 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-05-26 02:56:10,034 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 02:56:59,746 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:57:00,631 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 36 records
+2025-05-26 02:57:00,686 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1M)
+2025-05-26 02:57:13,276 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:57:14,593 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 48 records
+2025-05-26 02:57:14,596 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1w), fetching missing data
+2025-05-26 02:57:14,607 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1w)
+2025-05-26 02:57:18,480 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 4 missing candles
+2025-05-26 02:57:18,510 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1w)
+2025-05-26 02:57:18,513 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 4 1w records for BTCUSDT in batches of 100
+2025-05-26 02:57:18,933 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1w)
+2025-05-26 02:57:18,962 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1w)
+2025-05-26 02:57:30,561 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:57:30,564 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:57:31,609 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:57:31,964 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:57:33,233 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:57:33,341 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-05-26 02:57:33,344 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-05-26 02:57:37,336 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-05-26 02:57:37,402 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-05-26 02:57:37,403 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-05-26 02:57:37,547 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-05-26 02:57:37,568 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 02:57:50,875 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:57:51,639 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 02:57:51,772 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-05-26 02:57:51,774 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-05-26 02:57:51,974 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 02:57:55,567 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-05-26 02:57:55,622 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-05-26 02:57:55,624 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-05-26 02:57:55,783 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-05-26 02:57:55,807 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 02:57:58,924 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:57:58,927 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:57:58,928 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 02:57:58,929 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 02:58:36,933 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: USDT
+2025-05-26 02:58:39,789 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: ETHUSDT
+2025-05-26 03:01:01,254 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:01,373 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:01,404 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:01,405 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:01,572 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:01,573 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:03,042 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:03,043 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:03,351 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:03,353 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:04,045 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:01:04,047 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:01:32,198 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 03:01:47,603 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: SOL
+2025-05-26 03:01:49,247 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: SOLUSDT
+2025-05-26 03:04:29,952 - ClawBackend - INFO - [app.py:44] - Shutting down application...
+2025-05-26 03:05:19,658 - ClawBackend - INFO - [app.py:29] - Starting application...
+2025-05-26 03:05:45,306 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BNSOLUSDT (1m)
+2025-05-26 03:05:48,172 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BNSOLUSDT (1m)
+2025-05-26 03:05:48,472 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 03:05:48,790 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-05-26 03:05:48,791 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for BNSOLUSDT (1m), fetching from Binance
+2025-05-26 03:05:51,620 - ClawBackend - INFO - [market_data.py:369] - Initiating background task to get and save full historical data
+2025-05-26 03:05:51,622 - ClawBackend - INFO - [market_data.py:379] - Returning 69 records from Binance for page 1
+2025-05-26 03:05:51,661 - ClawBackend - INFO - [market_data.py:399] - Started background task to fetch full history for BNSOLUSDT (1m)
+2025-05-26 03:05:51,674 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 03:05:55,983 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 989 records. Progress: 2025-02-25 16:45:00+00:00 (989 total records saved)
+2025-05-26 03:05:57,257 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 888 records. Progress: 2025-02-26 09:25:00+00:00 (1877 total records saved)
+2025-05-26 03:05:58,796 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 923 records. Progress: 2025-02-27 02:05:00+00:00 (2800 total records saved)
+2025-05-26 03:06:00,006 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 899 records. Progress: 2025-02-27 18:45:00+00:00 (3699 total records saved)
+2025-05-26 03:06:01,561 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 947 records. Progress: 2025-02-28 11:25:00+00:00 (4646 total records saved)
+2025-05-26 03:06:01,683 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BNSOLUSDT
+2025-05-26 03:06:01,687 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BNSOLUSDT
+2025-05-26 03:06:02,995 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 958 records. Progress: 2025-03-01 04:05:00+00:00 (5604 total records saved)
+2025-05-26 03:06:07,295 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 869 records. Progress: 2025-03-01 20:45:00+00:00 (6473 total records saved)
+2025-05-26 03:06:09,312 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 781 records. Progress: 2025-03-02 13:25:00+00:00 (7254 total records saved)
+2025-05-26 03:06:10,543 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 987 records. Progress: 2025-03-03 06:05:00+00:00 (8241 total records saved)
+2025-05-26 03:06:12,270 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 986 records. Progress: 2025-03-03 22:45:00+00:00 (9227 total records saved)
+2025-05-26 03:06:13,489 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 957 records. Progress: 2025-03-04 15:25:00+00:00 (10184 total records saved)
+2025-05-26 03:06:14,769 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 848 records. Progress: 2025-03-05 08:05:00+00:00 (11032 total records saved)
+2025-05-26 03:06:16,002 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 830 records. Progress: 2025-03-06 00:44:00+00:00 (11862 total records saved)
+2025-05-26 03:06:17,506 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 770 records. Progress: 2025-03-06 17:23:00+00:00 (12632 total records saved)
+2025-05-26 03:06:18,729 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 819 records. Progress: 2025-03-07 10:03:00+00:00 (13451 total records saved)
+2025-05-26 03:06:20,373 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 869 records. Progress: 2025-03-08 02:43:00+00:00 (14320 total records saved)
+2025-05-26 03:06:23,745 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 750 records. Progress: 2025-03-08 19:22:00+00:00 (15070 total records saved)
+2025-05-26 03:06:24,991 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 811 records. Progress: 2025-03-09 12:02:00+00:00 (15881 total records saved)
+2025-05-26 03:06:26,218 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 911 records. Progress: 2025-03-10 04:41:00+00:00 (16792 total records saved)
+2025-05-26 03:06:27,451 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 922 records. Progress: 2025-03-10 21:21:00+00:00 (17714 total records saved)
+2025-05-26 03:06:28,649 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 896 records. Progress: 2025-03-11 14:01:00+00:00 (18610 total records saved)
+2025-05-26 03:06:29,874 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 842 records. Progress: 2025-03-12 06:41:00+00:00 (19452 total records saved)
+2025-05-26 03:06:31,098 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 849 records. Progress: 2025-03-12 23:21:00+00:00 (20301 total records saved)
+2025-05-26 03:06:33,537 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 814 records. Progress: 2025-03-13 16:00:00+00:00 (21115 total records saved)
+2025-05-26 03:06:34,882 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 772 records. Progress: 2025-03-14 08:40:00+00:00 (21887 total records saved)
+2025-05-26 03:06:36,140 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 864 records. Progress: 2025-03-15 01:20:00+00:00 (22751 total records saved)
+2025-05-26 03:06:37,586 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 806 records. Progress: 2025-03-15 18:00:00+00:00 (23557 total records saved)
+2025-05-26 03:06:38,807 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 732 records. Progress: 2025-03-16 10:38:00+00:00 (24289 total records saved)
+2025-05-26 03:06:40,136 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 785 records. Progress: 2025-03-17 03:18:00+00:00 (25074 total records saved)
+2025-05-26 03:06:41,476 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 790 records. Progress: 2025-03-17 19:58:00+00:00 (25864 total records saved)
+2025-05-26 03:06:42,676 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 764 records. Progress: 2025-03-18 12:38:00+00:00 (26628 total records saved)
+2025-05-26 03:06:44,138 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 768 records. Progress: 2025-03-19 05:17:00+00:00 (27396 total records saved)
+2025-05-26 03:06:45,928 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 826 records. Progress: 2025-03-19 21:56:00+00:00 (28222 total records saved)
+2025-05-26 03:06:47,207 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 771 records. Progress: 2025-03-20 14:36:00+00:00 (28993 total records saved)
+2025-05-26 03:06:49,064 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 758 records. Progress: 2025-03-21 07:16:00+00:00 (29751 total records saved)
+2025-05-26 03:06:50,606 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 863 records. Progress: 2025-03-21 23:56:00+00:00 (30614 total records saved)
+2025-05-26 03:06:51,824 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 796 records. Progress: 2025-03-22 16:36:00+00:00 (31410 total records saved)
+2025-05-26 03:06:53,338 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 648 records. Progress: 2025-03-23 09:16:00+00:00 (32058 total records saved)
+2025-05-26 03:06:54,672 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 725 records. Progress: 2025-03-24 01:56:00+00:00 (32783 total records saved)
+2025-05-26 03:06:56,026 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 956 records. Progress: 2025-03-24 18:36:00+00:00 (33739 total records saved)
+2025-05-26 03:06:57,438 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 779 records. Progress: 2025-03-25 11:16:00+00:00 (34518 total records saved)
+2025-05-26 03:06:58,688 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 764 records. Progress: 2025-03-26 03:56:00+00:00 (35282 total records saved)
+2025-05-26 03:07:00,357 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 823 records. Progress: 2025-03-26 20:36:00+00:00 (36105 total records saved)
+2025-05-26 03:07:01,639 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 722 records. Progress: 2025-03-27 13:16:00+00:00 (36827 total records saved)
+2025-05-26 03:07:02,988 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 800 records. Progress: 2025-03-28 05:56:00+00:00 (37627 total records saved)
+2025-05-26 03:07:05,033 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 849 records. Progress: 2025-03-28 22:35:00+00:00 (38476 total records saved)
+2025-05-26 03:07:06,603 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 761 records. Progress: 2025-03-29 15:15:00+00:00 (39237 total records saved)
+2025-05-26 03:07:07,840 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 693 records. Progress: 2025-03-30 07:55:00+00:00 (39930 total records saved)
+2025-05-26 03:07:09,552 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 789 records. Progress: 2025-03-31 00:35:00+00:00 (40719 total records saved)
+2025-05-26 03:07:11,182 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 770 records. Progress: 2025-03-31 17:15:00+00:00 (41489 total records saved)
+2025-05-26 03:07:12,471 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 704 records. Progress: 2025-04-01 09:55:00+00:00 (42193 total records saved)
+2025-05-26 03:07:13,723 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 765 records. Progress: 2025-04-02 02:35:00+00:00 (42958 total records saved)
+2025-05-26 03:07:15,269 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 792 records. Progress: 2025-04-02 19:15:00+00:00 (43750 total records saved)
+2025-05-26 03:07:16,706 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 889 records. Progress: 2025-04-03 11:55:00+00:00 (44639 total records saved)
+2025-05-26 03:07:18,294 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 722 records. Progress: 2025-04-04 04:35:00+00:00 (45361 total records saved)
+2025-05-26 03:07:19,556 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 791 records. Progress: 2025-04-04 21:15:00+00:00 (46152 total records saved)
+2025-05-26 03:07:20,754 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 673 records. Progress: 2025-04-05 13:54:00+00:00 (46825 total records saved)
+2025-05-26 03:07:22,517 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 606 records. Progress: 2025-04-06 06:33:00+00:00 (47431 total records saved)
+2025-05-26 03:07:23,848 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 816 records. Progress: 2025-04-06 23:12:00+00:00 (48247 total records saved)
+2025-05-26 03:07:25,106 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 927 records. Progress: 2025-04-07 15:52:00+00:00 (49174 total records saved)
+2025-05-26 03:07:26,631 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 751 records. Progress: 2025-04-08 08:32:00+00:00 (49925 total records saved)
+2025-05-26 03:07:27,920 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 770 records. Progress: 2025-04-09 01:12:00+00:00 (50695 total records saved)
+2025-05-26 03:07:29,262 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 824 records. Progress: 2025-04-09 17:52:00+00:00 (51519 total records saved)
+2025-05-26 03:07:31,103 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 835 records. Progress: 2025-04-10 10:32:00+00:00 (52354 total records saved)
+2025-05-26 03:07:32,355 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 743 records. Progress: 2025-04-11 03:11:00+00:00 (53097 total records saved)
+2025-05-26 03:07:34,010 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 882 records. Progress: 2025-04-11 19:51:00+00:00 (53979 total records saved)
+2025-05-26 03:07:35,313 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 884 records. Progress: 2025-04-12 12:31:00+00:00 (54863 total records saved)
+2025-05-26 03:07:36,525 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 828 records. Progress: 2025-04-13 05:11:00+00:00 (55691 total records saved)
+2025-05-26 03:07:37,924 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 770 records. Progress: 2025-04-13 21:50:00+00:00 (56461 total records saved)
+2025-05-26 03:07:39,879 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 691 records. Progress: 2025-04-14 14:30:00+00:00 (57152 total records saved)
+2025-05-26 03:07:41,603 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 665 records. Progress: 2025-04-15 07:10:00+00:00 (57817 total records saved)
+2025-05-26 03:07:43,146 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 694 records. Progress: 2025-04-15 23:48:00+00:00 (58511 total records saved)
+2025-05-26 03:07:44,644 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 686 records. Progress: 2025-04-16 16:28:00+00:00 (59197 total records saved)
+2025-05-26 03:07:45,958 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 807 records. Progress: 2025-04-17 09:07:00+00:00 (60004 total records saved)
+2025-05-26 03:07:47,562 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 792 records. Progress: 2025-04-18 01:42:00+00:00 (60796 total records saved)
+2025-05-26 03:07:50,002 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 794 records. Progress: 2025-04-18 18:22:00+00:00 (61590 total records saved)
+2025-05-26 03:07:52,490 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 782 records. Progress: 2025-04-19 11:02:00+00:00 (62372 total records saved)
+2025-05-26 03:07:53,951 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 734 records. Progress: 2025-04-20 03:42:00+00:00 (63106 total records saved)
+2025-05-26 03:07:55,600 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 822 records. Progress: 2025-04-20 20:22:00+00:00 (63928 total records saved)
+2025-05-26 03:07:57,577 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 757 records. Progress: 2025-04-21 13:02:00+00:00 (64685 total records saved)
+2025-05-26 03:07:59,077 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 835 records. Progress: 2025-04-22 05:41:00+00:00 (65520 total records saved)
+2025-05-26 03:08:00,803 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 861 records. Progress: 2025-04-22 22:21:00+00:00 (66381 total records saved)
+2025-05-26 03:08:10,088 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 897 records. Progress: 2025-04-23 15:01:00+00:00 (67278 total records saved)
+2025-05-26 03:08:11,561 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 799 records. Progress: 2025-04-24 07:41:00+00:00 (68077 total records saved)
+2025-05-26 03:08:13,184 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 814 records. Progress: 2025-04-25 00:21:00+00:00 (68891 total records saved)
+2025-05-26 03:08:14,370 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 832 records. Progress: 2025-04-25 17:00:00+00:00 (69723 total records saved)
+2025-05-26 03:08:17,355 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 702 records. Progress: 2025-04-26 09:40:00+00:00 (70425 total records saved)
+2025-05-26 03:08:18,806 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 750 records. Progress: 2025-04-27 02:20:00+00:00 (71175 total records saved)
+2025-05-26 03:08:19,973 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 719 records. Progress: 2025-04-27 19:00:00+00:00 (71894 total records saved)
+2025-05-26 03:08:20,014 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BNSOLUSDT
+2025-05-26 03:08:20,016 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BNSOLUSDT
+2025-05-26 03:08:21,414 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 790 records. Progress: 2025-04-28 11:40:00+00:00 (72684 total records saved)
+2025-05-26 03:08:22,771 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 780 records. Progress: 2025-04-29 04:17:00+00:00 (73464 total records saved)
+2025-05-26 03:08:24,410 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 740 records. Progress: 2025-04-29 20:57:00+00:00 (74204 total records saved)
+2025-05-26 03:08:25,819 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 831 records. Progress: 2025-04-30 13:37:00+00:00 (75035 total records saved)
+2025-05-26 03:08:27,189 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 827 records. Progress: 2025-05-01 06:17:00+00:00 (75862 total records saved)
+2025-05-26 03:08:28,791 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 832 records. Progress: 2025-05-01 22:57:00+00:00 (76694 total records saved)
+2025-05-26 03:08:30,439 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 836 records. Progress: 2025-05-02 15:37:00+00:00 (77530 total records saved)
+2025-05-26 03:08:31,796 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 654 records. Progress: 2025-05-03 08:17:00+00:00 (78184 total records saved)
+2025-05-26 03:08:33,387 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 783 records. Progress: 2025-05-04 00:57:00+00:00 (78967 total records saved)
+2025-05-26 03:08:34,655 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 843 records. Progress: 2025-05-04 17:37:00+00:00 (79810 total records saved)
+2025-05-26 03:08:36,251 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 817 records. Progress: 2025-05-05 10:17:00+00:00 (80627 total records saved)
+2025-05-26 03:08:37,807 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 861 records. Progress: 2025-05-06 02:57:00+00:00 (81488 total records saved)
+2025-05-26 03:08:39,187 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 829 records. Progress: 2025-05-06 19:37:00+00:00 (82317 total records saved)
+2025-05-26 03:08:40,375 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 711 records. Progress: 2025-05-07 12:17:00+00:00 (83028 total records saved)
+2025-05-26 03:08:42,007 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 820 records. Progress: 2025-05-08 04:57:00+00:00 (83848 total records saved)
+2025-05-26 03:08:43,548 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 893 records. Progress: 2025-05-08 21:37:00+00:00 (84741 total records saved)
+2025-05-26 03:08:45,004 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 916 records. Progress: 2025-05-09 14:17:00+00:00 (85657 total records saved)
+2025-05-26 03:08:46,513 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 859 records. Progress: 2025-05-10 06:57:00+00:00 (86516 total records saved)
+2025-05-26 03:08:47,826 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 817 records. Progress: 2025-05-10 23:37:00+00:00 (87333 total records saved)
+2025-05-26 03:08:49,265 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 785 records. Progress: 2025-05-11 16:17:00+00:00 (88118 total records saved)
+2025-05-26 03:08:51,020 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 727 records. Progress: 2025-05-12 08:57:00+00:00 (88845 total records saved)
+2025-05-26 03:08:51,913 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 03:08:54,195 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 820 records. Progress: 2025-05-13 01:37:00+00:00 (89665 total records saved)
+2025-05-26 03:08:56,025 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 821 records. Progress: 2025-05-13 18:17:00+00:00 (90486 total records saved)
+2025-05-26 03:08:57,390 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 823 records. Progress: 2025-05-14 10:57:00+00:00 (91309 total records saved)
+2025-05-26 03:08:58,687 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 721 records. Progress: 2025-05-15 03:37:00+00:00 (92030 total records saved)
+2025-05-26 03:09:00,178 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 842 records. Progress: 2025-05-15 20:17:00+00:00 (92872 total records saved)
+2025-05-26 03:09:01,836 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 765 records. Progress: 2025-05-16 12:57:00+00:00 (93637 total records saved)
+2025-05-26 03:09:03,294 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 766 records. Progress: 2025-05-17 05:37:00+00:00 (94403 total records saved)
+2025-05-26 03:09:04,628 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 771 records. Progress: 2025-05-17 22:17:00+00:00 (95174 total records saved)
+2025-05-26 03:09:06,473 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 746 records. Progress: 2025-05-18 14:57:00+00:00 (95920 total records saved)
+2025-05-26 03:09:07,729 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 877 records. Progress: 2025-05-19 07:37:00+00:00 (96797 total records saved)
+2025-05-26 03:09:08,966 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 821 records. Progress: 2025-05-20 00:17:00+00:00 (97618 total records saved)
+2025-05-26 03:09:10,223 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 831 records. Progress: 2025-05-20 16:57:00+00:00 (98449 total records saved)
+2025-05-26 03:09:11,498 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 801 records. Progress: 2025-05-21 09:37:00+00:00 (99250 total records saved)
+2025-05-26 03:09:12,780 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 803 records. Progress: 2025-05-22 02:17:00+00:00 (100053 total records saved)
+2025-05-26 03:09:14,371 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 854 records. Progress: 2025-05-22 18:57:00+00:00 (100907 total records saved)
+2025-05-26 03:09:15,768 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 794 records. Progress: 2025-05-23 11:35:00+00:00 (101701 total records saved)
+2025-05-26 03:09:18,235 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 797 records. Progress: 2025-05-24 04:15:00+00:00 (102498 total records saved)
+2025-05-26 03:09:19,511 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 673 records. Progress: 2025-05-24 20:55:00+00:00 (103171 total records saved)
+2025-05-26 03:09:20,653 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 689 records. Progress: 2025-05-25 13:35:00+00:00 (103860 total records saved)
+2025-05-26 03:09:22,288 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 437 records. Progress: 2025-05-26 00:05:00+00:00 (104297 total records saved)
+2025-05-26 03:09:23,526 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for BNSOLUSDT (1m)
+2025-05-26 03:09:23,849 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for BNSOLUSDT (1m)
+2025-05-26 03:09:32,494 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTC
+2025-05-26 03:09:34,720 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 03:12:16,598 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 03:13:26,294 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 03:15:37,350 - ClawBackend - INFO - [paid_plans.py:713] - Processing webhook event: balance.available
+2025-05-26 03:15:38,411 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BNB
+2025-05-26 03:15:51,968 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTC
+2025-05-26 03:15:54,851 - ClawBackend - INFO - [market_data.py:187] - Searching cryptos with query: BTCUSDT
+2025-05-26 03:16:22,081 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 03:16:22,154 - ClawBackend - INFO - [market_data.py:239] - New WebSocket connection for BTCUSDT (1m)
+2025-05-26 03:16:23,918 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-05-26 03:16:24,369 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-05-26 03:16:24,370 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-05-26 03:16:28,661 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-05-26 03:16:28,681 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-05-26 03:16:28,682 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-05-26 03:16:29,005 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-05-26 03:16:29,011 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-05-26 03:16:31,648 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:16:31,648 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:16:44,195 - ClawBackend - INFO - [market_data.py:336] - Client disconnected for BTCUSDT
+2025-05-26 03:16:44,196 - ClawBackend - INFO - [market_data.py:341] - Closing connection for BTCUSDT
+2025-05-26 03:20:39,455 - ClawBackend - INFO - [app.py:44] - Shutting down application...
