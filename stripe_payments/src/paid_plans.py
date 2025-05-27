@@ -7,7 +7,7 @@ from src.common.logger import logger
 from fastapi import APIRouter
 from models.requests import SubscribeRequest, CancelSubscriptionRequest
 from models.response import NativeCheckoutResponseSchema, CancellationResponseSchema
-from src.firebase.repository import FirebaseRepository
+from src.infrastructure.database.firebase.repository import FirebaseRepository
 from src.infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from firebase_admin import auth
 import time

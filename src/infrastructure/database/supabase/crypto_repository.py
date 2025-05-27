@@ -10,6 +10,8 @@ from typing import List
 import os
 from common.logger import logger
 from fastapi import HTTPException
+from infrastructure.database.firebase.repository import FirebaseRepository
+import uuid
 
 binance = BinanceMarketData()
 
@@ -19,10 +21,53 @@ class SupabaseCryptoRepository(CryptoRepository):
             os.getenv("SUPABASE_URL"),
             os.getenv("SUPABASE_SERVICE_KEY")
         )
-
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
         self.watchlist_table = "watchlist"
+
+    async def get_firebase_repo(self):
+        unique_id = f"app_{uuid.uuid4()}"
+        return FirebaseRepository(app_name=unique_id)
+    
+    async def subscription_exists(self, user_id: str) -> bool:
+        """Check if a subscription exists for the user in Supabase."""
+        try:
+            result = self.client.table(self.subscription_table).select("user_id").eq("user_id", user_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Error checking subscription for user {user_id}: {str(e)}")
+            return False
+    
+    async def insert_subscription(self, user_id: str, plan_type: str, PLAN_LIMITS: dict):
+        """Insert a subscription into Supabase based on plan type."""
+        try:
+            limits = PLAN_LIMITS.get(plan_type, PLAN_LIMITS["free"])
+            subscription_data = {
+                "user_id": user_id,
+                "plan_type": plan_type,
+                "price_alerts_limit": limits["price_alerts_limit"],
+                "pattern_detection_limit": limits["pattern_detection_limit"],
+                "watchlist_limit": limits["watchlist_limit"],
+                "market_analysis_limit": limits["market_analysis_limit"],
+                "journaling_enabled": limits["journaling_enabled"],
+                "video_download_limit": limits["video_download_limit"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            self.client.table(self.subscription_table).insert(subscription_data).execute()
+            logger.info(f"Inserted subscription for user {user_id}: {plan_type}")
+        except Exception as e:
+            logger.error(f"Error inserting subscription for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to insert subscription")
+        
+    async def ensure_subscription_exists(self, user_id: str, PLAN_LIMITS: dict):
+        """Ensure a subscription exists in Supabase, fetching from Firebase if needed."""
+        if not await self.subscription_exists(user_id):
+            logger.info(f"No subscription found for user {user_id}, checking Firebase")
+            firebase_repo = await self.get_firebase_repo()
+            plan_type = await firebase_repo.get_user_subscription(user_id)
+
+            await self.insert_subscription(user_id, plan_type, PLAN_LIMITS)
 
     async def update_subscription(self, user_id: str, plan_type: str, PLAN_LIMITS: dict) -> bool:
         """Update or insert user subscription data in Supabase"""
@@ -55,76 +100,76 @@ class SupabaseCryptoRepository(CryptoRepository):
             raise
 
     async def get_subscription_limits(self, user_id: str) -> dict:
-        """Fetch subscription limits and usage data for a user from Supabase"""
+        """Retrieve subscription limits from Supabase."""
         try:
             result = self.client.table(self.subscription_table).select("*").eq("user_id", user_id).execute()
-            if not result.data or len(result.data) == 0:
-                logger.error(f"No subscription data found for user {user_id}")
-                raise HTTPException(status_code=404, detail="Subscription not found for user")
-            subscription = result.data[0]
-            limits = {
-                "plan_type": subscription["plan_type"],
-                "price_alerts_limit": subscription["price_alerts_limit"],
-                "pattern_detection_limit": subscription["pattern_detection_limit"],
-                "watchlist_limit": subscription["watchlist_limit"],
-                "market_analysis_limit": subscription["market_analysis_limit"],
-                "journaling_enabled": subscription["journaling_enabled"],
-                "video_download_limit": subscription["video_download_limit"]
-            }
-            usage = {
-                "price_alerts_used": 0,
-                "pattern_detection_used": 0,
-                "watchlist_used": 0,
-                "market_analysis_used": 0,
-                "video_downloads_used": 0
-            }
-            return {**limits, **usage}
+            if not result.data:
+                raise HTTPException(status_code=404, detail="Subscription not found")
+            return result.data[0]
         except Exception as e:
-            logger.error(f"Error fetching subscription limits for user {user_id}: {str(e)}")
-            raise
+            logger.error(f"Error fetching limits for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch subscription limits")
 
     async def get_watchlist_count(self, user_id: str) -> int:
-        """Get the current number of symbols in the user's watchlist."""
+        """Get the current number of items in the user's watchlist."""
         try:
-            result = self.client.table(self.watchlist_table).select("id", count="exact").eq("user_id", user_id).execute()
-            return result.count
+            result = self.client.table(self.watchlist_table).select("user_id").eq("user_id", user_id).execute()
+            return len(result.data)
         except Exception as e:
-            logger.error(f"Error getting watchlist count for user {user_id}: {str(e)}")
-            raise
-
-    async def add_to_watchlist(self, user_id: str, symbol: str, base_asset: str, quote_asset: str, source: str):
-        """Add a symbol to the user's watchlist."""
+            logger.error(f"Error fetching watchlist count for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch watchlist count")
+        
+    async def get_watchlist(self, user_id: str) -> List[dict]:
+        """Retrieve all items in the user's watchlist."""
         try:
+            result = self.client.table(self.watchlist_table).select("*").eq("user_id", user_id).execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error getting watchlist: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to get watchlist")
+        
+    async def add_to_watchlist(self, user_id: str, symbol: str, base_asset: str, quote_asset: str, source: str, PLAN_LIMITS: dict):
+        """Add an item to the watchlist, handling subscription logic internally."""
+        try:
+            # Ensure subscription exists
+            await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
+
+            # Get subscription limits
+            limits = await self.get_subscription_limits(user_id)
+            watchlist_limit = limits["watchlist_limit"]
+
+            # Check watchlist count against limit
+            count = await self.get_watchlist_count(user_id)
+            if watchlist_limit != -1 and count >= watchlist_limit:
+                raise HTTPException(status_code=403, detail="Watchlist limit reached")
+
+            # Add item to watchlist
             data = {
                 "user_id": user_id,
                 "symbol": symbol,
-                "base_asset": base_asset,
-                "quote_asset": quote_asset,
+                "base_currency": base_asset,
+                "asset": quote_asset,
                 "source": source,
                 "added_at": datetime.now(timezone.utc).isoformat()
             }
-            self.client.table("watchlist").insert(data).execute()
+            self.client.table(self.watchlist_table).insert(data).execute()
+            logger.info(f"Added {symbol} to watchlist for user {user_id}")
+        except HTTPException as e:
+            raise e
         except Exception as e:
             if "duplicate key value violates unique constraint" in str(e):
                 raise HTTPException(status_code=409, detail="Symbol already in watchlist")
-            logger.error(f"Error adding to watchlist: {str(e)}")
-            raise
+            logger.error(f"Error adding to watchlist for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to add to watchlist")
 
     async def remove_from_watchlist(self, user_id: str, symbol: str):
         """Remove a symbol from the user's watchlist."""
         try:
-            self.client.table("watchlist").delete().eq("user_id", user_id).eq("symbol", symbol).execute()
+            result = self.client.table(self.watchlist_table).delete().eq("user_id", user_id).eq("symbol", symbol).execute()
+            if len(result.data) == 0:
+                raise HTTPException(status_code=404, detail="Symbol not found in watchlist")
         except Exception as e:
             logger.error(f"Error removing from watchlist: {str(e)}")
-            raise
-
-    async def get_watchlist_status(self, user_id: str, symbol: str) -> bool:
-        """Check if a symbol is in the user's watchlist."""
-        try:
-            result = self.client.table("watchlist").select("id").eq("user_id", user_id).eq("symbol", symbol).execute()
-            return len(result.data) > 0
-        except Exception as e:
-            logger.error(f"Error checking watchlist status: {str(e)}")
             raise
 
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:

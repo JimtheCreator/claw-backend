@@ -364,6 +364,42 @@ class BinanceMarketData:
                 "priceChangePercent": "0",
                 "quoteVolume": "0"
             }
+
+    async def get_tickers_watchlist(self, symbols: list[str]) -> list[dict]:
+        """
+        Fetch ticker data for a list of symbols from Binance by retrieving all tickers and filtering.
+
+        Args:
+            symbols (list[str]): List of trading symbols (e.g., ["BTCUSDT", "ETHUSDT"]).
+
+        Returns:
+            list[dict]: List of ticker dictionaries for the specified symbols.
+        """
+        if not symbols:
+            return []
+
+        # Ensure the client is connected
+        await self.ensure_connected()
+
+        try:
+            # Fetch all tickers (no parameters retrieves all available tickers)
+            all_tickers = await self.client.get_ticker()
+
+            # Validate the response is a list
+            if not isinstance(all_tickers, list):
+                logger.error("Unexpected response format from get_ticker: %s", all_tickers)
+                return []
+
+            # Filter tickers to include only those in the provided symbols list
+            tickers = [ticker for ticker in all_tickers if ticker.get('symbol') in symbols]
+            return tickers
+
+        except BinanceAPIException as e:
+            logger.error("Binance API Error fetching tickers: %s", e)
+            return []
+        except Exception as e:
+            logger.error("Error fetching tickers: %s", e)
+            return []
             
     # Method to get multiple tickers in parallel
     async def get_tickers_batch(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
