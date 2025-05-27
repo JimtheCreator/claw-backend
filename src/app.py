@@ -10,7 +10,6 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 from presentation.api.routes import market_data
-import core.services.crypto_list as crypto_data
 from presentation.api.routes import analysis
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger

@@ -1,6 +1,7 @@
 # watchlist_routes.py
 # watchlist_routes.py
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketState
 from pydantic import BaseModel
 from typing import List, Optional
 import asyncio
@@ -297,6 +298,11 @@ async def websocket_watchlist(websocket: WebSocket, user_id: str):
         async with websockets.connect(binance_stream_url) as binance_ws:
             logger.info(f"Successfully connected to Binance stream for user {user_id}: {stream_names}")
             while True:
+                # Check if the WebSocket is still connected
+                if websocket.state != WebSocketState.CONNECTED:
+                    logger.info(f"Client WebSocket closed for user {user_id}. Stopping updates.")
+                    break  # Exit the loop if the client’s gone
+
                 try:
                     now = datetime.now()
                     if now - last_sparkline_batch_update_time >= sparkline_update_interval:
