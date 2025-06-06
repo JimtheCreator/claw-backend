@@ -3,7 +3,6 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, field_validator, Field, EmailStr, conint, constr
 import re
 
-
 class SubscribeRequest(BaseModel):
     user_id: str
     plan_id: str

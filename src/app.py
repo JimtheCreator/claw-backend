@@ -19,6 +19,9 @@ from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from presentation.api.routes.alerts_endpoints.price_alerts import check_and_trigger_price_alerts, router as price_alerts_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,11 +38,16 @@ async def lifespan(app: FastAPI):
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
+        scheduler.add_job(check_and_trigger_price_alerts, IntervalTrigger(minutes=1))
+        scheduler.start()
+        logger.info("Scheduler started.")
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
+    # scheduler.shutdown()
+    logger.info("Scheduler stopped.")
     logger.info("Shutting down application...")
 
 app = FastAPI(
@@ -47,6 +55,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+# Initialize the scheduler and repository
+scheduler = AsyncIOScheduler()
 
 # Add CORS middleware
 app.add_middleware(
@@ -65,6 +76,7 @@ app.include_router(router, prefix="/api/v1/test")
 app.include_router(paid_plans_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
 app.include_router(watchlist_router, prefix="/api/v1")
+app.include_router(price_alerts_router, prefix="/api/v1")
 
 
 @app.get("/health")

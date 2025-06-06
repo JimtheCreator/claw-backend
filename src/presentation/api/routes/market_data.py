@@ -174,7 +174,6 @@ async def delete_all_market_data_endpoint(
         
     return result
 
-
 @router.get("/cryptos/search")
 async def search_crypto_pairs(query: str, limit: int = 20):
     """

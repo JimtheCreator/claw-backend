@@ -1,5 +1,4 @@
 # watchlist_routes.py
-# watchlist_routes.py
 from fastapi import APIRouter, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 from pydantic import BaseModel
@@ -29,7 +28,7 @@ import json
 import firebase_admin
 from firebase_admin import credentials, db
 
-router = APIRouter()
+router = APIRouter(tags=["Symbol Watchlists"])
 
 # Shared Binance client instance
 shared_binance_client = BinanceMarketData()
@@ -205,7 +204,6 @@ async def add_to_watchlist(request: AddWatchlistRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to add to watchlist")
     
-
 @router.delete("/watchlist/remove")
 async def remove_from_watchlist(request: RemoveWatchlistRequest):
     repo = SupabaseCryptoRepository()
@@ -224,175 +222,206 @@ async def get_watchlist(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to retrieve watchlist - " + str(e))
 
-
 @router.websocket("/ws/watchlist/{user_id}")
 async def websocket_watchlist(websocket: WebSocket, user_id: str):
     await websocket.accept()
-    logger.info(f"New WebSocket connection for watchlist of user {user_id}")
-
-    current_sparklines_data = {} # Key: symbol, Value: {'sparkline': [...], 'timestamp': iso_string}
-    # To store details like base_currency, asset, source, added_at per symbol
-    symbol_details_map = {}
-
+    logger.info(f"New WebSocket connection accepted for user {user_id}")
+    
+    binance_ws = None
+    
     try:
         repo = SupabaseCryptoRepository()
-        watchlist_items = await repo.get_watchlist(user_id) # Renamed to avoid conflict
+        watchlist_items = await repo.get_watchlist(user_id)
         
         if not watchlist_items:
-            logger.info(f"No symbols in watchlist for user {user_id}. Closing WebSocket.")
-            await websocket.send_json({"type": "info", "message": "No symbols in watchlist."})
+            await safe_websocket_send(websocket, {"type": "info", "message": "No symbols in watchlist."})
             await websocket.close()
             return
 
         symbols = [item['symbol'] for item in watchlist_items]
-        for item in watchlist_items:
-            symbol_details_map[item['symbol']] = {
-                'base_currency': item['base_currency'],
-                'asset': item['asset'],
-                'source': item['source'],
-                'added_at': item['added_at']
-            }
+        symbol_details_map = {item['symbol']: item for item in watchlist_items}
 
-        # Initial fetch of ticker data
+        # Fetch and send initial data
         tickers = await shared_binance_client.get_tickers_watchlist(symbols)
         ticker_dict = {ticker['symbol']: ticker for ticker in tickers} if tickers else {}
-
-        # Initial fetch of sparkline data
-        logger.info(f"Fetching initial sparkline data for {len(symbols)} symbols for user {user_id}")
-        initial_sparklines_map = await get_sparklines_batch(symbols, hours=24)
-        initial_sparkline_timestamp = datetime.now().isoformat()
-        for symbol in symbols:
-            current_sparklines_data[symbol] = {
-                "sparkline": initial_sparklines_map.get(symbol, []),
-                "timestamp": initial_sparkline_timestamp
-            }
-        logger.info(f"Initial sparkline data fetched for {len(initial_sparklines_map)} symbols for user {user_id}")
+        sparklines_map = await get_sparklines_batch(symbols, hours=24)
+        sparkline_timestamp = datetime.now().isoformat()
 
         initial_data_payload = []
-        for symbol_key in symbols:
-            details = symbol_details_map[symbol_key]
-            ticker_info = ticker_dict.get(symbol_key)
+        for symbol in symbols:
+            details = symbol_details_map[symbol]
+            ticker_info = ticker_dict.get(symbol)
             price = float(ticker_info['lastPrice']) if ticker_info else None
             change = float(ticker_info['priceChangePercent']) if ticker_info else None
-            sparkline_info = current_sparklines_data.get(symbol_key, {"sparkline": [], "timestamp": initial_sparkline_timestamp})
+            sparkline = sparklines_map.get(symbol, [])
 
             initial_data_payload.append({
-                "symbol": symbol_key,
+                "symbol": symbol,
                 "base_currency": details['base_currency'],
                 "asset": details['asset'],
                 "source": details['source'],
                 "added_at": details['added_at'],
                 "price": price,
                 "change": change,
-                "sparkline": sparkline_info["sparkline"],
-                "sparkline_timestamp": sparkline_info["timestamp"]
+                "sparkline": sparkline,
+                "sparkline_timestamp": sparkline_timestamp
             })
-        await websocket.send_json({"type": "init", "watchlist": initial_data_payload})
+        
+        # Check connection state before sending
+        if not await safe_websocket_send(websocket, {"type": "init", "watchlist": initial_data_payload}):
+            return
 
+        # Stream real-time updates from Binance
         stream_names = [f"{s.lower()}@ticker" for s in symbols]
         binance_stream_url = f"wss://stream.binance.com:9443/stream?streams={'/'.join(stream_names)}"
         
-        last_sparkline_batch_update_time = datetime.now()
-        sparkline_update_interval = timedelta(minutes=15)
-
-        async with websockets.connect(binance_stream_url) as binance_ws:
-            logger.info(f"Successfully connected to Binance stream for user {user_id}: {stream_names}")
+        async with websockets.connect(binance_stream_url) as binance_ws_conn:
+            binance_ws = binance_ws_conn
+            
             while True:
-                # Check if the WebSocket is still connected
-                if websocket.state != WebSocketState.CONNECTED:
-                    logger.info(f"Client WebSocket closed for user {user_id}. Stopping updates.")
-                    break  # Exit the loop if the client’s gone
-
                 try:
-                    now = datetime.now()
-                    if now - last_sparkline_batch_update_time >= sparkline_update_interval:
-                        logger.info(f"Periodically updating sparkline data for {len(symbols)} symbols for user {user_id}")
-                        updated_sparklines_map = await get_sparklines_batch(symbols, hours=24)
-                        new_sparkline_timestamp = datetime.now().isoformat()
-                        
-                        batch_sparkline_update_payload_items = []
-                        for symbol_key in symbols:
-                            current_sparklines_data[symbol_key] = {
-                                "sparkline": updated_sparklines_map.get(symbol_key, []),
-                                "timestamp": new_sparkline_timestamp
-                            }
-                            details = symbol_details_map[symbol_key]
-                            batch_sparkline_update_payload_items.append({
-                                "symbol": symbol_key,
+                    # Check WebSocket state before attempting to receive
+                    if websocket.client_state != WebSocketState.CONNECTED:
+                        logger.info(f"WebSocket no longer connected for user {user_id}")
+                        break
+                    
+                    # Create tasks for both receiving from client and Binance
+                    client_task = asyncio.create_task(websocket.receive_text())
+                    binance_task = asyncio.create_task(binance_ws_conn.recv())
+                    
+                    # Wait for either task to complete with timeout
+                    done, pending = await asyncio.wait(
+                        [client_task, binance_task],
+                        timeout=5.0,
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    # Cancel pending tasks
+                    for task in pending:
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                    
+                    # Handle completed tasks
+                    if not done:
+                        # Timeout occurred, check if connection is still alive
+                        continue
+                    
+                    completed_task = done.pop()
+                    
+                    if completed_task == client_task:
+                        # Client sent a message or disconnected
+                        try:
+                            client_msg = completed_task.result()
+                            logger.debug(f"Received client message: {client_msg}")
+                            # Handle client message if needed
+                        except WebSocketDisconnect:
+                            logger.info(f"Client disconnected: {user_id}")
+                            break
+                        except Exception as e:
+                            logger.error(f"Error receiving client message: {e}")
+                            break
+                    
+                    elif completed_task == binance_task:
+                        # Received data from Binance
+                        try:
+                            msg = completed_task.result()
+                            data = json.loads(msg)
+                            stream_data = data.get('data', {})
+
+                            if not stream_data:
+                                continue
+
+                            symbol = stream_data.get('s', '').upper()
+                            if symbol not in symbol_details_map:
+                                continue
+
+                            price = float(stream_data.get('c', 0))
+                            change = float(stream_data.get('P', 0.0))
+                            timestamp = stream_data.get('E')
+                            details = symbol_details_map[symbol]
+
+                            update_payload = {
+                                "type": "update",
+                                "symbol": symbol,
                                 "base_currency": details['base_currency'],
                                 "asset": details['asset'],
-                                "sparkline": current_sparklines_data[symbol_key]["sparkline"],
-                                "sparkline_timestamp": current_sparklines_data[symbol_key]["timestamp"]
-                            })
-                        
-                        if batch_sparkline_update_payload_items:
-                            await websocket.send_json({
-                                "type": "sparkline_batch_update",
-                                "updates": batch_sparkline_update_payload_items
-                            })
-                        last_sparkline_batch_update_time = now
-                        logger.info(f"Periodic sparkline data update completed and sent for user {user_id}")
-
-                    msg = await asyncio.wait_for(binance_ws.recv(), timeout=5.0)
-                    data = json.loads(msg)
-                    stream_data = data.get('data', {})
-                    
-                    if not stream_data: continue
-
-                    symbol_from_stream = stream_data.get('s', '').upper()
-                    if not symbol_from_stream or symbol_from_stream not in symbol_details_map:
-                        logger.debug(f"Ticker for unhandled symbol {symbol_from_stream} received for user {user_id}, skipping.")
-                        continue
-                        
-                    current_price = float(stream_data.get('c', 0))
-                    change_percent = float(stream_data.get('P', 0.0))
-                    event_timestamp = stream_data.get('E')
-
-                    sparkline_info_for_update = current_sparklines_data.get(symbol_from_stream, {"sparkline": [], "timestamp": datetime.now().isoformat()})
-                    details = symbol_details_map[symbol_from_stream]
-
-                    await websocket.send_json({
-                        "type": "update",
-                        "symbol": symbol_from_stream,
-                        "base_currency": details['base_currency'],
-                        "asset": details['asset'],
-                        "price": current_price,
-                        "change": round(change_percent, 2),
-                        "sparkline": sparkline_info_for_update["sparkline"],
-                        "sparkline_timestamp": sparkline_info_for_update["timestamp"],
-                        "timestamp": event_timestamp
-                    })
+                                "price": price,
+                                "change": round(change, 2),
+                                "timestamp": timestamp
+                            }
+                            
+                            # Safely send the update
+                            if not await safe_websocket_send(websocket, update_payload):
+                                # If send failed, connection is likely closed
+                                break
+                                
+                        except json.JSONDecodeError as e:
+                            logger.error(f"JSON decode error: {e}")
+                            continue
+                        except Exception as e:
+                            logger.error(f"Error processing Binance message: {e}")
+                            continue
 
                 except asyncio.TimeoutError:
+                    # Check if connection is still alive during timeout
+                    if websocket.client_state != WebSocketState.CONNECTED:
+                        break
                     continue
-                except json.JSONDecodeError as e:
-                    logger.error(f"JSON decode error for user {user_id}, message: '{msg[:100]}...'. Error: {e}")
-                    continue
-                except websockets.exceptions.ConnectionClosed as e: # Catches ClosedOK, ClosedError
-                    logger.info(f"Binance WebSocket connection closed for user {user_id} (Stream: {e.reason}, Code: {e.code}). Re-raising as WebSocketDisconnect.")
-                    raise WebSocketDisconnect(f"Binance connection closed: {e.reason}") # Trigger outer disconnect handling
-                except Exception as e: # Catch other errors within the loop
-                    logger.error(f"Inner loop error for user {user_id}, symbol {symbol_from_stream if 'symbol_from_stream' in locals() else 'N/A'}: {type(e).__name__} - {e}")
-                    # Depending on error severity, may continue or break/raise
-                    await asyncio.sleep(1) # Brief pause before retrying receive
+                except WebSocketDisconnect:
+                    logger.info(f"WebSocket disconnected for user {user_id}")
+                    break
+                except Exception as e:
+                    logger.error(f"Stream error: {e}")
+                    # Check if this is a connection-related error
+                    if websocket.client_state != WebSocketState.CONNECTED:
+                        break
+                    await asyncio.sleep(1)
 
-    except WebSocketDisconnect as e: # Handles client disconnects or Binance connection issues propagated as WebSocketDisconnect
-        logger.info(f"Watchlist WebSocket client disconnected for user {user_id}. Reason: {e}")
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected for user {user_id}")
     except Exception as e:
-        logger.error(f"Overall WebSocket error for watchlist of user {user_id}: {type(e).__name__} - {e}")
-        if websocket.client_state == websockets.protocol.State.OPEN:
-            try:
-                await websocket.send_json({"type": "error", "message": f"An unexpected error occurred: {str(e)}"})
-            except Exception as send_err:
-                logger.error(f"Failed to send error to client for user {user_id}: {send_err}")
+        logger.error(f"Unexpected error for user {user_id}: {e}")
     finally:
-        logger.info(f"Closing watchlist WebSocket connection for user {user_id}")
-        if websocket.client_state != websockets.protocol.State.CLOSED: # Check state before closing
+        # Clean up Binance WebSocket connection
+        if binance_ws and not binance_ws.close:
             try:
-                await websocket.close(code=1000) # Graceful close
+                await binance_ws.close()
             except Exception as e:
-                logger.warning(f"Error during final websocket close for user {user_id}: {e}")
+                logger.debug(f"Error closing Binance WebSocket: {e}")
+        
+        # Only close if not already closed
+        if websocket.client_state == WebSocketState.CONNECTED:
+            try:
+                await websocket.close(code=1000)
+            except Exception as e:
+                logger.debug(f"Error closing websocket: {e}")
+        
+        logger.info(f"WebSocket closed for user {user_id}")
 
+# Enhanced helper function to safely send WebSocket messages
+async def safe_websocket_send(websocket: WebSocket, data: dict) -> bool:
+    """
+    Safely send data through WebSocket with connection state checking.
+    
+    Returns:
+        bool: True if message was sent successfully, False otherwise
+    """
+    try:
+        if websocket.client_state == WebSocketState.CONNECTED:
+            await websocket.send_json(data)
+            return True
+        else:
+            logger.debug("WebSocket not connected, skipping send")
+            return False
+    except WebSocketDisconnect:
+        logger.debug("WebSocket disconnected during send")
+        return False
+    except Exception as e:
+        logger.error(f"Error sending WebSocket message: {e}")
+        return False
 
 @router.get("/watchlist/{user_id}/sparklines")
 async def get_watchlist_sparklines(user_id: str, hours: int = 24):
@@ -418,71 +447,3 @@ async def get_watchlist_sparklines(user_id: str, hours: int = 24):
     except Exception as e:
         logger.error(f"Error fetching on-demand sparklines for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve sparklines")
-
-
-
-
-async def get_sparkline_data(symbol: str, hours: int = 24) -> List[float]:
-    """
-    Fetch sparkline data for a symbol over the specified time period.
-    This function already includes logic to downsample to ~50 points.
-    """
-    try:
-        if hours <= 1:
-            interval = "1m"
-            limit = hours * 60
-        elif hours <= 6:
-            interval = "5m"
-            limit = hours * 12
-        elif hours <= 24:
-            interval = "15m"
-            limit = hours * 4
-        else:
-            interval = "1h"
-            limit = min(hours, 168)
-
-        klines = await shared_binance_client.get_klines(
-            symbol=symbol,
-            interval=interval,
-            limit=limit
-        )
-
-        if not klines:
-            logger.warning(f"No klines data received for sparkline: {symbol}")
-            return []
-
-        sparkline_prices = [float(kline[4]) for kline in klines]
-
-        if len(sparkline_prices) > 50:
-            step = max(1, len(sparkline_prices) // 50) # Ensure step is at least 1
-            sparkline_prices = sparkline_prices[::step][:50]
-
-        logger.debug(f"Generated sparkline for {symbol}: {len(sparkline_prices)} points")
-        return sparkline_prices
-
-    except Exception as e:
-        logger.error(f"Error generating sparkline for {symbol}: {str(e)}")
-        return []
-
-async def get_sparklines_batch(symbols: List[str], hours: int = 24) -> dict:
-    """
-    Fetch sparkline data for multiple symbols in parallel.
-    """
-    if not symbols:
-        return {}
-    try:
-        tasks = [get_sparkline_data(symbol, hours) for symbol in symbols]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        sparklines = {}
-        for i, result in enumerate(results):
-            symbol = symbols[i]
-            if isinstance(result, Exception):
-                logger.error(f"Error fetching sparkline for {symbol} in batch: {result}")
-                sparklines[symbol] = []
-            else:
-                sparklines[symbol] = result
-        return sparklines
-    except Exception as e:
-        logger.error(f"Error in batch sparkline fetch: {e}")
-        return {symbol: [] for symbol in symbols}

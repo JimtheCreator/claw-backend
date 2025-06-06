@@ -7,7 +7,6 @@ from infrastructure.data_sources.binance.client import BinanceMarketData
 from supabase import create_client
 from datetime import datetime, timezone
 from typing import List
-import os
 from common.logger import logger
 from fastapi import HTTPException
 from infrastructure.database.firebase.repository import FirebaseRepository
@@ -24,6 +23,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
         self.watchlist_table = "watchlist"
+        self.price_alerts_table = "price_alerts"
 
     async def get_firebase_repo(self):
         unique_id = f"app_{uuid.uuid4()}"
@@ -171,6 +171,86 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Error removing from watchlist: {str(e)}")
             raise
+    
+    async def get_active_alerts_count(self, user_id: str) -> int:
+        """
+        Retrieve the count of active price alerts for a given user.
+        
+        Args:
+            user_id (str): The ID of the user whose active alerts are being counted
+            
+        Returns:
+            int: The number of active alerts for the user
+            
+        Raises:
+            HTTPException: If there's an error accessing the database
+        """
+        try:
+            # Query the price_alerts table for active alerts belonging to the user
+            result = self.client.table(self.price_alerts_table) \
+                .select("id") \
+                .eq("user_id", user_id) \
+                .eq("status", "active") \
+                .execute()
+            
+            # Return the count of matching rows
+            return len(result.data)
+            
+        except Exception as e:
+            # Log the error and raise an HTTP exception
+            logger.error(f"Error fetching active alerts count for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch active alerts count")
+        
+    async def get_active_price_alerts(self):
+        try:
+            # Query the price_alerts table for active alerts
+            result = self.client.table(self.price_alerts_table).select("*").eq("status", "active").execute()
+            
+            return result.data
+            
+        except Exception as e:
+            # Log the error and raise an HTTP exception
+            logger.error(f"Error fetching active alerts: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
+    
+    async def create_alert(self, user_id: str, symbol: str, condition_type: str, condition_value: float, PLAN_LIMITS: dict):
+        """Create a price alert for the user, checking subscription limits."""
+        try:
+            # Ensure subscription exists
+            await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
+
+            # Get subscription limits
+            limits = await self.get_subscription_limits(user_id)
+            price_alerts_limit = limits["price_alerts_limit"]
+
+            # Check current number of active alerts
+            current_alerts = await self.get_active_alerts_count(user_id)
+            if price_alerts_limit != -1 and current_alerts >= price_alerts_limit:
+                raise HTTPException(status_code=403, detail="Price alerts limit reached")
+
+            # Create the alert
+            alert_data = {
+                "user_id": user_id,
+                "symbol": symbol,
+                "condition_type": condition_type,
+                "condition_value": condition_value,
+                "status": "active",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            self.client.table(self.price_alerts_table).insert(alert_data).execute()
+            logger.info(f"Created alert for user {user_id} on symbol {symbol}")
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error creating alert for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create alert")
+        
+    async def cancel_alert(self, user_id: str, alert_id: int):
+        result = self.client.table(self.price_alerts_table).select("user_id").eq("id", alert_id).execute()
+        if not result.data or result.data[0]["user_id"] != user_id:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        self.client.table(self.price_alerts_table).update({"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}).eq("id", alert_id).execute()
 
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
         """Retrieve a crypto by symbol with error handling"""
@@ -281,8 +361,6 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Failed to store price in Redis: {e}")
 
-
-    # src/infrastructure/database/supabase/crypto_repository.py
     async def bulk_save_cryptos(self, cryptos: List[dict]) -> None:
         """Batch upsert crypto metadata (non-volatile) to Supabase"""
         if not cryptos:

@@ -25,3 +25,4 @@ scipy
 pydantic[email]
 firebase_admin
 stripe
+apscheduler
