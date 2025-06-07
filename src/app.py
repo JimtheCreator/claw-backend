@@ -38,8 +38,8 @@ async def lifespan(app: FastAPI):
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
-        scheduler.add_job(check_and_trigger_price_alerts, IntervalTrigger(minutes=1))
-        scheduler.start()
+        # scheduler.add_job(check_and_trigger_price_alerts, IntervalTrigger(minutes=1))
+        # scheduler.start()
         logger.info("Scheduler started.")
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
@@ -77,7 +77,6 @@ app.include_router(paid_plans_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
 app.include_router(watchlist_router, prefix="/api/v1")
 app.include_router(price_alerts_router, prefix="/api/v1")
-
 
 @app.get("/health")
 async def health_check():

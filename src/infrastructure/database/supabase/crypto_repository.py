@@ -11,6 +11,7 @@ from common.logger import logger
 from fastapi import HTTPException
 from infrastructure.database.firebase.repository import FirebaseRepository
 import uuid
+from infrastructure.database.redis.cache import redis_cache
 
 binance = BinanceMarketData()
 
@@ -20,10 +21,12 @@ class SupabaseCryptoRepository(CryptoRepository):
             os.getenv("SUPABASE_URL"),
             os.getenv("SUPABASE_SERVICE_KEY")
         )
+    
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
         self.watchlist_table = "watchlist"
         self.price_alerts_table = "price_alerts"
+        self.redis_client = redis_cache
 
     async def get_firebase_repo(self):
         unique_id = f"app_{uuid.uuid4()}"
@@ -201,7 +204,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error fetching active alerts count for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to fetch active alerts count")
         
-    async def get_active_price_alerts(self):
+    async def get_all_active_price_alerts(self):
         try:
             # Query the price_alerts table for active alerts
             result = self.client.table(self.price_alerts_table).select("*").eq("status", "active").execute()
@@ -245,11 +248,21 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Error creating alert for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to create alert")
-        
-    async def cancel_alert(self, user_id: str, alert_id: int):
+    
+    async def get_user_active_alerts(self, user_id: str) -> List[dict]:
+        try:
+            result = self.client.table(self.price_alerts_table).select("*").eq("user_id", user_id).eq("status", "active").execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error fetching active alerts for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
+
+    async def cancel_alert(self, user_id: str, alert_id: str):
+        # Check if the alert exists and belongs to the user
         result = self.client.table(self.price_alerts_table).select("user_id").eq("id", alert_id).execute()
         if not result.data or result.data[0]["user_id"] != user_id:
             raise HTTPException(status_code=404, detail="Alert not found")
+        # Update the alert status to "cancelled"
         self.client.table(self.price_alerts_table).update({"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}).eq("id", alert_id).execute()
 
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
@@ -319,7 +332,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         # Price data should always come from Redis for freshness
         if self.redis_client:
             try:
-                price_data = await self.redis_client.get(f"crypto:price:{symbol}")
+                price_data = await self.redis_client.get_cached_data(f"crypto:price:{symbol}")
                 if price_data:
                     logger.info(f"Price data for {symbol} retrieved from Redis")
                     return {**price_data, 'data_source': 'redis'}

@@ -11,6 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from enum import Enum as PyEnum
+from typing import List
 
 # Define valid condition types for alerts
 class ConditionType(str, PyEnum):
@@ -92,7 +93,7 @@ async def check_and_trigger_price_alerts():
     try:
         repo = get_supabase_repo()
         # Fetch all active alerts from the database
-        alerts = await repo.get_active_price_alerts()
+        alerts = await repo.get_all_active_price_alerts()
 
         if not alerts:
             logger.info("No active alerts found.")
@@ -192,6 +193,28 @@ async def create_alert(
     except Exception as e:
         logger.error(f"Error creating alert for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@router.get("/alerts/{user_id}", response_model=List[dict])
+async def get_active_alerts(user_id: str, repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+    try:
+        alerts = await repo.get_user_active_alerts(user_id)
+        return alerts
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error fetching alerts for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch alerts")
+
+@router.post("/alerts/{alert_id}/cancel")
+async def cancel_alert(alert_id: str, user_id: str = Query(...), repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+    try:
+        await repo.cancel_alert(user_id, alert_id)
+        return {"message": "Alert cancelled successfully"}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error cancelling alert {alert_id} for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to cancel alert")
     
 # Endpoint to update FCM token
 @router.post("/users/{user_id}/fcm-token")
@@ -205,3 +228,4 @@ async def update_fcm_token(
         return {"message": "FCM token updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
