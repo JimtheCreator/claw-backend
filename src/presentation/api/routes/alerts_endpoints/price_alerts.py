@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from enum import Enum as PyEnum
 from typing import List
+from infrastructure.data_sources.binance.client import BinanceMarketData
+import asyncio
 
 # Define valid condition types for alerts
 class ConditionType(str, PyEnum):
@@ -89,72 +91,6 @@ def get_firebase_repo():
 def get_supabase_repo():
     return SupabaseCryptoRepository()
 
-async def check_and_trigger_price_alerts():
-    try:
-        repo = get_supabase_repo()
-        # Fetch all active alerts from the database
-        alerts = await repo.get_all_active_price_alerts()
-
-        if not alerts:
-            logger.info("No active alerts found.")
-            return
-
-        # Get unique symbols from alerts
-        symbols = set(alert["symbol"] for alert in alerts)
-
-        # Fetch current prices for these symbols
-        prices = {}
-        for symbol in symbols:
-            price_data = await repo.get_crypto_price(symbol)
-            if price_data:
-                prices[symbol] = price_data["price"]
-
-        # Check each alert against current prices
-        for alert in alerts:
-            symbol = alert["symbol"]
-            if symbol in prices:
-                current_price = prices[symbol]
-                condition_type = alert["condition_type"]
-                condition_value = alert["condition_value"]
-                if (condition_type == "price_above" and current_price > condition_value) or \
-                   (condition_type == "price_below" and current_price < condition_value):
-                    await trigger_price_alert(alert, current_price)
-    except Exception as e:
-        logger.error(f"Error in check_and_trigger_alerts: {str(e)}")
-
-async def trigger_price_alert(
-        alert,
-        current_price,
-        firebase_repo: FirebaseRepository = Depends(get_firebase_repo),
-        supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
-):
-    try:
-        user_id = alert["user_id"]
-        # Retrieve FCM token from Firebase
-        user_data = firebase_repo.db.child(user_id).get()
-        fcm_token = user_data.get("fcm_token") if user_data else None
-
-        if fcm_token:
-            # Send notification via FCM
-            message = messaging.Message(
-                notification=messaging.Notification(
-                    title="Price Alert",
-                    body=f"{alert['symbol']} is {alert['condition_type']} {alert['condition_value']}! Current price: {current_price}"
-                ),
-                token=fcm_token
-            )
-            messaging.send(message)
-            logger.info(f"Notification sent to user {user_id} for {alert['symbol']}")
-
-        # Log the alert trigger in the database 
-        # Update alert status to prevent repeat notifications
-        supabase_repo.client.table("price_alerts").update({
-            "status": "triggered",
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }).eq("id", alert["id"]).execute()
-    except Exception as e:
-        logger.error(f"Error triggering alert: {str(e)}")
-
 @router.post("/alerts")
 async def create_alert(
     request: AlertCreate,
@@ -216,16 +152,124 @@ async def cancel_alert(alert_id: str, user_id: str = Query(...), repo: SupabaseC
         logger.error(f"Error cancelling alert {alert_id} for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to cancel alert")
     
-# Endpoint to update FCM token
-@router.post("/users/{user_id}/fcm-token")
-async def update_fcm_token(
-    user_id: str,
-    fcm_token: str,
-    firebase_repo: FirebaseRepository = Depends(get_firebase_repo)
-):
+
+
+binance_client = BinanceMarketData()
+
+async def send_fcm_notification(user_id: str, symbol: str, price: float, condition_type: str, fcm_token: str):
+    """Constructs and sends a notification via FCM."""
+    condition_text = "above" if condition_type == "price_above" else "below"
+    title = f"Price Alert for {symbol}!"
+    body = f"{symbol} has just moved {condition_text} your target price. Current price: ${price:,.4f}"
+
+    message = messaging.Message(
+        notification=messaging.Notification(
+            title=title,
+            body=body,
+        ),
+        data={
+            "symbol": symbol,
+            "price": str(price),
+            "click_action": "FLUTTER_NOTIFICATION_CLICK",
+        },
+        token=fcm_token,
+        android=messaging.AndroidConfig(
+            priority="high",
+            notification=messaging.AndroidNotification(
+                # FIX: Add the channel ID to match your Android App.java
+                channel_id="price_alerts_channel"
+            )
+        ),
+        apns=messaging.APNSConfig(
+            headers={
+                # CORRECT: Set priority in the headers for APNSConfig
+                'apns-priority': '10' # For iOS, '5' is normal priority, '10' is high
+            },
+            payload=messaging.APNSPayload(
+                aps=messaging.Aps(
+                    content_available=True,
+                    # The 'sound' key can be added for a default notification sound
+                    sound="default"
+                )
+            )
+        )
+    )
+
     try:
-        firebase_repo.db.child(user_id).update({"fcm_token": fcm_token})
-        return {"message": "FCM token updated successfully"}
+        response = messaging.send(message)
+        logger.info(f"Successfully sent FCM message to user {user_id} for symbol {symbol}: {response}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to send FCM message for user {user_id}: {e}")
+
+# ... (the rest of the file remains the same)
+
+
+async def check_and_trigger_alerts():
+    """
+    Scheduled job to check all active alerts against current market prices
+    and trigger notifications.
+    """
+    logger.info("Scheduler running: Checking for triggered price alerts...")
+    repo = SupabaseCryptoRepository()
+    firebase_repo = FirebaseRepository()
+
+    try:
+        active_alerts = await repo.get_all_active_price_alerts()
+        if not active_alerts:
+            logger.info("No active alerts to check.")
+            return
+
+        # Get unique symbols to fetch prices efficiently
+        symbols = list(set([alert['symbol'] for alert in active_alerts]))
+        
+        # Ensure Binance client is connected and fetch prices in a batch
+        await binance_client.ensure_connected_minimal()
+        tickers = await binance_client.get_tickers_batch(symbols)
+
+        triggered_alert_ids = []
+        notifications_to_send = []
+
+        for alert in active_alerts:
+            symbol = alert['symbol']
+            current_ticker = tickers.get(symbol)
+            if not current_ticker or 'lastPrice' not in current_ticker:
+                continue
+
+            current_price = float(current_ticker['lastPrice'])
+            condition_value = float(alert['condition_value'])
+            condition_type = alert['condition_type']
+            
+            triggered = False
+            if condition_type == "price_above" and current_price > condition_value:
+                triggered = True
+            elif condition_type == "price_below" and current_price < condition_value:
+                triggered = True
+
+            if triggered:
+                logger.info(f"Alert triggered for user {alert['user_id']} on {symbol} at price {current_price}")
+                triggered_alert_ids.append(alert['id'])
+                
+                # Fetch user's FCM token from Firebase RTDB
+                user_data = firebase_repo.db.child(alert['user_id']).get()
+                if user_data and 'fcmToken' in user_data:
+                    notifications_to_send.append(
+                        send_fcm_notification(
+                            user_id=alert['user_id'],
+                            symbol=symbol,
+                            price=current_price,
+                            condition_type=condition_type,
+                            fcm_token=user_data['fcmToken']
+                        )
+                    )
+        
+        # Send all notifications concurrently
+        if notifications_to_send:
+            await asyncio.gather(*notifications_to_send)
+
+        # Deactivate all triggered alerts in a single batch
+        if triggered_alert_ids:
+            await repo.deactivate_triggered_price_alerts(triggered_alert_ids)
+
+    except Exception as e:
+        logger.error(f"Error during alert check job: {e}")
     

@@ -21,7 +21,7 @@ from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from presentation.api.routes.alerts_endpoints.price_alerts import check_and_trigger_price_alerts, router as price_alerts_router
+from presentation.api.routes.alerts_endpoints.price_alerts import check_and_trigger_alerts, router as price_alerts_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,16 +38,28 @@ async def lifespan(app: FastAPI):
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
-        # scheduler.add_job(check_and_trigger_price_alerts, IntervalTrigger(minutes=1))
-        # scheduler.start()
-        logger.info("Scheduler started.")
+        
+        # Initialize the scheduler
+        scheduler = AsyncIOScheduler()
+        # Schedule the alert checking job to run every 60 seconds
+        scheduler.add_job(check_and_trigger_alerts, IntervalTrigger(seconds=30))
+        scheduler.start()
+        
+        # Make the scheduler accessible for shutdown
+        app.state.scheduler = scheduler
+        
+        logger.info("Scheduler started and alert checking job is scheduled.")
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
-    # scheduler.shutdown()
-    logger.info("Scheduler stopped.")
+    
+    # Gracefully shut down the scheduler
+    if app.state.scheduler.running:
+        app.state.scheduler.shutdown()
+        logger.info("Scheduler stopped.")
+
     logger.info("Shutting down application...")
 
 app = FastAPI(

@@ -27,6 +27,8 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.watchlist_table = "watchlist"
         self.price_alerts_table = "price_alerts"
         self.redis_client = redis_cache
+    
+    
 
     async def get_firebase_repo(self):
         unique_id = f"app_{uuid.uuid4()}"
@@ -264,6 +266,20 @@ class SupabaseCryptoRepository(CryptoRepository):
             raise HTTPException(status_code=404, detail="Alert not found")
         # Update the alert status to "cancelled"
         self.client.table(self.price_alerts_table).update({"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}).eq("id", alert_id).execute()
+
+    async def deactivate_triggered_price_alerts(self, alert_ids: List[str]):
+        """Update the status of triggered alerts to 'triggered' to prevent re-sending."""
+        if not alert_ids:
+            return
+        try:
+            self.client.table(self.price_alerts_table).update({
+                "status": "triggered",
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }).in_("id", alert_ids).execute()
+            logger.info(f"Deactivated {len(alert_ids)} triggered alerts.")
+        except Exception as e:
+            logger.error(f"Error deactivating triggered alerts: {str(e)}")
+            # Do not raise, as the main process should continue
 
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
         """Retrieve a crypto by symbol with error handling"""

@@ -11622,3 +11622,1549 @@ TimeoutError
 2025-06-07 15:45:46,968 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 394 records. Progress: 2025-06-07 12:41:00+00:00 (102188 total records saved)
 2025-06-07 15:45:47,876 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for BNSOLUSDT (1m)
 2025-06-07 15:45:47,939 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for BNSOLUSDT (1m)
+2025-06-07 15:58:18,563 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 15:58:27,339 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:03:37,496 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BNSOLUSDT
+2025-06-07 16:03:37,534 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BNSOLUSDT
+2025-06-07 16:04:20,114 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:04:24,162 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:06:38,646 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:06:48,094 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:07:21,731 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:07:23,564 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:07:47,496 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:07:53,263 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:07:54,578 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:13:09,800 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:13:14,307 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:13:17,324 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:13:21,300 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:13:23,981 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:13:26,969 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:16:14,354 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:16:21,455 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:17:19,456 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:17:19,511 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:19:27,711 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:19:37,922 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:20:10,130 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:20:13,265 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:27:38,179 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:27:48,271 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:28:19,845 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:28:22,845 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:29:59,671 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:30:08,226 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:31:33,362 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:31:35,680 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:38:06,635 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:38:16,127 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:38:47,559 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:39:20,851 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:39:29,699 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:41:29,869 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:41:33,895 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:49:06,302 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:49:16,426 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:50:50,967 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:50:54,097 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:51:26,805 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:51:32,992 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:52:42,075 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:52:44,926 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:57:26,550 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:57:36,922 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 16:58:44,147 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 16:58:47,714 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:04:29,311 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:04:39,413 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:05:29,116 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 17:05:29,150 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:09:47,826 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:10:27,062 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 17:10:29,083 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:13:09,992 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:13:14,821 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:13:18,919 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:14:47,615 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:14:57,702 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:15:40,957 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 17:15:41,003 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:19:12,181 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:19:27,092 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:19:27,157 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:22:07,096 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:22:27,880 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:22:47,265 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:32:57,633 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 17:33:07,765 - ClawBackend - INFO - [app.py:43] - Scheduler started.
+2025-06-07 17:34:05,807 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:34:10,855 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 17:34:31,900 - ClawBackend - ERROR - [logger.py:75] - Unexpected error for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1:  | Exception: TimeoutError:  at C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\timeouts.py:116 in __aexit__ | Code: raise TimeoutError from exc_val | Exception: TimeoutError:  at C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\timeouts.py:116 in __aexit__ | Code: raise TimeoutError from exc_val | Exception: TimeoutError:  at C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\timeouts.py:116 in __aexit__ | Code: raise TimeoutError from exc_val
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\binance\async_client.py", line 82, in create
+    await self.ping()
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\binance\async_client.py", line 296, in ping
+    return await self._get("ping", version=self.PRIVATE_API_VERSION)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\binance\async_client.py", line 249, in _get
+    return await self._request_api("get", path, signed, version, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\binance\async_client.py", line 184, in _request_api
+    return await self._request(method, uri, signed, force_params, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\binance\async_client.py", line 147, in _request
+    async with getattr(self.session, method)(
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        yarl.URL(uri, encoded=True),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    ) as response:
+    ^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\client.py", line 1425, in __aenter__
+    self._resp: _RetType = await self._coro
+                           ^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\client.py", line 703, in _request
+    conn = await self._connector.connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        req, traces=traces, timeout=real_timeout
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\connector.py", line 548, in connect
+    proto = await self._create_connection(req, traces, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\connector.py", line 1056, in _create_connection
+    _, proto = await self._create_direct_connection(req, traces, timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\connector.py", line 1351, in _create_direct_connection
+    hosts = await self._resolve_host(host, port, traces=traces)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\aiohttp\connector.py", line 995, in _resolve_host
+    return await asyncio.shield(resolved_host_task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\user_symbol_watchlist.py", line 245, in websocket_watchlist
+    tickers = await shared_binance_client.get_tickers_watchlist(symbols)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\data_sources\binance\client.py", line 382, in get_tickers_watchlist
+    await self.ensure_connected()
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\data_sources\binance\client.py", line 137, in ensure_connected
+    await self.connect()
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\data_sources\binance\client.py", line 43, in connect
+    self.client = await asyncio.wait_for(
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 506, in wait_for
+    async with timeouts.timeout(timeout):
+               ~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\timeouts.py", line 116, in __aexit__
+    raise TimeoutError from exc_val
+TimeoutError
+2025-06-07 17:34:32,094 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:35:20,896 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for ETHUSDT (1m)
+2025-06-07 17:35:31,024 - ClawBackend - ERROR - [logger.py:75] - WebSocket error for ETHUSDT: timed out during handshake | Exception: TimeoutError: timed out during handshake at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\client.py:478 in __await_impl__ | Code: raise TimeoutError("timed out during handshake") from None | Exception: TimeoutError: timed out during handshake at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\client.py:478 in __await_impl__ | Code: raise TimeoutError("timed out during handshake") from None | Exception: TimeoutError: timed out during handshake at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\client.py:478 in __await_impl__ | Code: raise TimeoutError("timed out during handshake") from None
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\market_data.py", line 267, in websocket_stream_market_data
+    async with websockets.connect(
+               ~~~~~~~~~~~~~~~~~~^
+        f"wss://stream.binance.com:9443/stream?streams={'/'.join(streams)}"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ) as binance_ws:
+    ^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\client.py", line 487, in __aenter__
+    return await self
+           ^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\client.py", line 478, in __await_impl__
+    raise TimeoutError("timed out during handshake") from None
+TimeoutError: timed out during handshake
+2025-06-07 17:35:31,029 - ClawBackend - INFO - [market_data.py:339] - Closing connection for ETHUSDT
+2025-06-07 17:36:15,421 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:43:19,414 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 17:43:20,888 - ClawBackend - INFO - [app.py:43] - Scheduler started.
+2025-06-07 17:45:31,110 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:45:31,967 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 17:46:17,403 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:46:23,968 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 17:46:24,090 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 17:46:24,090 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 17:46:24,091 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 17:46:24,092 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 17:46:25,907 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 17:46:35,085 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 17:46:35,098 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 17:46:35,099 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 17:46:35,741 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 17:46:35,795 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 17:46:59,929 - ClawBackend - INFO - [price_alerts.py:172] - Creating alert for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 137844.39
+2025-06-07 17:47:07,966 - ClawBackend - INFO - [repository.py:46] - User BYMKm2kJFsYOkHygv3Nc1hpyvhw1 exists in Firebase
+2025-06-07 17:47:15,264 - ClawBackend - INFO - [crypto_repository.py:245] - Created alert for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1 on symbol BTCUSDT
+2025-06-07 17:47:15,265 - ClawBackend - INFO - [price_alerts.py:187] - Alert created successfully for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1 on symbol BTCUSDT
+2025-06-07 17:47:31,980 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 17:47:31,981 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 17:47:34,129 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user BYMKm2kJFsYOkHygv3Nc1hpyvhw1
+2025-06-07 22:25:37,575 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 22:25:40,048 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 22:26:10,807 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 22:26:15,955 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:26:28,184 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:26:28,277 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BTC
+2025-06-07 22:26:30,704 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BTCUSDT
+2025-06-07 22:26:40,477 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:26:56,662 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:26:56,665 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:26:57,698 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:26:57,828 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:26:57,830 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:27:00,613 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:27:00,714 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:27:00,718 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:27:01,134 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:27:01,251 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:27:03,991 - ClawBackend - INFO - [crypto_repository.py:71] - No subscription found for user Lj4yGpAktxQ8cNos27TpGVFeU4r1, checking Firebase
+2025-06-07 22:27:05,819 - ClawBackend - INFO - [repository.py:85] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 has subscription type: free
+2025-06-07 22:27:06,234 - ClawBackend - INFO - [crypto_repository.py:63] - Inserted subscription for user Lj4yGpAktxQ8cNos27TpGVFeU4r1: free
+2025-06-07 22:27:07,356 - ClawBackend - INFO - [crypto_repository.py:161] - Added BTCUSDT to watchlist for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:27:09,314 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:27:40,031 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:27:47,381 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105858.0
+2025-06-07 22:27:47,700 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 22:27:50,265 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:27:50,267 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:27:56,870 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:27:58,784 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:28:02,566 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:28:02,567 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:28:05,008 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:28:40,030 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:28:42,047 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105856.71
+2025-06-07 22:28:42,391 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: 'SupabaseCryptoRepository' object has no attribute 'deactivate_triggered_alerts' | Exception: AttributeError: 'SupabaseCryptoRepository' object has no attribute 'deactivate_triggered_alerts' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:274 in check_and_trigger_alerts | Code: await repo.deactivate_triggered_alerts(triggered_alert_ids) | Exception: AttributeError: 'SupabaseCryptoRepository' object has no attribute 'deactivate_triggered_alerts' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:274 in check_and_trigger_alerts | Code: await repo.deactivate_triggered_alerts(triggered_alert_ids) | Exception: AttributeError: 'SupabaseCryptoRepository' object has no attribute 'deactivate_triggered_alerts' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:274 in check_and_trigger_alerts | Code: await repo.deactivate_triggered_alerts(triggered_alert_ids)
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 274, in check_and_trigger_alerts
+    await repo.deactivate_triggered_alerts(triggered_alert_ids)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SupabaseCryptoRepository' object has no attribute 'deactivate_triggered_alerts'. Did you mean: 'deactivate_triggered_price_alerts'?
+2025-06-07 22:28:52,913 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:28:56,324 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 22:28:58,170 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:28:59,712 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:29:01,671 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:29:01,672 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:29:31,343 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:29:39,112 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:29:39,131 - ClawBackend - INFO - [app.py:61] - Scheduler stopped.
+2025-06-07 22:29:39,132 - ClawBackend - INFO - [app.py:63] - Shutting down application...
+2025-06-07 22:29:52,552 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 22:29:53,792 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 22:30:11,178 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 22:30:12,824 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:30:53,789 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:30:58,787 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105851.4
+2025-06-07 22:31:00,797 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 22:31:53,796 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:32:53,799 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:33:32,796 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:33:37,819 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:33:37,942 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:33:37,943 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:33:37,948 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:33:37,951 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:33:40,385 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:33:40,455 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:33:40,457 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:33:40,728 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:33:40,790 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:33:42,314 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:33:53,160 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105806.0
+2025-06-07 22:33:54,191 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 22:33:57,459 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:33:57,461 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:34:06,594 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:34:13,947 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:34:13,949 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:34:53,789 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:35:53,799 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:35:56,048 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105827.16
+2025-06-07 22:35:57,584 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 22:36:53,803 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:37:02,380 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:37:02,381 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:37:06,090 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:37:06,131 - ClawBackend - INFO - [app.py:61] - Scheduler stopped.
+2025-06-07 22:37:06,132 - ClawBackend - INFO - [app.py:63] - Shutting down application...
+2025-06-07 22:37:58,205 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 22:37:59,657 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 22:38:04,686 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:38:04,950 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:38:04,951 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:38:04,956 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:38:04,970 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:38:06,994 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 381 missing candles
+2025-06-07 22:38:07,197 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:38:07,257 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 381 1m records for BTCUSDT in batches of 500
+2025-06-07 22:38:07,505 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:38:07,539 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:38:26,122 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:38:26,123 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:38:26,125 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:38:28,942 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:38:29,039 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:38:29,138 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:38:29,139 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:38:29,141 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:38:29,617 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:38:33,227 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:38:33,273 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:38:33,276 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:38:33,409 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:38:33,432 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:38:33,742 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:38:59,615 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:39:29,621 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:39:59,620 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:40:29,747 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:40:59,624 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:41:29,615 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:41:59,616 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:42:29,619 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:42:59,617 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:43:29,620 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:43:47,346 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:43:47,411 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:43:59,615 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:44:29,732 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:44:59,699 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:45:29,293 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:45:29,404 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:45:29,628 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:45:37,904 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:45:37,905 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:45:59,624 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:46:17,164 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 22:46:19,909 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:46:23,859 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:46:27,538 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:46:29,622 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:46:37,778 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:46:44,400 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:46:44,410 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:46:45,579 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:46:45,797 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:46:46,055 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:46:46,056 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:46:48,659 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:46:48,721 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:46:48,722 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:46:52,165 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:46:52,210 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:46:59,620 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:47:29,622 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:47:59,617 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:48:29,618 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:48:33,890 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105706.0
+2025-06-07 22:48:35,971 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 22:48:38,256 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:48:38,258 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:48:44,105 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:48:51,117 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:48:51,118 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:48:59,611 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:49:29,640 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:50:48,173 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 22:50:49,662 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 22:50:57,793 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:50:57,798 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:50:58,011 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:50:58,150 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:50:58,151 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:51:00,573 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:51:00,650 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:51:00,650 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:51:01,083 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:51:01,143 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:51:14,681 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105700.0
+2025-06-07 22:51:16,115 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 22:51:19,632 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:51:24,940 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:51:31,577 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:51:31,580 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:51:49,631 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:52:10,295 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:52:10,298 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:52:10,716 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:52:10,822 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:52:10,823 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:52:13,063 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:52:13,106 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:52:13,112 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:52:13,253 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:52:13,273 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:52:15,252 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:52:18,271 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:52:20,024 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:52:23,807 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:52:23,808 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:52:25,545 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:52:27,330 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:52:27,561 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:52:27,678 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:52:27,798 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:52:27,799 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:52:30,607 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:52:30,993 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:52:30,997 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:52:31,121 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:52:31,151 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:52:34,165 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105680.0
+2025-06-07 22:52:34,976 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 22:52:37,013 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:52:37,014 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 22:52:37,021 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:52:43,162 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:52:49,625 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:52:50,892 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:52:50,892 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:53:19,626 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:53:25,167 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:53:27,516 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:53:27,519 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 22:53:27,821 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 22:53:27,917 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 22:53:27,918 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 22:53:30,364 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 22:53:30,407 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 22:53:30,409 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 22:53:30,552 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 22:53:30,603 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 22:53:33,907 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:53:33,910 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:53:40,337 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:53:40,338 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:53:49,628 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:54:19,635 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:54:21,646 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:54:31,647 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:54:49,628 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:54:51,946 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105688.19
+2025-06-07 22:54:52,925 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:55:19,622 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:55:21,573 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105695.21
+2025-06-07 22:55:21,875 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:55:49,637 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:55:51,462 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 22:55:54,306 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:55:54,674 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:56:19,628 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:56:21,764 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:56:22,161 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:56:49,622 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:56:52,233 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:56:52,594 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:57:19,632 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:57:22,971 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:57:23,620 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:57:49,634 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:57:52,492 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:57:52,870 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps( | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: aps=messaging.Aps(
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    await asyncio.gather(*notifications_to_send)
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    aps=messaging.Aps(
+        content_available=True,
+        # For iOS, '5' is normal priority, '10' is high
+        priority="10",
+    )
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:58:19,654 - ClawBackend - INFO - [price_alerts.py:215] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:58:22,512 - ClawBackend - INFO - [price_alerts.py:252] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.9
+2025-06-07 22:58:22,990 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: Aps.__init__() got an unexpected keyword argument 'priority' | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: token=fcm_token, | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: token=fcm_token, | Exception: TypeError: Aps.__init__() got an unexpected keyword argument 'priority' at d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py:194 in send_fcm_notification | Code: token=fcm_token,
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 270, in check_and_trigger_alerts
+    notifications_to_send.append(
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 194, in send_fcm_notification
+    token=fcm_token,
+                ^^^^
+    ...<3 lines>...
+    apns=messaging.APNSConfig(
+    ^^^^^^^^^
+TypeError: Aps.__init__() got an unexpected keyword argument 'priority'
+2025-06-07 22:58:23,002 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 22:58:23,003 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 22:59:09,767 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 22:59:11,497 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 22:59:41,459 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 22:59:46,888 - ClawBackend - INFO - [price_alerts.py:264] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105725.91
+2025-06-07 22:59:48,791 - ClawBackend - INFO - [price_alerts.py:215] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749326388081775%7ec486aa7ec486aa
+2025-06-07 22:59:49,273 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 22:59:54,836 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:00:11,462 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:00:31,436 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:00:41,462 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:01:11,460 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:01:36,783 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:01:40,090 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:01:41,822 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:01:46,990 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:02:11,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:02:41,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:03:11,469 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:03:41,467 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:04:11,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:04:41,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:05:11,491 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:05:41,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:06:11,465 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:06:41,469 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:07:11,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:07:41,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:08:11,458 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:08:41,471 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:09:11,461 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:09:41,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:10:11,473 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:10:41,465 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:11:11,476 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:11:41,473 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:12:11,462 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:12:41,167 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:12:41,873 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:12:46,733 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:13:11,476 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:13:41,470 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:13:59,989 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:14:02,847 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:14:03,971 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:14:11,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:14:41,460 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:15:11,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:15:41,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:16:11,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:16:41,470 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:17:11,475 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:17:41,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:18:11,467 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:18:41,464 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:19:08,933 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:19:08,964 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:19:11,859 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:19:20,324 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:19:29,500 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:19:41,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:20:11,467 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:20:33,319 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:20:39,308 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:20:41,462 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:20:45,196 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:20:45,611 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:20:45,614 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:20:47,885 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:20:48,128 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:20:48,141 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:20:50,832 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:20:50,918 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:20:50,921 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:20:55,712 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:20:55,839 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:21:07,031 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105860.0
+2025-06-07 23:21:08,112 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:21:10,879 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:21:10,881 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:21:11,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:21:16,116 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:21:19,583 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:21:24,510 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:21:24,512 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:21:41,465 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:21:43,878 - ClawBackend - INFO - [price_alerts.py:264] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105878.88
+2025-06-07 23:21:44,770 - ClawBackend - INFO - [price_alerts.py:215] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749327704058618%7ec486aa7ec486aa
+2025-06-07 23:21:45,145 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 23:21:50,622 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:21:53,286 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:21:53,287 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:22:11,463 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:22:32,362 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:22:41,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:23:11,474 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:23:41,471 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:24:11,460 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:24:41,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:25:11,460 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:25:41,468 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:26:11,462 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:26:41,461 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:27:11,470 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:27:41,458 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:28:11,458 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:28:41,471 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:29:11,511 - ClawBackend - INFO - [price_alerts.py:227] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:29:13,727 - ClawBackend - INFO - [app.py:61] - Scheduler stopped.
+2025-06-07 23:29:13,728 - ClawBackend - INFO - [app.py:63] - Shutting down application...
+2025-06-07 23:30:20,660 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 23:30:22,486 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 23:30:52,461 - ClawBackend - INFO - [price_alerts.py:208] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:31:22,462 - ClawBackend - INFO - [price_alerts.py:208] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:31:23,697 - ClawBackend - INFO - [app.py:61] - Scheduler stopped.
+2025-06-07 23:31:23,697 - ClawBackend - INFO - [app.py:63] - Shutting down application...
+2025-06-07 23:31:40,553 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 23:31:42,505 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 23:32:12,511 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:32:15,106 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:32:16,769 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:32:23,473 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:32:27,522 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:32:27,795 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:32:29,742 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:32:29,911 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:32:29,911 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:32:30,827 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:32:32,277 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:32:32,294 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:32:32,295 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:32:32,876 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:32:32,921 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:32:42,518 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:33:00,703 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105821.0
+2025-06-07 23:33:02,382 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:33:04,308 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:33:04,309 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:33:12,020 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:33:12,894 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:33:14,794 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105835.97
+2025-06-07 23:33:15,684 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749328394953192%7ec486aa7ec486aa
+2025-06-07 23:33:16,015 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 23:33:16,018 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:33:18,823 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:33:18,824 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:33:19,851 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:33:23,687 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:33:23,688 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:33:42,504 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:33:54,293 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:34:12,519 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:34:21,063 - ClawBackend - INFO - [app.py:61] - Scheduler stopped.
+2025-06-07 23:34:21,064 - ClawBackend - INFO - [app.py:63] - Shutting down application...
+2025-06-07 23:34:26,088 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-06-07 23:34:27,239 - ClawBackend - INFO - [app.py:51] - Scheduler started and alert checking job is scheduled.
+2025-06-07 23:34:35,749 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:34:37,125 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:34:44,265 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:34:45,959 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:34:46,295 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:34:46,371 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:34:46,372 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:34:46,375 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:34:48,275 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:34:48,290 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:34:48,290 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:34:48,523 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:34:48,534 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:34:50,485 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:34:57,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:35:02,706 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105853.0
+2025-06-07 23:35:03,794 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:35:05,709 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:35:05,709 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:35:11,770 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:35:19,033 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:35:19,034 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:35:25,418 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:35:27,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:35:34,165 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:35:57,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:36:12,007 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:36:27,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:36:35,928 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:36:37,583 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:36:37,829 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:36:38,999 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:36:39,080 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:36:39,081 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:36:41,227 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:36:41,241 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:36:41,242 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:36:41,366 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:36:41,374 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:36:44,749 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:36:44,993 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105850.0
+2025-06-07 23:36:45,652 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:36:47,420 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:36:47,421 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:36:51,579 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:36:56,932 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:36:56,942 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:36:56,943 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:36:57,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:37:04,965 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:37:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:37:57,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:38:01,455 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:38:04,256 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:38:04,257 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:38:06,658 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:38:06,659 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:38:07,269 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:38:27,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:38:39,984 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:38:57,250 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:39:14,844 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:39:16,143 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:39:27,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:39:42,606 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:39:45,435 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:39:45,918 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:39:46,442 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:39:46,522 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:39:46,523 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:39:48,587 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:39:48,600 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:39:48,601 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:39:48,714 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:39:48,721 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:39:48,919 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:39:52,573 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105819.0
+2025-06-07 23:39:53,381 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:39:55,778 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:39:55,779 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:39:57,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:40:00,536 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:40:04,900 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:40:05,966 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:40:05,968 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:40:12,054 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:40:27,254 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:40:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:41:05,003 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:41:05,004 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:41:27,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:41:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:42:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:42:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:43:27,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:43:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:44:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:44:57,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:45:27,250 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:45:57,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:45:59,426 - ClawBackend - ERROR - [logger.py:75] - Error fetching active alerts: [WinError 10054] An existing connection was forcibly closed by the remote host | Exception: ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py:118 in map_httpcore_exceptions | Code: raise mapped_exc(message) from exc | Exception: ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py:118 in map_httpcore_exceptions | Code: raise mapped_exc(message) from exc | Exception: ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py:118 in map_httpcore_exceptions | Code: raise mapped_exc(message) from exc
+Traceback (most recent call last):
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 156, in _connect
+    stream = stream.start_tls(**kwargs)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 154, in start_tls
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py", line 212, in get_all_active_price_alerts
+    result = self.client.table(self.price_alerts_table).select("*").eq("status", "active").execute()
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 58, in execute
+    r = self.session.request(
+        self.http_method,
+    ...<3 lines>...
+        headers=self.headers,
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+2025-06-07 23:45:59,609 - ClawBackend - ERROR - [logger.py:75] - Error during alert check job: 500: Failed to fetch active alerts | Exception: HTTPException: 500: Failed to fetch active alerts at d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py:219 in get_all_active_price_alerts | Code: raise HTTPException(status_code=500, detail="Failed to fetch active alerts") | Exception: HTTPException: 500: Failed to fetch active alerts at d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py:219 in get_all_active_price_alerts | Code: raise HTTPException(status_code=500, detail="Failed to fetch active alerts") | Exception: HTTPException: 500: Failed to fetch active alerts at d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py:219 in get_all_active_price_alerts | Code: raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
+Traceback (most recent call last):
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 156, in _connect
+    stream = stream.start_tls(**kwargs)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 154, in start_tls
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py", line 212, in get_all_active_price_alerts
+    result = self.client.table(self.price_alerts_table).select("*").eq("status", "active").execute()
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\postgrest\_sync\request_builder.py", line 58, in execute
+    r = self.session.request(
+        self.http_method,
+    ...<3 lines>...
+        headers=self.headers,
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10054] An existing connection was forcibly closed by the remote host
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\alerts_endpoints\price_alerts.py", line 217, in check_and_trigger_alerts
+    active_alerts = await repo.get_all_active_price_alerts()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\database\supabase\crypto_repository.py", line 219, in get_all_active_price_alerts
+    raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
+fastapi.exceptions.HTTPException: 500: Failed to fetch active alerts
+2025-06-07 23:46:27,249 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:46:57,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:47:24,063 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:47:27,677 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:47:28,664 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:47:45,705 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:47:53,275 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:47:53,281 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:47:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:47:59,192 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:48:02,054 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:48:27,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:48:38,167 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:48:39,048 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:48:57,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:48:59,285 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105831.45
+2025-06-07 23:49:00,835 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749329340133751%7ec486aa7ec486aa
+2025-06-07 23:49:01,228 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 23:49:02,569 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:49:02,654 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:49:08,437 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:49:10,308 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:49:11,037 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:49:27,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:49:52,567 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:49:57,241 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:50:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:50:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:51:13,804 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:51:15,865 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:51:27,241 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:51:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:52:27,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:52:46,533 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:52:50,711 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:52:51,152 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:52:51,744 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:52:51,963 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:52:51,964 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:52:52,334 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:52:54,155 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:52:55,788 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:52:55,873 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:52:55,884 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:53:00,111 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:53:00,123 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:53:01,297 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:53:01,390 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:53:01,390 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:53:01,392 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:53:01,393 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:53:01,832 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:53:01,832 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:53:01,835 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:53:04,288 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 381 missing candles
+2025-06-07 23:53:04,318 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:53:04,319 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 381 1m records for BTCUSDT in batches of 500
+2025-06-07 23:53:04,539 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:53:04,554 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:53:11,009 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105856.5
+2025-06-07 23:53:11,626 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:53:13,821 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:53:13,822 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:53:22,701 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:53:27,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:53:29,377 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:53:29,378 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:53:57,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:54:00,598 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:54:07,399 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:54:07,399 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:54:08,618 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:54:08,618 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:54:10,610 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:54:27,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:54:48,552 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-07 23:54:50,149 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:54:57,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:55:00,400 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:06,227 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:55:06,296 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:55:07,677 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:55:07,839 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:55:07,840 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:55:10,416 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:12,058 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:55:12,076 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:55:12,085 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:55:15,928 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:55:15,933 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:55:16,799 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105833.0
+2025-06-07 23:55:17,556 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:55:25,108 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:29,203 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:30,888 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:55:30,954 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:55:31,028 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:55:31,029 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:55:32,722 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:55:33,906 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:55:33,907 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:55:35,885 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:55:35,901 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:55:35,902 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:55:36,014 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:55:36,022 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:55:37,172 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:37,786 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105833.0
+2025-06-07 23:55:38,132 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:55:39,835 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:55:39,836 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:55:50,889 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:55:57,249 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:55:59,823 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105824.28
+2025-06-07 23:56:00,549 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749329759863669%7ec486aa7ec486aa
+2025-06-07 23:56:00,903 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-07 23:56:07,876 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:56:08,447 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:56:10,300 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:56:10,663 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-07 23:56:11,216 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-07 23:56:11,289 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-07 23:56:11,290 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-07 23:56:14,928 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-07 23:56:14,945 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-07 23:56:14,945 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-07 23:56:15,056 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-07 23:56:15,068 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-07 23:56:18,385 - ClawBackend - ERROR - [logger.py:75] - WebSocket error for BTCUSDT: sent 1011 (internal error) keepalive ping timeout; no close frame received | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc
+TimeoutError: timed out while closing connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\market_data.py", line 271, in websocket_stream_market_data
+    msg = await binance_ws.recv()
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py", line 313, in recv
+    raise self.protocol.close_exc from self.recv_exc
+websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
+2025-06-07 23:56:20,740 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105821.0
+2025-06-07 23:56:21,055 - ClawBackend - INFO - [repository.py:46] - User Lj4yGpAktxQ8cNos27TpGVFeU4r1 exists in Firebase
+2025-06-07 23:56:22,920 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:56:22,920 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on symbol BTCUSDT
+2025-06-07 23:56:22,923 - ClawBackend - ERROR - [logger.py:75] - WebSocket error for BTCUSDT: sent 1011 (internal error) keepalive ping timeout; no close frame received | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc
+TimeoutError: timed out while closing connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\market_data.py", line 271, in websocket_stream_market_data
+    msg = await binance_ws.recv()
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py", line 313, in recv
+    raise self.protocol.close_exc from self.recv_exc
+websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
+2025-06-07 23:56:22,925 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:56:23,965 - ClawBackend - ERROR - [logger.py:75] - WebSocket error for BTCUSDT: sent 1011 (internal error) keepalive ping timeout; no close frame received | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc | Exception: ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received at D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py:313 in recv | Code: raise self.protocol.close_exc from self.recv_exc
+TimeoutError: timed out while closing connection
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "d:\ClawInc\Claw-Backend\src\presentation\api\routes\market_data.py", line 271, in websocket_stream_market_data
+    msg = await binance_ws.recv()
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ClawInc\Claw-Backend\.venv\Lib\site-packages\websockets\asyncio\connection.py", line 313, in recv
+    raise self.protocol.close_exc from self.recv_exc
+websockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received
+2025-06-07 23:56:23,967 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:56:27,110 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:56:27,961 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:56:28,874 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:56:30,320 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:56:34,312 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-07 23:56:34,314 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-07 23:56:57,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:57:27,249 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:57:57,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:58:27,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:58:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:59:27,241 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-07 23:59:53,642 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-07 23:59:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:00:27,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:00:57,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:01:27,254 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:01:45,486 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user Lj4yGpAktxQ8cNos27TpGVFeU4r1
+2025-06-08 00:01:57,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:02:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:02:28,891 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:02:39,765 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:02:56,951 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BTCU
+2025-06-08 00:02:57,401 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:02:58,701 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BTCUSDT
+2025-06-08 00:03:05,475 - ClawBackend - INFO - [crypto_repository.py:161] - Added BTCUSDT to watchlist for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:06,699 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:08,622 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: USDT
+2025-06-08 00:03:11,740 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: SOLUSDT
+2025-06-08 00:03:17,260 - ClawBackend - INFO - [crypto_repository.py:161] - Added SOLUSDT to watchlist for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:17,695 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:18,733 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:24,498 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:27,241 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:03:34,411 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:36,518 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:03:36,525 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:03:37,037 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:03:37,146 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:03:37,147 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:03:39,187 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:03:39,219 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:03:39,220 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:03:39,342 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:03:39,357 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:03:42,178 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:03:45,956 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105844.0
+2025-06-08 00:03:46,709 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:03:48,490 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:03:48,491 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:03:54,968 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105846.0
+2025-06-08 00:03:55,253 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:03:57,017 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:03:57,018 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:03:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:04:01,003 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:05,577 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:04:05,578 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:04:09,773 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:15,302 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:04:15,303 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:04:16,396 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:19,246 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:04:19,247 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:04:22,847 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-08 00:04:24,689 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:04:46,790 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:49,954 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:04:50,094 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:04:50,344 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:04:50,424 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:04:50,425 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:04:52,452 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:04:52,615 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:04:52,641 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:04:52,641 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:04:52,761 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:04:52,778 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:04:55,370 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105860.0
+2025-06-08 00:04:55,656 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:04:57,388 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:04:57,389 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:04:57,394 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:04:59,270 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105859.37
+2025-06-08 00:05:00,046 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749330299344609%7ec486aa7ec486aa
+2025-06-08 00:05:00,420 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:05:01,907 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:05:04,352 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:05:09,889 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:05:09,890 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:05:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:05:44,742 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:05:57,250 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:05:58,820 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105841.95
+2025-06-08 00:05:59,364 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749330358654073%7ec486aa7ec486aa
+2025-06-08 00:05:59,698 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:06:16,717 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:06:18,426 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:06:18,439 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:06:18,786 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:06:18,848 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:06:18,849 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:06:20,844 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:06:20,856 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:06:20,857 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:06:20,970 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:06:20,978 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:06:23,531 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:06:24,841 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:06:27,241 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:06:28,734 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user Lj4yGpAktxQ8cNos27TpGVFeU4r1 on BTCUSDT at price 105810.01
+2025-06-08 00:06:29,295 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user Lj4yGpAktxQ8cNos27TpGVFeU4r1 for symbol BTCUSDT: projects/watchers-db/messages/0:1749330388596358%7ec486aa7ec486aa
+2025-06-08 00:06:29,637 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:06:29,640 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:06:29,641 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:06:35,001 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:06:35,057 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:06:35,396 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:06:35,465 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:06:35,465 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:06:37,120 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:06:37,133 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:06:37,135 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:06:37,276 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:06:37,285 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:06:40,849 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:06:45,099 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105799.0
+2025-06-08 00:06:45,395 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:06:47,048 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:06:47,049 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:06:54,123 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105795.0
+2025-06-08 00:06:54,412 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:06:56,029 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:06:56,030 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:06:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:07:00,433 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:07:05,230 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:07:06,122 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:07:06,123 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:07:13,862 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:07:27,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:07:57,254 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:08:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:08:57,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:09:27,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:09:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:10:27,250 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:10:57,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:11:27,238 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:11:57,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:12:11,672 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:12:11,675 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:12:13,128 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:12:13,130 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:12:14,791 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:12:14,792 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:12:27,246 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:12:57,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:13:27,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:13:35,582 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-08 00:13:37,108 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:13:57,246 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:14:09,543 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:14:12,752 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:14:12,780 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:14:13,345 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:14:13,408 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:14:13,409 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:14:15,408 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:14:15,423 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:14:15,423 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:14:15,535 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:14:15,540 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:14:19,316 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:14:27,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:14:34,257 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105796.0
+2025-06-08 00:14:35,022 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:14:36,658 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:14:36,659 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:14:41,702 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:14:46,667 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:14:46,668 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:14:47,686 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:14:56,993 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:14:56,994 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:14:57,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:14:58,246 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:15:27,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:15:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:16:27,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:16:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:17:27,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:17:57,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:18:27,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:18:57,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:19:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:19:57,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:20:10,878 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-08 00:20:12,560 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:20:27,254 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:20:34,959 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:20:40,975 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:20:41,067 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:20:43,161 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:20:43,250 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:20:43,251 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:20:43,332 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:20:45,573 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:20:45,614 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:20:45,617 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:20:45,751 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:20:45,779 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:20:54,777 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105795.35
+2025-06-08 00:20:55,610 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:20:57,584 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:20:57,585 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:20:57,591 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:21:20,083 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105795.29
+2025-06-08 00:21:20,391 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:21:22,280 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:21:22,280 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:21:27,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:21:32,072 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:21:37,391 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:21:37,392 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:21:44,559 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:21:53,774 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:21:56,333 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:21:56,334 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:21:57,239 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:22:27,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:22:57,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:23:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:23:29,211 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105795.68
+2025-06-08 00:23:30,553 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749331409866070%7ec486aa7ec486aa
+2025-06-08 00:23:30,969 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:23:57,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:23:59,522 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105823.76
+2025-06-08 00:23:59,829 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105823.76
+2025-06-08 00:24:00,361 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749331439662752%7ec486aa7ec486aa
+2025-06-08 00:24:00,585 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749331439885051%7ec486aa7ec486aa
+2025-06-08 00:24:00,996 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 2 triggered alerts.
+2025-06-08 00:24:12,132 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-08 00:24:13,704 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:24:27,252 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:24:51,446 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:24:51,448 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:24:51,850 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:24:51,942 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:24:51,943 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:24:54,215 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:24:54,296 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:24:54,297 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:24:54,448 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:24:54,467 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:24:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:24:58,624 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:24:59,021 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105824.0
+2025-06-08 00:24:59,332 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:25:01,885 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:25:01,886 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:25:06,705 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:25:13,253 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:25:13,408 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:25:13,409 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:25:15,412 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:25:15,414 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:25:16,213 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:25:16,299 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:25:16,300 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:25:18,116 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:25:18,135 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:25:18,136 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:25:18,253 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:25:18,271 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:25:20,623 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:25:22,603 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_ABOVE at value 105801.0
+2025-06-08 00:25:22,900 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:25:24,961 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:25:24,962 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:25:27,246 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:25:28,519 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:25:32,041 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:25:37,601 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:25:37,604 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:25:57,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:26:27,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:26:57,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:27:27,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:27:45,528 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:27:57,240 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:28:07,629 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:28:10,152 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:28:10,240 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 100 records
+2025-06-08 00:28:10,241 - ClawBackend - INFO - [market_data.py:271] - Stale data detected for BTCUSDT (1m), fetching missing data
+2025-06-08 00:28:10,244 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:28:10,246 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for BTCUSDT (1m)
+2025-06-08 00:28:13,395 - ClawBackend - INFO - [market_data.py:311] - Added background task to save 380 missing candles
+2025-06-08 00:28:13,422 - ClawBackend - INFO - [market_data.py:76] - Registered background task for BTCUSDT (1m)
+2025-06-08 00:28:13,424 - ClawBackend - INFO - [market_data.py:100] - Starting background task to save 380 1m records for BTCUSDT in batches of 500
+2025-06-08 00:28:13,569 - ClawBackend - INFO - [market_data.py:118] - Saved batch 1/1 for BTCUSDT (1m)
+2025-06-08 00:28:13,601 - ClawBackend - INFO - [market_data.py:152] - Unregistered background task for BTCUSDT (1m)
+2025-06-08 00:28:15,264 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT with condition ConditionType.PRICE_BELOW at value 105800.2
+2025-06-08 00:28:16,118 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:28:18,085 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:28:18,085 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol BTCUSDT
+2025-06-08 00:28:18,094 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:28:22,296 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:28:27,254 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:28:29,375 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:28:29,377 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:28:32,878 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:28:50,544 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:28:50,545 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:28:50,882 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:28:50,884 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:28:54,879 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for BTCUSDT
+2025-06-08 00:28:54,880 - ClawBackend - INFO - [market_data.py:339] - Closing connection for BTCUSDT
+2025-06-08 00:28:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:29:27,253 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:29:57,251 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:30:27,246 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:30:57,243 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:31:27,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:31:57,244 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:32:27,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:32:57,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:33:27,245 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:33:57,247 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:34:27,242 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:34:56,240 - ClawBackend - INFO - [market_data.py:185] - Searching cryptos with query: BNB
+2025-06-08 00:34:59,489 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:35:06,154 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:35:27,246 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:35:29,497 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105834.07
+2025-06-08 00:35:31,033 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105834.07
+2025-06-08 00:35:31,925 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749332131222970%7ec486aa7ec486aa
+2025-06-08 00:35:32,214 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749332131447725%7ec486aa7ec486aa
+2025-06-08 00:35:32,672 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 2 triggered alerts.
+2025-06-08 00:35:57,046 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:35:57,087 - ClawBackend - INFO - [user_symbol_watchlist.py:321] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:35:57,248 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:35:59,198 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on BTCUSDT at price 105865.42
+2025-06-08 00:35:59,728 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol BTCUSDT: projects/watchers-db/messages/0:1749332159038883%7ec486aa7ec486aa
+2025-06-08 00:36:00,219 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:36:01,353 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for SOLUSDT (1m)
+2025-06-08 00:36:01,357 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for SOLUSDT (1m)
+2025-06-08 00:36:01,527 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:36:01,613 - ClawBackend - INFO - [market_data_repository.py:191] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-06-08 00:36:01,613 - ClawBackend - INFO - [market_data.py:322] - No data found in InfluxDB for SOLUSDT (1m), fetching from Binance
+2025-06-08 00:36:03,863 - ClawBackend - INFO - [market_data.py:369] - Initiating background task to get and save full historical data
+2025-06-08 00:36:03,868 - ClawBackend - INFO - [market_data.py:379] - Returning 100 records from Binance for page 1
+2025-06-08 00:36:03,898 - ClawBackend - INFO - [market_data.py:399] - Started background task to fetch full history for SOLUSDT (1m)
+2025-06-08 00:36:03,915 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:36:05,110 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:06,159 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:06,634 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-10 14:16:00+00:00 (1000 total records saved)
+2025-06-08 00:36:07,688 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-11 06:56:00+00:00 (2000 total records saved)
+2025-06-08 00:36:09,054 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-11 23:36:00+00:00 (3000 total records saved)
+2025-06-08 00:36:10,028 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-12 16:16:00+00:00 (4000 total records saved)
+2025-06-08 00:36:11,047 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-13 08:56:00+00:00 (5000 total records saved)
+2025-06-08 00:36:11,933 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT with condition ConditionType.PRICE_BELOW at value 151.42
+2025-06-08 00:36:12,231 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:36:14,349 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT
+2025-06-08 00:36:14,350 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT
+2025-06-08 00:36:14,541 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-14 01:36:00+00:00 (6000 total records saved)
+2025-06-08 00:36:15,937 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-14 18:16:00+00:00 (7000 total records saved)
+2025-06-08 00:36:16,935 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-15 10:56:00+00:00 (8000 total records saved)
+2025-06-08 00:36:18,409 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-16 03:36:00+00:00 (9000 total records saved)
+2025-06-08 00:36:19,461 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-16 20:16:00+00:00 (10000 total records saved)
+2025-06-08 00:36:20,561 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-17 12:56:00+00:00 (11000 total records saved)
+2025-06-08 00:36:20,969 - ClawBackend - INFO - [price_alerts.py:108] - Creating alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT with condition ConditionType.PRICE_BELOW at value 151.38
+2025-06-08 00:36:21,311 - ClawBackend - INFO - [repository.py:46] - User 3AYShBCRy7ffqTPUDxkwPBPZoyu2 exists in Firebase
+2025-06-08 00:36:23,265 - ClawBackend - INFO - [crypto_repository.py:247] - Created alert for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT
+2025-06-08 00:36:23,265 - ClawBackend - INFO - [price_alerts.py:123] - Alert created successfully for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on symbol SOLUSDT
+2025-06-08 00:36:23,765 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-18 05:36:00+00:00 (12000 total records saved)
+2025-06-08 00:36:24,746 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-18 22:16:00+00:00 (13000 total records saved)
+2025-06-08 00:36:27,507 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-19 14:56:00+00:00 (14000 total records saved)
+2025-06-08 00:36:28,404 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:29,527 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:32,241 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-20 07:36:00+00:00 (15000 total records saved)
+2025-06-08 00:36:32,313 - ClawBackend - INFO - [market_data_repository.py:39] - Successfully connected to InfluxDB
+2025-06-08 00:36:32,315 - ClawBackend - INFO - [market_data.py:190] - Background task active for SOLUSDT (1m), checking if we can fetch from InfluxDB
+2025-06-08 00:36:37,377 - ClawBackend - INFO - [market_data.py:204] - No recent data, fetching from Binance for SOLUSDT (1m)
+2025-06-08 00:36:37,389 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:38,627 - ClawBackend - INFO - [user_symbol_watchlist.py:228] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:39,939 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for SOLUSDT (1m)
+2025-06-08 00:36:39,941 - ClawBackend - INFO - [market_data.py:237] - New WebSocket connection for SOLUSDT (1m)
+2025-06-08 00:36:39,954 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for SOLUSDT
+2025-06-08 00:36:39,956 - ClawBackend - INFO - [market_data.py:339] - Closing connection for SOLUSDT
+2025-06-08 00:36:40,150 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-21 00:16:00+00:00 (16000 total records saved)
+2025-06-08 00:36:41,530 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:41,743 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-21 16:56:00+00:00 (17000 total records saved)
+2025-06-08 00:36:42,270 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:42,786 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-22 09:36:00+00:00 (18000 total records saved)
+2025-06-08 00:36:42,798 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:42,799 - ClawBackend - INFO - [user_symbol_watchlist.py:402] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-06-08 00:36:43,071 - ClawBackend - INFO - [market_data.py:254] - Fetched 100 records from Binance for SOLUSDT (1m)
+2025-06-08 00:36:43,979 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-23 02:16:00+00:00 (19000 total records saved)
+2025-06-08 00:36:45,042 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-23 18:56:00+00:00 (20000 total records saved)
+2025-06-08 00:36:46,549 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-24 11:36:00+00:00 (21000 total records saved)
+2025-06-08 00:36:47,601 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-25 04:16:00+00:00 (22000 total records saved)
+2025-06-08 00:36:48,574 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-25 20:56:00+00:00 (23000 total records saved)
+2025-06-08 00:36:48,653 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for SOLUSDT
+2025-06-08 00:36:48,654 - ClawBackend - INFO - [market_data.py:339] - Closing connection for SOLUSDT
+2025-06-08 00:36:49,620 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-26 13:36:00+00:00 (24000 total records saved)
+2025-06-08 00:36:51,079 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-27 06:16:00+00:00 (25000 total records saved)
+2025-06-08 00:36:52,053 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-27 22:56:00+00:00 (26000 total records saved)
+2025-06-08 00:36:52,611 - ClawBackend - INFO - [market_data.py:334] - Client disconnected for SOLUSDT
+2025-06-08 00:36:52,613 - ClawBackend - INFO - [market_data.py:339] - Closing connection for SOLUSDT
+2025-06-08 00:36:53,445 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-28 15:36:00+00:00 (27000 total records saved)
+2025-06-08 00:36:54,432 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-29 08:16:00+00:00 (28000 total records saved)
+2025-06-08 00:36:55,813 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-30 00:56:00+00:00 (29000 total records saved)
+2025-06-08 00:36:56,827 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-30 17:36:00+00:00 (30000 total records saved)
+2025-06-08 00:36:57,250 - ClawBackend - INFO - [price_alerts.py:212] - Scheduler running: Checking for triggered price alerts...
+2025-06-08 00:36:59,184 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-03-31 10:16:00+00:00 (31000 total records saved)
+2025-06-08 00:36:59,611 - ClawBackend - INFO - [price_alerts.py:249] - Alert triggered for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 on SOLUSDT at price 151.39
+2025-06-08 00:37:00,224 - ClawBackend - INFO - [price_alerts.py:200] - Successfully sent FCM message to user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 for symbol SOLUSDT: projects/watchers-db/messages/0:1749332219434985%7ec486aa7ec486aa
+2025-06-08 00:37:00,552 - ClawBackend - INFO - [crypto_repository.py:279] - Deactivated 1 triggered alerts.
+2025-06-08 00:37:00,917 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-01 02:56:00+00:00 (32000 total records saved)
+2025-06-08 00:37:01,933 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-01 19:36:00+00:00 (33000 total records saved)
+2025-06-08 00:37:02,906 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-02 12:16:00+00:00 (34000 total records saved)
+2025-06-08 00:37:03,901 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-03 04:56:00+00:00 (35000 total records saved)
+2025-06-08 00:37:04,870 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-03 21:36:00+00:00 (36000 total records saved)
+2025-06-08 00:37:05,851 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-04 14:16:00+00:00 (37000 total records saved)
+2025-06-08 00:37:06,859 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-05 06:56:00+00:00 (38000 total records saved)
+2025-06-08 00:37:07,886 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-05 23:36:00+00:00 (39000 total records saved)
+2025-06-08 00:37:08,874 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-06 16:16:00+00:00 (40000 total records saved)
+2025-06-08 00:37:09,999 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-07 08:56:00+00:00 (41000 total records saved)
+2025-06-08 00:37:11,538 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-08 01:36:00+00:00 (42000 total records saved)
+2025-06-08 00:37:12,534 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-08 18:16:00+00:00 (43000 total records saved)
+2025-06-08 00:37:13,617 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-09 10:56:00+00:00 (44000 total records saved)
+2025-06-08 00:37:14,836 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-10 03:36:00+00:00 (45000 total records saved)
+2025-06-08 00:37:15,827 - ClawBackend - INFO - [market_data.py:449] - Saved batch of 1000 records. Progress: 2025-04-10 20:16:00+00:00 (46000 total records saved)
+2025-06-08 00:37:26,344 - ClawBackend - INFO - [market_data.py:421] - No more data available from Binance for SOLUSDT (1m)
+2025-06-08 00:37:26,359 - ClawBackend - INFO - [market_data.py:475] - Unregistered background task for SOLUSDT (1m)

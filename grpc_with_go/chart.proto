@@ -1,0 +1,24 @@
+// File: chart.proto
+syntax = "proto3";
+
+package chart;
+
+service ChartService {
+  rpc GetHistoricalChart (ChartRequest) returns (stream ChartPoint);
+}
+
+message ChartRequest {
+  string symbol = 1;
+  int64 from_timestamp = 2;
+  int64 to_timestamp = 3;
+  string interval = 4; // e.g., "1m", "1h"
+}
+
+message ChartPoint {
+  int64 timestamp = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+}
