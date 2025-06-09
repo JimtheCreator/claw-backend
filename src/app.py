@@ -19,9 +19,8 @@ from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.interval import IntervalTrigger
-from presentation.api.routes.alerts_endpoints.price_alerts import check_and_trigger_alerts, router as price_alerts_router
+from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
+from core.use_cases.alerts.price_alerts.PriceAlertManager import AlertManager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -30,46 +29,47 @@ async def lifespan(app: FastAPI):
         configure_logging()
         logger.info("Starting application...")
         # Add to startup validation
-        required_envs = ["PRODUCTION_STRIPE_API_KEY", "TEST_STRIPE_API_KEY", "FIREBASE_DATABASE_URL", "SUPABASE_URL", "REDIS_HOST", "SUPABASE_SERVICE_KEY", "SUPABASE_SERVICE_KEY", "FIREBASE_CREDENTIALS_PATH"]
+        # Validate environment variables
+        required_envs = [
+            "PRODUCTION_STRIPE_API_KEY", "TEST_STRIPE_API_KEY", 
+            "FIREBASE_DATABASE_URL", "SUPABASE_URL", "REDIS_HOST", 
+            "SUPABASE_SERVICE_KEY", "FIREBASE_CREDENTIALS_PATH"
+        ]
+        
         for env in required_envs:
             if not os.getenv(env):
                 raise RuntimeError(f"Missing required environment variable: {env}")
+            
         await redis_cache.initialize()
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
-        # Initialize the scheduler
-        scheduler = AsyncIOScheduler()
-        # Schedule the alert checking job to run every 60 seconds
-        scheduler.add_job(check_and_trigger_alerts, IntervalTrigger(seconds=30))
-        scheduler.start()
-        
-        # Make the scheduler accessible for shutdown
-        app.state.scheduler = scheduler
-        
-        logger.info("Scheduler started and alert checking job is scheduled.")
+        # Create and start the AlertManager
+        alert_manager = AlertManager()
+        app.state.alert_manager = alert_manager
+        await alert_manager.start()
+
+        logger.info("AlertManager started successfully.")
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
-    
-    # Gracefully shut down the scheduler
-    if app.state.scheduler.running:
-        app.state.scheduler.shutdown()
-        logger.info("Scheduler stopped.")
+
+    # Gracefully shut down the AlertManager
+    if app.state.alert_manager:
+        await app.state.alert_manager.stop()
+        logger.info("AlertManager stopped.")
 
     logger.info("Shutting down application...")
 
 app = FastAPI(
     title="Claw-Backend",
-    version="0.1.0",
+    version="0.2.0-realtime", # New version!
     lifespan=lifespan
 )
 
-# Initialize the scheduler and repository
-scheduler = AsyncIOScheduler()
 
 # Add CORS middleware
 app.add_middleware(

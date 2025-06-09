@@ -442,6 +442,43 @@ class BinanceMarketData:
                 "priceChangePercent": "0",
                 "quoteVolume": "0"
             } for symbol in symbols}
+        
+    async def get_combined_stream_for_tickers(self, symbols: List[str]) -> AsyncGenerator[dict, None]:
+        """
+        Connects to a combined WebSocket stream for ticker data for multiple symbols.
+        """
+        if not symbols:
+            return
+
+        lower_symbols = [s.lower() for s in symbols]
+        streams = [f"{symbol}@ticker" for symbol in lower_symbols]
+        streams_path = "/".join(streams)
+        socket_url = f"wss://stream.binance.com:9443/stream?streams={streams_path}"
+        
+        logger.info(f"Connecting to combined ticker stream: {socket_url}")
+        
+        try:
+            async with websockets.connect(socket_url) as websocket:
+                async for msg_text in websocket:
+                    msg = json.loads(msg_text)
+                    
+                    data = msg.get('data', {})
+                    stream_name = msg.get('stream', '')
+                    
+                    if '@ticker' in stream_name:
+                        # Extract symbol from stream name (e.g., 'btcusdt@ticker')
+                        symbol = stream_name.split('@')[0].upper()
+                        yield {
+                            "symbol": symbol,
+                            "ticker": {
+                                "price": float(data.get('c', 0)),
+                                "change": float(data.get('P', 0)),
+                                "volume": float(data.get('v', 0)),
+                            }
+                        }
+        except Exception as e:
+            logger.error(f"Error in combined ticker stream: {e}")
+            raise
 
     async def _throttle(self):
         now = asyncio.get_event_loop().time() * 1000  # in ms

@@ -243,14 +243,25 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
-            self.client.table(self.price_alerts_table).insert(alert_data).execute()
-            logger.info(f"Created alert for user {user_id} on symbol {symbol}")
+            
+            # Insert and get the result
+            result = self.client.table(self.price_alerts_table).insert(alert_data).execute()
+            
+            # Check if insertion was successful and return the created alert
+            if result.data and len(result.data) > 0:
+                created_alert = result.data[0]  # Supabase returns the inserted row
+                logger.info(f"Created alert for user {user_id} on symbol {symbol} with ID {created_alert.get('id')}")
+                return created_alert  # ✅ RETURN THE CREATED ALERT
+            else:
+                logger.error(f"Alert creation failed - no data returned from database for user {user_id}")
+                raise HTTPException(status_code=500, detail="Failed to create alert - no data returned")
+                
         except HTTPException as e:
             raise e
         except Exception as e:
             logger.error(f"Error creating alert for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to create alert")
-    
+        
     async def get_user_active_alerts(self, user_id: str) -> List[dict]:
         try:
             result = self.client.table(self.price_alerts_table).select("*").eq("user_id", user_id).eq("status", "active").execute()
