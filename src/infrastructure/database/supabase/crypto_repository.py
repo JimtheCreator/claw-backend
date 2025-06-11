@@ -4,7 +4,7 @@ from core.interfaces.crypto_repository import CryptoRepository
 from core.domain.entities.CryptoEntity import CryptoEntity
 from common.logger import logger
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from supabase import create_client
+from supabase import create_client, Client
 from datetime import datetime, timezone
 from typing import List
 from common.logger import logger
@@ -17,19 +17,21 @@ binance = BinanceMarketData()
 
 class SupabaseCryptoRepository(CryptoRepository):
     def __init__(self):
-        self.client = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_KEY")
-        )
+        # Ensure environment variables are loaded
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+        if not supabase_url or not supabase_key:
+            raise ValueError("Supabase URL and Key must be set in environment variables.")
+        
+        self.client: Client = create_client(supabase_url, supabase_key)
     
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
         self.watchlist_table = "watchlist"
         self.price_alerts_table = "price_alerts"
+        self.pattern_alerts_table = "pattern_alerts" # New table for pattern alerts
         self.redis_client = redis_cache
     
-    
-
     async def get_firebase_repo(self):
         unique_id = f"app_{uuid.uuid4()}"
         return FirebaseRepository(app_name=unique_id)
@@ -177,7 +179,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error removing from watchlist: {str(e)}")
             raise
     
-    async def get_active_alerts_count(self, user_id: str) -> int:
+    async def get_active_price_alerts_count(self, user_id: str) -> int:
         """
         Retrieve the count of active price alerts for a given user.
         
@@ -218,7 +220,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error fetching active alerts: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
     
-    async def create_alert(self, user_id: str, symbol: str, condition_type: str, condition_value: float, PLAN_LIMITS: dict):
+    async def create_price_alert(self, user_id: str, symbol: str, condition_type: str, condition_value: float, PLAN_LIMITS: dict):
         """Create a price alert for the user, checking subscription limits."""
         try:
             # Ensure subscription exists
@@ -229,7 +231,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             price_alerts_limit = limits["price_alerts_limit"]
 
             # Check current number of active alerts
-            current_alerts = await self.get_active_alerts_count(user_id)
+            current_alerts = await self.get_active_price_alerts_count(user_id)
             if price_alerts_limit != -1 and current_alerts >= price_alerts_limit:
                 raise HTTPException(status_code=403, detail="Price alerts limit reached")
 
@@ -262,7 +264,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error creating alert for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to create alert")
         
-    async def get_user_active_alerts(self, user_id: str) -> List[dict]:
+    async def get_user_active_price_alerts(self, user_id: str) -> List[dict]:
         try:
             result = self.client.table(self.price_alerts_table).select("*").eq("user_id", user_id).eq("status", "active").execute()
             return result.data
@@ -270,7 +272,7 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error fetching active alerts for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to fetch active alerts")
 
-    async def cancel_alert(self, user_id: str, alert_id: str):
+    async def cancel_price_alert(self, user_id: str, alert_id: str):
         # Check if the alert exists and belongs to the user
         result = self.client.table(self.price_alerts_table).select("user_id").eq("id", alert_id).execute()
         if not result.data or result.data[0]["user_id"] != user_id:
@@ -292,6 +294,106 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error deactivating triggered alerts: {str(e)}")
             # Do not raise, as the main process should continue
 
+    async def create_pattern_alert(self, user_id: str, symbol: str, pattern_name: str, time_interval: str, pattern_state: str, notification_method: str, PLAN_LIMITS: dict):
+        """Create a pattern alert, checking against subscription limits."""
+        try:
+            await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
+            limits = await self.get_subscription_limits(user_id)
+            pattern_alerts_limit = limits.get("pattern_detection_limit", 0)
+
+            current_alerts = await self.get_active_pattern_alerts_count(user_id)
+            if pattern_alerts_limit != -1 and current_alerts >= pattern_alerts_limit:
+                raise HTTPException(status_code=403, detail=f"Pattern alerts limit of {pattern_alerts_limit} reached.")
+
+            alert_data = {
+                "user_id": user_id, "symbol": symbol, "pattern_name": pattern_name,
+                "time_interval": time_interval, "pattern_state": pattern_state, "status": "active",
+                "notification_method": notification_method, "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            result = self.client.table(self.pattern_alerts_table).insert(alert_data).execute()
+            
+            if result.data:
+                created_alert = result.data[0]
+                logger.info(f"Created pattern alert for user {user_id} with ID {created_alert.get('id')}")
+                return created_alert
+            else:
+                logger.error(f"Pattern alert creation failed for user {user_id}: No data returned from db.")
+                raise HTTPException(status_code=500, detail="Failed to create pattern alert")
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error creating pattern alert for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create pattern alert")
+
+    async def get_user_pattern_alerts(self, user_id: str) -> List[dict]:
+        """Retrieve all active pattern alerts for a specific user."""
+        try:
+            result = self.client.table(self.pattern_alerts_table)\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .eq("status", "active")\
+                .order("created_at", desc=True)\
+                .execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error fetching pattern alerts for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch pattern alerts")
+
+    async def delete_pattern_alert(self, user_id: str, alert_id: str):
+        """Deletes a pattern alert, ensuring it belongs to the user."""
+        try:
+            # First, verify the alert belongs to the user to prevent unauthorized deletion
+            verify_result = self.client.table(self.pattern_alerts_table)\
+                .select("id").eq("id", alert_id).eq("user_id", user_id).execute()
+            
+            if not verify_result.data:
+                raise HTTPException(status_code=404, detail="Alert not found or you do not have permission to delete it.")
+
+            # If verification passes, delete the alert
+            delete_result = self.client.table(self.pattern_alerts_table).delete().eq("id", alert_id).execute()
+            
+            if not delete_result.data:
+                 raise HTTPException(status_code=404, detail="Alert not found for deletion.")
+            
+            logger.info(f"Deleted pattern alert {alert_id} for user {user_id}")
+
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error deleting pattern alert {alert_id} for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to delete alert")
+        
+    async def get_active_pattern_alerts_count(self, user_id: str) -> int:
+        """
+        Retrieve the count of active pattern alerts for a given user.
+        
+        Args:
+            user_id (str): The ID of the user whose active pattern alerts are being counted
+            
+        Returns:
+            int: The number of active pattern alerts for the user
+            
+        Raises:
+            HTTPException: If there's an error accessing the database
+        """
+        try:
+            # Query the pattern_alerts table for active alerts belonging to the user
+            result = self.client.table(self.pattern_alerts_table) \
+                .select("id") \
+                .eq("user_id", user_id) \
+                .eq("status", "active") \
+                .execute()
+            
+            # Return the count of matching rows
+            return len(result.data)
+            
+        except Exception as e:
+            # Log the error and raise an HTTP exception
+            logger.error(f"Error fetching active pattern alerts count for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch active pattern alerts count")
+    
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
         """Retrieve a crypto by symbol with error handling"""
         try:
@@ -453,3 +555,46 @@ class SupabaseCryptoRepository(CryptoRepository):
                 # Your time series storage logic here
             except Exception as e:
                 logger.error(f"Failed to store prices in time series DB: {e}")
+
+    # --- ADD THIS NEW METHOD ---
+    async def get_symbols_paginated(self, page: int, limit: int):
+        """
+        Fetches symbols from the 'symbols' table with pagination.
+        This is much more efficient than fetching all records at once.
+        """
+        try:
+            # Calculate offset for pagination
+            # Page 1, limit 200 -> offset 0
+            # Page 2, limit 200 -> offset 200
+            offset = (page - 1) * limit
+            
+            # Query the 'symbols' table, selecting the columns your app needs
+            # and applying the limit and offset.
+            response = self.client.table(self.table) \
+                .select('symbol', 
+                        'asset') \
+                .range(offset, offset + limit - 1) \
+                .execute()
+            
+            # The data is in response.data
+            return response.data
+        except Exception as e:
+            print(f"Error fetching paginated symbols: {e}")
+            return None
+
+    async def search_symbols_by_query(self, query: str, limit: int = 20):
+        """
+        Searches for symbols matching the query in 'symbol' or 'asset' columns.
+        """
+        try:
+            # Using 'ilike' for case-insensitive pattern matching
+            # Fixed: Proper PostgREST syntax for OR queries
+            response = self.client.table(self.table) \
+                .select('symbol', 'asset') \
+                .or_(f"symbol.ilike.%{query}%,asset.ilike.%{query}%") \
+                .limit(limit) \
+                .execute()
+            return response.data
+        except Exception as e:
+            print(f"Error searching symbols: {e}")
+            return None

@@ -1,16 +1,22 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi import APIRouter, HTTPException, Query, Depends
-from firebase_admin import messaging
+
+import os
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
+sys.path.append(parent_dir)
+
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from infrastructure.database.firebase.repository import FirebaseRepository
 from common.logger import logger
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from enum import Enum as PyEnum
 from typing import List
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from core.use_cases.alerts.price_alerts.PriceAlertManager import AlertManager
+from stripe_payments.src.plan_limits import PLAN_LIMITS
 
 # Define valid condition types for alerts
 class ConditionType(str, PyEnum):
@@ -30,56 +36,6 @@ router = APIRouter(tags=["alerts"])  # ✅ Correct
 # Global instance for singleton pattern
 _alert_manager_instance = None
 
-PLAN_LIMITS = {
-    "test_drive": {
-        "price_alerts_limit": 5,
-        "pattern_detection_limit": 2,
-        "watchlist_limit": 1,
-        "market_analysis_limit": 7,
-        "journaling_enabled": False,
-        "video_download_limit": 1
-    },
-    "starter_weekly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": 7,
-        "watchlist_limit": 3,
-        "market_analysis_limit": 49,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    },
-    "starter_monthly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": 60,
-        "watchlist_limit": 6,
-        "market_analysis_limit": 300,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    },
-    "pro_weekly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": -1,
-        "watchlist_limit": -1,
-        "market_analysis_limit": -1,
-        "journaling_enabled": True,
-        "video_download_limit": -1
-    },
-    "pro_monthly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": -1,
-        "watchlist_limit": -1,
-        "market_analysis_limit": -1,
-        "journaling_enabled": True,
-        "video_download_limit": -1
-    },
-    "free": {
-        "price_alerts_limit": 1,
-        "pattern_detection_limit": 1,
-        "watchlist_limit": 1,
-        "market_analysis_limit": 3,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    }
-}
 
 # Dependency injection functions
 def get_firebase_repo():
@@ -118,7 +74,7 @@ async def create_alert(
         if not await user.check_user_exists(user_id):
             raise HTTPException(status_code=404, detail="User not found")
         # Check if the user has reached their alert limit
-        create_alert = await repo.create_alert(
+        create_alert = await repo.create_price_alert(
             user_id=user_id,
             symbol=request.symbol,
             condition_type=request.condition_type.value,  # Use enum value
@@ -149,7 +105,7 @@ async def cancel_alert(
     alert_manager: AlertManager = Depends(get_alert_manager)
 ):
     try:
-        await repo.cancel_alert(user_id, alert_id)
+        await repo.cancel_price_alert(user_id, alert_id)
 
         # Inform the AlertManager to remove the alert from the cache - NOW USING INJECTED INSTANCE
         await alert_manager.remove_alert(alert_id, symbol)
@@ -164,7 +120,7 @@ async def cancel_alert(
 @router.get("/alerts/{user_id}", response_model=List[dict])
 async def get_active_alerts(user_id: str, repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
     try:
-        alerts = await repo.get_user_active_alerts(user_id)
+        alerts = await repo.get_user_active_price_alerts(user_id)
         return alerts
     except HTTPException as e:
         raise e

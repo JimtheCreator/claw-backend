@@ -20,7 +20,9 @@ from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
 from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
+from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from core.use_cases.alerts.price_alerts.PriceAlertManager import AlertManager
+from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -89,7 +91,10 @@ app.include_router(paid_plans_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
 app.include_router(watchlist_router, prefix="/api/v1")
 app.include_router(price_alerts_router, prefix="/api/v1")
+app.include_router(pattern_alerts_router, prefix="/api/v1")
+app.include_router(roomdb_cached_data_router, prefix="/api/v1")
 
+# Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}

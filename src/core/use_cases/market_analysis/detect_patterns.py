@@ -11,13 +11,24 @@ import asyncio
 from common.logger import logger
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 
-# === Pattern Registry (Enhanced) ===
-_pattern_registry: Dict[str, callable] = {}
 
-def register_pattern(name: str) -> callable:
-    """Decorator to register pattern detection functions"""
+# === Pattern Registry (Enhanced) ===
+_pattern_registry: Dict[str, Dict[str, Any]] = {}
+
+def register_pattern(name: str, types: List[str] = None) -> callable:
+    """
+    Decorator to register pattern detection functions.
+    
+    Args:
+        name (str): The primary name/key for the pattern.
+        types (List[str], optional): A list of the specific 'pattern_type' strings 
+                                     that the function can return. If None, the 
+                                     'name' is used as the single type.
+    """
     def decorator(func: callable) -> callable:
-        _pattern_registry[name] = func
+        # If no specific types are provided, assume the type is the pattern's name
+        pattern_types = types if types is not None else [name]
+        _pattern_registry[name] = {"function": func, "types": pattern_types}
         return func
     return decorator
 
@@ -29,10 +40,14 @@ class PatternDetector:
     async def detect(self, pattern_name: str, ohlcv: dict) -> Tuple[bool, float, str]:
         if pattern_name not in _pattern_registry:
             raise ValueError(f"Unsupported pattern: {pattern_name}")
-        detector = _pattern_registry.get(pattern_name)
-        return await detector(self, ohlcv)
+        # Retrieve the actual detector function from the registry
+        detector_info = _pattern_registry.get(pattern_name, {})
+        detector_func = detector_info.get("function")
+        if not detector_func:
+            raise ValueError(f"Detector function for '{pattern_name}' not found.")
+        return await detector_func(self, ohlcv)
 
-    @register_pattern("rectangle")
+    @register_pattern("rectangle", types=["rectangle"])
     async def _detect_rectangle(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect rectangle patterns (consolidation zones)
@@ -89,7 +104,7 @@ class PatternDetector:
             logger.error(f"Rectangle detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("engulfing")
+    @register_pattern("engulfing", types=["bullish_engulfing", "bearish_engulfing"])
     async def _detect_engulfing(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect bullish and bearish engulfing candle patterns
@@ -149,7 +164,7 @@ class PatternDetector:
             logger.error(f"Engulfing pattern detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
         
-    @register_pattern("pennant")
+    @register_pattern("pennant", types=["bullish_pennant", "bearish_pennant"])
     async def _detect_pennant(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect pennant patterns (small symmetrical triangles following a strong trend)
@@ -311,8 +326,7 @@ class PatternDetector:
             logger.error(f"Pennant pattern detection error: {str(e)}")
             return False, 0.0, ""
         
-    # --- Existing pattern implementations (enhanced) ---
-    @register_pattern("zigzag")
+    @register_pattern("zigzag", types=["zigzag"])
     async def _detect_zigzag(self, ohlcv: dict, deviation_pct = 5) -> Tuple[bool, float, str]:
         """
         Detect ZigZag pattern with adaptive thresholding
@@ -360,7 +374,7 @@ class PatternDetector:
             return False, 0.0, ""  # ✅ Three values returned
 
     # Continuing from the triangle pattern detection method
-    @register_pattern("triangle")
+    @register_pattern("triangle", types=["symmetrical_triangle", "descending_triangle", "ascending_triangle"])
     async def _detect_triangle(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect triangle patterns (symmetrical, ascending, descending) with 
@@ -418,7 +432,7 @@ class PatternDetector:
             logger.error(f"Triangle detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("head_and_shoulders")
+    @register_pattern("head_and_shoulders", types=["bearish_head_and_shoulders", "inverse_head_and_shoulders"])
     async def _detect_head_and_shoulders(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect head and shoulders patterns (regular or inverse)
@@ -510,7 +524,7 @@ class PatternDetector:
             logger.error(f"Head and shoulders detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("double_top")
+    @register_pattern("double_top", types=["double_top"])
     async def _detect_double_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect double top patterns (bearish)
@@ -572,7 +586,7 @@ class PatternDetector:
             logger.error(f"Double top detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("double_bottom")
+    @register_pattern("double_bottom", types=["double_bottom"])
     async def _detect_double_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect double bottom patterns (bullish)
@@ -635,7 +649,7 @@ class PatternDetector:
             return False, 0.0, ""  # ✅ Three values returned
             
     # New pattern detection methods to be added to the PatternDetector class
-    @register_pattern("triple_top")
+    @register_pattern("triple_top", types=["triple_top"])
     async def _detect_triple_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect triple top patterns (bearish reversal)
@@ -711,7 +725,7 @@ class PatternDetector:
             logger.error(f"Triple top detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("triple_bottom")
+    @register_pattern("triple_bottom", types=["triple_bottom"])
     async def _detect_triple_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect triple bottom patterns (bullish reversal)
@@ -787,7 +801,7 @@ class PatternDetector:
             logger.error(f"Triple bottom detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("wedge_rising")
+    @register_pattern("wedge_rising", types=["wedge_rising"])
     async def _detect_wedge_rising(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect rising wedge patterns (bearish reversal)
@@ -871,7 +885,7 @@ class PatternDetector:
             logger.error(f"Rising wedge detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("wedge_falling")
+    @register_pattern("wedge_falling", types=["wedge_falling"])
     async def _detect_wedge_falling(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect falling wedge patterns (bullish reversal)
@@ -954,7 +968,7 @@ class PatternDetector:
             logger.error(f"Falling wedge detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("flag_bullish")
+    @register_pattern("flag_bullish", types=["flag_bullish"])
     async def _detect_flag_bullish(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect bullish flag patterns (continuation)
@@ -1059,7 +1073,7 @@ class PatternDetector:
             logger.error(f"Bullish flag detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("flag_bearish")  
+    @register_pattern("flag_bearish", types=["flag_bearish"])
     async def _detect_flag_bearish(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect bearish flag patterns (continuation)
@@ -1163,8 +1177,8 @@ class PatternDetector:
         except Exception as e:
             logger.error(f"Bearish flag detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
-    
-    @register_pattern("doji")
+
+    @register_pattern("doji", types=["standard_doji", "gravestone_doji", "dragonfly_doji"])
     async def _detect_doji(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect doji candlestick patterns (indecision, potential reversal)
@@ -1243,7 +1257,7 @@ class PatternDetector:
             logger.error(f"Doji detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("morning_star")
+    @register_pattern("morning_star", types=["morning_star"])
     async def _detect_morning_star(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect morning star patterns (bullish reversal)
@@ -1322,7 +1336,7 @@ class PatternDetector:
             logger.error(f"Morning star detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("evening_star")
+    @register_pattern("evening_star", types=["evening_star"])
     async def _detect_evening_star(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect evening star patterns (bearish reversal)
@@ -1401,7 +1415,7 @@ class PatternDetector:
             logger.error(f"Evening star detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("hammer")
+    @register_pattern("hammer", types=["hammer"])
     async def _detect_hammer(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect hammer candlestick patterns (bullish reversal after downtrend)
@@ -1492,7 +1506,7 @@ class PatternDetector:
             logger.error(f"Hammer detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("shooting_star")
+    @register_pattern("shooting_star", types=["bullish_shooting_star", "bearish_shooting_star"])
     async def _detect_shooting_star(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect shooting star candlestick patterns (bearish reversal after uptrend)
@@ -1585,7 +1599,7 @@ class PatternDetector:
             logger.error(f"Shooting star detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("channel")
+    @register_pattern("channel", types=["horizontal_channel", "ascending_channel", "descending_channel"])
     async def _detect_channel(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect price channels (parallel support and resistance lines)
@@ -1705,7 +1719,7 @@ class PatternDetector:
             logger.error(f"Channel detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("island_reversal")
+    @register_pattern("island_reversal", types=["bullish_island_reversal", "bearish_island_reversal"])
     async def _detect_island_reversal(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect island reversal patterns (powerful reversal signal)
@@ -1743,7 +1757,7 @@ class PatternDetector:
             if bullish_gap1 and bullish_gap2:
                 # Bullish island bottom after downtrend
                 is_island = True
-                island_type = "bullish"
+                island_type = "bullish_island_reversal"
                 
                 # Check if middle day has significant trading range
                 middle_range = highs[-2] - lows[-2]
@@ -1770,7 +1784,7 @@ class PatternDetector:
             elif bearish_gap1 and bearish_gap2:
                 # Bearish island top after uptrend
                 is_island = True
-                island_type = "bearish"
+                island_type = "bearish_island_reversal"
                 
                 # Check if middle day has significant trading range
                 middle_range = highs[-2] - lows[-2]
@@ -1799,8 +1813,8 @@ class PatternDetector:
         except Exception as e:
             logger.error(f"Island reversal detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
-        
-    @register_pattern("cup_and_handle")
+
+    @register_pattern("cup_and_handle", types=["cup_and_handle"])
     async def _detect_cup_and_handle(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect cup and handle patterns (bullish continuation)
@@ -1891,7 +1905,7 @@ class PatternDetector:
             logger.error(f"Cup and handle detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_line_strike")
+    @register_pattern("three_line_strike", types=["three_line_strike"])
     async def _detect_three_line_strike(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three line strike patterns (bullish reversal)
@@ -1955,7 +1969,7 @@ class PatternDetector:
             logger.error(f"Three line strike detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_outside_up")
+    @register_pattern("three_outside_up", types=["three_outside_up"])
     async def _detect_three_outside_up(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three outside up patterns (bullish reversal)
@@ -2019,7 +2033,7 @@ class PatternDetector:
             logger.error(f"Three outside up detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_outside_down")
+    @register_pattern("three_outside_down", types=["three_outside_down"])
     async def _detect_three_outside_down(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three outside down patterns (bearish reversal)
@@ -2083,7 +2097,7 @@ class PatternDetector:
             logger.error(f"Three outside down detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_inside_up")
+    @register_pattern("three_inside_up", types=["three_inside_up"])
     async def _detect_three_inside_up(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three inside up patterns (bullish reversal)
@@ -2147,7 +2161,7 @@ class PatternDetector:
             logger.error(f"Three inside up detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_inside_down")
+    @register_pattern("three_inside_down", types=["three_inside_down"])
     async def _detect_three_inside_down(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three inside down patterns (bearish reversal)
@@ -2211,7 +2225,7 @@ class PatternDetector:
             logger.error(f"Three inside down detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("dark_cloud_cover")
+    @register_pattern("dark_cloud_cover", types=["dark_cloud_cover"])
     async def _detect_dark_cloud_cover(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect dark cloud cover patterns (bearish reversal)
@@ -2277,7 +2291,7 @@ class PatternDetector:
             logger.error(f"Dark cloud cover detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("piercing_pattern")
+    @register_pattern("piercing_pattern", types=["piercing_pattern"])
     async def _detect_piercing_pattern(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect piercing pattern (bullish reversal)
@@ -2343,7 +2357,7 @@ class PatternDetector:
             logger.error(f"Piercing pattern detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("kicker")
+    @register_pattern("kicker", types=["bullish_kicker", "bearish_kicker"])
     async def _detect_kicker(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect kicker patterns (strong reversal signal)
@@ -2427,7 +2441,7 @@ class PatternDetector:
             logger.error(f"Kicker pattern detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
 
-    @register_pattern("three_white_soldiers")
+    @register_pattern("three_white_soldiers", types=["three_white_soldiers"])
     async def _detect_three_white_soldiers(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect three white soldiers pattern (bullish reversal)
@@ -2492,8 +2506,8 @@ class PatternDetector:
         except Exception as e:
             logger.error(f"Three white soldiers detection error: {str(e)}")
             return False, 0.0, ""  # ✅ Three values returned
-        
-    @register_pattern("hanging_man")
+
+    @register_pattern("hanging_man", types=["hanging_man"])
     async def _detect_hanging_man(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Hanging Man patterns (bearish reversal after uptrend)
@@ -2551,7 +2565,7 @@ class PatternDetector:
             logger.error(f"Hanging Man detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("inverted_hammer")
+    @register_pattern("inverted_hammer", types=["inverted_hammer"])
     async def _detect_inverted_hammer(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Inverted Hammer patterns (bullish reversal after downtrend)
@@ -2608,7 +2622,7 @@ class PatternDetector:
             logger.error(f"Inverted Hammer detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("tweezers_top")
+    @register_pattern("tweezers_top", types=["tweezers_top"])
     async def _detect_tweezers_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Tweezer Top patterns (bearish reversal)
@@ -2654,7 +2668,7 @@ class PatternDetector:
             logger.error(f"Tweezers Top detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("tweezers_bottom")
+    @register_pattern("tweezers_bottom", types=["tweezers_bottom"])
     async def _detect_tweezers_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Tweezer Bottom patterns (bullish reversal)
@@ -2698,7 +2712,7 @@ class PatternDetector:
             logger.error(f"Tweezers Bottom detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("abandoned_baby")
+    @register_pattern("abandoned_baby", types=["bullish_abandoned_baby", "bearish_abandoned_baby"])
     async def _detect_abandoned_baby(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Abandoned Baby patterns (strong reversal)
@@ -2775,7 +2789,7 @@ class PatternDetector:
             logger.error(f"Abandoned Baby detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("rising_three_methods")
+    @register_pattern("rising_three_methods", types=["rising_three_methods"])
     async def _detect_rising_three_methods(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Rising Three Methods patterns (bullish continuation)
@@ -2837,7 +2851,7 @@ class PatternDetector:
             logger.error(f"Rising Three Methods detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("falling_three_methods")
+    @register_pattern("falling_three_methods", types=["falling_three_methods"])
     async def _detect_falling_three_methods(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Falling Three Methods patterns (bearish continuation)
@@ -2889,7 +2903,7 @@ class PatternDetector:
             logger.error(f"Falling Three Methods detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("hikkake")
+    @register_pattern("hikkake", types=["bullish_hikkake", "bearish_hikkake"])
     async def _detect_hikkake(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Hikkake patterns (can be bullish or bearish "trap")
@@ -2971,7 +2985,7 @@ class PatternDetector:
             logger.error(f"Hikkake detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("mat_hold")
+    @register_pattern("mat_hold", types=["bullish_mat_hold", "bearish_mat_hold"])
     async def _detect_mat_hold(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Mat Hold patterns (bullish/bearish continuation)
@@ -3061,7 +3075,7 @@ class PatternDetector:
             logger.error(f"Mat Hold detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("spinning_top")
+    @register_pattern("spinning_top", types=["spinning_top"])
     async def _detect_spinning_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Spinning Top patterns (indecision)
@@ -3113,7 +3127,7 @@ class PatternDetector:
             logger.error(f"Spinning Top detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("marubozu")
+    @register_pattern("marubozu", types=["bullish_marubozu", "bearish_marubozu"])
     async def _detect_marubozu(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Marubozu patterns (strong momentum)
@@ -3174,7 +3188,7 @@ class PatternDetector:
             logger.error(f"Marubozu detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("harami")
+    @register_pattern("harami", types=["bullish_harami", "bearish_harami", "bullish_harami_cross", "bearish_harami_cross"])
     async def _detect_harami(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Harami patterns (reversal/indecision)
@@ -3265,7 +3279,7 @@ class PatternDetector:
             logger.error(f"Harami detection error: {str(e)}")
             return False, 0.0, ""
 
-    @register_pattern("three_black_crows")
+    @register_pattern("three_black_crows", types=["three_black_crows"])
     async def _detect_three_black_crows(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
         Detect Three Black Crows patterns (bearish reversal after uptrend)

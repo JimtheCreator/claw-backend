@@ -12,8 +12,8 @@ from src.infrastructure.database.supabase.crypto_repository import SupabaseCrypt
 from firebase_admin import auth
 import time
 import uuid
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
+from stripe_payments.src.plan_limits import PLAN_LIMITS
 
 
 router = APIRouter(tags=["Stripe Paid Plans"])
@@ -41,57 +41,6 @@ PLAN_TYPES = {
 }
 
 PRICE_ID_TO_PLAN = {v: k for k, v in PLAN_PRICE_IDS.items()}
-
-PLAN_LIMITS = {
-    "test_drive": {
-        "price_alerts_limit": 5,
-        "pattern_detection_limit": 2,
-        "watchlist_limit": 1,
-        "market_analysis_limit": 7,
-        "journaling_enabled": False,
-        "video_download_limit": 1
-    },
-    "starter_weekly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": 7,
-        "watchlist_limit": 3,
-        "market_analysis_limit": 49,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    },
-    "starter_monthly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": 60,
-        "watchlist_limit": 6,
-        "market_analysis_limit": 300,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    },
-    "pro_weekly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": -1,
-        "watchlist_limit": -1,
-        "market_analysis_limit": -1,
-        "journaling_enabled": True,
-        "video_download_limit": -1
-    },
-    "pro_monthly": {
-        "price_alerts_limit": -1,
-        "pattern_detection_limit": -1,
-        "watchlist_limit": -1,
-        "market_analysis_limit": -1,
-        "journaling_enabled": True,
-        "video_download_limit": -1
-    },
-    "free": {
-        "price_alerts_limit": 1,
-        "pattern_detection_limit": 1,
-        "watchlist_limit": 1,
-        "market_analysis_limit": 3,
-        "journaling_enabled": False,
-        "video_download_limit": 0
-    }
-}
 
 def get_firebase_repo():
     unique_id = f"app_{uuid.uuid4()}"
