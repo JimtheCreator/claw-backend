@@ -87,3 +87,38 @@ class FirebaseRepository:
         except Exception as e:
             logger.error(f"Firebase error: {str(e)}")
             raise HTTPException(status_code=500, detail="Database access failed")
+        
+
+    async def get_fcm_tokens_for_users(self, user_ids: list[str]) -> dict[str, str]:
+        """
+        Fetches FCM tokens for a given list of user IDs from Firebase Realtime Database.
+
+        Args:
+            user_ids (list[str]): A list of user IDs to fetch tokens for.
+
+        Returns:
+            dict[str, str]: A dictionary mapping user_id to its fcm_token.
+        """
+        if not user_ids:
+            return {}
+
+        tokens_map = {}
+        # NOTE: This fetches users one by one. For very high throughput,
+        # you might restructure your DB for batch gets, but this is a solid start.
+        for user_id in user_ids:
+            try:
+                # Assuming the token is stored at path /users/{user_id}/fcmToken
+                token = self.db.child(user_id).child('fcmToken').get()
+
+                if token:
+                    tokens_map[user_id] = token
+                else:
+                    logger.warning(f"FCM token not found for user {user_id} in Firebase.")
+
+            except Exception as e:
+                logger.error(f"Error fetching FCM token for user {user_id} from Firebase: {str(e)}")
+                # Continue to the next user
+                continue
+        
+        logger.info(f"Fetched {len(tokens_map)} FCM tokens from Firebase.")
+        return tokens_map

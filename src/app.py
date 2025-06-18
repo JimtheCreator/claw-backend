@@ -21,8 +21,9 @@ from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
 from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
-from core.use_cases.alerts.price_alerts.PriceAlertManager import AlertManager
+from infrastructure.notifications.alerts.price_alerts.PriceAlertManager import AlertManager
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
+from infrastructure.notifications.alerts.pattern_alerts.PatternAlertManager import PatternAlertManager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,22 +48,35 @@ async def lifespan(app: FastAPI):
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
-        # Create and start the AlertManager
-        alert_manager = AlertManager()
-        app.state.alert_manager = alert_manager
-        await alert_manager.start()
+        # Create and start the Price AlertManager
+        price_alert_manager = AlertManager()
+        app.state.price_alert_manager = price_alert_manager
+        await price_alert_manager.start()
+        logger.info("PriceAlertManager started successfully.")
 
         logger.info("AlertManager started successfully.")
+
+        # NEW: Create and start the Pattern AlertManager
+        pattern_alert_manager = PatternAlertManager()
+        app.state.pattern_alert_manager = pattern_alert_manager
+        await pattern_alert_manager.start()
+        logger.info("PatternAlertManager started successfully.")
+
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
 
-    # Gracefully shut down the AlertManager
-    if app.state.alert_manager:
-        await app.state.alert_manager.stop()
-        logger.info("AlertManager stopped.")
+    # Gracefully shut down managers
+    if hasattr(app.state, 'price_alert_manager') and app.state.price_alert_manager:
+        await app.state.price_alert_manager.stop()
+        logger.info("PriceAlertManager stopped.")
+        
+    # NEW: Shutdown pattern manager
+    if hasattr(app.state, 'pattern_alert_manager') and app.state.pattern_alert_manager:
+        await app.state.pattern_alert_manager.stop()
+        logger.info("PatternAlertManager stopped.")
 
     logger.info("Shutting down application...")
 

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from enum import Enum as PyEnum
 from typing import List
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from core.use_cases.alerts.price_alerts.PriceAlertManager import AlertManager
+from infrastructure.notifications.alerts.price_alerts.PriceAlertManager import AlertManager
 from stripe_payments.src.plan_limits import PLAN_LIMITS
 
 # Define valid condition types for alerts

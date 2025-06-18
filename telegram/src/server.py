@@ -32,4 +32,4 @@ if response.status_code == 200:
     message = result['choices'][0]['message']['content']
     print(message)
 else:
-    print("Error:", response.text)
+    print("Error:", response.text) 

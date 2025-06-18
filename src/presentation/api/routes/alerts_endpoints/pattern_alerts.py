@@ -1,5 +1,7 @@
 # src/presentation/api/routes/alerts_endpoints/pattern_alerts.py
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
+import requests
+
 from typing import List
 from pydantic import BaseModel
 import os
@@ -42,9 +44,10 @@ class PatternAlertResponse(BaseModel):
 
 @router.post("/create", response_model=PatternAlertResponse, status_code=201)
 async def create_pattern_alert(
+    request: Request,
     alert_data: PatternAlertCreate,
     x_user_id: str = Header(...),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
 ):
     """
     Create a new pattern alert for the authenticated user.
@@ -63,6 +66,13 @@ async def create_pattern_alert(
         )
 
         logger.info(f"Successfully created pattern alert with ID {created_alert.get('id')} for user {x_user_id}")
+
+        # --- DYNAMIC UPDATE ---
+        pattern_alert_manager = request.app.state.pattern_alert_manager
+        if pattern_alert_manager:
+            await pattern_alert_manager.add_alert_and_start_listener(created_alert)
+
+
         # Manually construct the response to match the model
         return PatternAlertResponse(
             id=str(created_alert.get('id')),
@@ -97,9 +107,9 @@ async def get_pattern_alerts(
         logger.error(f"Error fetching pattern alerts for user {x_user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch pattern alerts")
 
-
 @router.delete("/delete/{alert_id}", status_code=204)
 async def delete_pattern_alert(
+    request: Request,
     alert_id: str, 
     x_user_id: str = Header(...),
     repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
@@ -108,8 +118,21 @@ async def delete_pattern_alert(
     Delete a specific pattern alert owned by the authenticated user.
     """
     try:
+        # Important: You need to get the alert details BEFORE deleting it
+        # to know what to remove from the map.
+        alert_to_delete = await repo.get_pattern_alert_details(alert_id, x_user_id) # You'll need to create this helper in the repo
+        
+        if not alert_to_delete:
+            raise HTTPException(status_code=404, detail="Alert not found.")
+
         await repo.delete_pattern_alert(user_id=x_user_id, alert_id=alert_id)
-        return
+        
+        # --- DYNAMIC UPDATE ---
+        pattern_alert_manager = request.app.state.pattern_alert_manager
+        if pattern_alert_manager:
+            await pattern_alert_manager.remove_alert_and_stop_listener(alert_to_delete)
+
+        return  # Return with 204 No Content
     except HTTPException as e:
         # Re-raise HTTPException to return proper status codes (e.g., 404)
         raise e

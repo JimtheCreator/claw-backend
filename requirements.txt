@@ -26,3 +26,8 @@ pydantic[email]
 firebase_admin
 stripe
 apscheduler
+anyio
+pytest-tornado
+pytest-trio
+pytest-twisted
+twisted

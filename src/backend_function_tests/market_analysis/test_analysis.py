@@ -16,7 +16,7 @@ from core.use_cases.market_analysis.detect_patterns import PatternDetector
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from core.use_cases.market_analysis.analysis_structure.main_analysis_structure import PatternAPI
 
-from fastapi import APIRouter, Path, Body, Depends, HTTPException, BackgroundTasks
+from fastapi import Path, Body, Depends, HTTPException, BackgroundTasks
 from typing import Optional
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger

@@ -393,6 +393,125 @@ class SupabaseCryptoRepository(CryptoRepository):
             # Log the error and raise an HTTP exception
             logger.error(f"Error fetching active pattern alerts count for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to fetch active pattern alerts count")
+
+    async def get_all_active_pattern_alerts(self) -> List[dict]:
+        """
+        Retrieve all active pattern alerts from all users.
+        Used to build the initial in-memory subscription map.
+        """
+        try:
+            result = self.client.table(self.pattern_alerts_table)\
+                .select(
+                    "user_id," \
+                    "symbol," \
+                    "pattern_name," \
+                    "time_interval")\
+                .eq("status", "active")\
+                .execute()
+            return result.data
+        except Exception as e:
+            logger.error(f"Error fetching all active pattern alerts: {str(e)}")
+            return []
+
+    async def deactivate_pattern_alerts_by_criteria(self, user_ids: list[str], symbol: str, pattern_name: str, time_interval: str) -> List[str]:
+        """
+        Finds active alerts matching criteria, updates their status to 'triggered',
+        and returns their IDs. This is an atomic-like operation to prevent duplicates.
+        """
+        try:
+            # First, select the IDs of the alerts to be updated
+            select_res = self.client.table(self.pattern_alerts_table)\
+                .select("id")\
+                .in_("user_id", user_ids)\
+                .eq("symbol", symbol)\
+                .eq("pattern_name", pattern_name)\
+                .eq("time_interval", time_interval)\
+                .eq("status", "active")\
+                .execute()
+
+            if not select_res.data:
+                return []
+            
+            alert_ids_to_deactivate = [item['id'] for item in select_res.data]
+
+            # Now, update these specific alerts
+            update_res = self.client.table(self.pattern_alerts_table)\
+                .update({"status": "triggered", "updated_at": datetime.now(timezone.utc).isoformat()})\
+                .in_("id", alert_ids_to_deactivate)\
+                .execute()
+            
+            logger.info(f"Deactivated {len(update_res.data)} pattern alerts for {symbol}/{pattern_name}.")
+            return alert_ids_to_deactivate
+
+        except Exception as e:
+            logger.error(f"Error deactivating pattern alerts by criteria: {e}")
+            return []
+            
+    async def create_pattern_match_history(self, alert_ids: List[str], pattern_name: str, symbol: str):
+        """(Optional) Logs triggered alerts to a history table."""
+        # This assumes you have a 'pattern_match_history' table
+        # Columns: id, alert_id (FK to pattern_alerts), matched_at, pattern_name, symbol
+        if not alert_ids:
+            return
+        
+        history_records = [
+            {"alert_id": alert_id, "pattern_name": pattern_name, "symbol": symbol, "matched_at": datetime.now(timezone.utc).isoformat()}
+            for alert_id in alert_ids
+        ]
+        
+        try:
+            # Assuming you have a table named 'pattern_match_history'
+            self.client.table("pattern_match_history").insert(history_records).execute()
+            logger.info(f"Logged {len(history_records)} pattern matches to history.")
+        except Exception as e:
+            logger.error(f"Failed to create pattern match history: {e}")
+
+    # REMOVE the old get_fcm_tokens_for_users method and REPLACE it with this one.
+    async def get_fcm_tokens_for_users(self, user_ids: list[str]) -> dict:
+        """
+        Acts as a bridge to fetch FCM tokens from the Firebase repository.
+
+        Args:
+            user_ids (list[str]): The list of user IDs.
+
+        Returns:
+            dict: A dictionary mapping user_id to fcm_token.
+        """
+        if not user_ids:
+            return {}
+        
+        try:
+            # Instantiate the Firebase repository to access its methods
+            firebase_repo = await self.get_firebase_repo()
+            if not firebase_repo:
+                logger.error("Firebase repository could not be initialized.")
+                return {}
+            
+            # Delegate the call to the method that actually contains the logic
+            logger.info(f"Bridging to Firebase to fetch FCM tokens for {len(user_ids)} users.")
+            return await firebase_repo.get_fcm_tokens_for_users(user_ids)
+
+        except Exception as e:
+            logger.error(f"Error while bridging to Firebase for FCM token fetching: {str(e)}")
+            # Return an empty dict on failure to prevent crashing the notification flow
+            return {}
+        
+    async def get_pattern_alert_details(self, alert_id: str, user_id: str) -> dict:
+        """Retrieve pattern alert details by ID and user ID."""
+        try:
+            result = self.client.table(self.pattern_alerts_table)\
+                .select("*")\
+                .eq("id", alert_id)\
+                .eq("user_id", user_id)\
+                .execute()
+            if result.data and len(result.data) > 0:
+                return result.data[0]
+            raise HTTPException(status_code=404, detail="Alert not found or you do not have permission to access it")
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error fetching pattern alert details for alert {alert_id} and user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch alert details")
     
     async def get_crypto(self, symbol: str) -> CryptoEntity | None:
         """Retrieve a crypto by symbol with error handling"""

@@ -11,7 +11,6 @@ import asyncio
 from common.logger import logger
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 
-
 # === Pattern Registry (Enhanced) ===
 _pattern_registry: Dict[str, Dict[str, Any]] = {}
 

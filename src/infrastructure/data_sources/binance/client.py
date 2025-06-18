@@ -444,12 +444,8 @@ class BinanceMarketData:
             } for symbol in symbols}
         
     async def get_combined_stream_for_tickers(self, symbols: List[str]) -> AsyncGenerator[dict, None]:
-        """
-        Connects to a combined WebSocket stream for ticker data for multiple symbols.
-        """
         if not symbols:
             return
-
         lower_symbols = [s.lower() for s in symbols]
         streams = [f"{symbol}@ticker" for symbol in lower_symbols]
         streams_path = "/".join(streams)
@@ -458,15 +454,13 @@ class BinanceMarketData:
         logger.info(f"Connecting to combined ticker stream: {socket_url}")
         
         try:
-            async with websockets.connect(socket_url) as websocket:
+            # Disable client-side pings to prevent timeout errors
+            async with websockets.connect(socket_url, ping_interval=None) as websocket:
                 async for msg_text in websocket:
                     msg = json.loads(msg_text)
-                    
                     data = msg.get('data', {})
                     stream_name = msg.get('stream', '')
-                    
                     if '@ticker' in stream_name:
-                        # Extract symbol from stream name (e.g., 'btcusdt@ticker')
                         symbol = stream_name.split('@')[0].upper()
                         yield {
                             "symbol": symbol,
