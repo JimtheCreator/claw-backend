@@ -99,7 +99,7 @@ class AlertManager:
 
             logger.info(f"Connecting to combined WebSocket stream for symbols: {symbols}")
             try:
-                async for message in self.binance_client.get_combined_stream_for_tickers(symbols):
+                async for message in self.binance_client. get_combined_stream_for_tickers(symbols):
                     await self._process_message(message)
             except asyncio.CancelledError:
                 logger.info("Listener task was cancelled.")
@@ -271,6 +271,7 @@ class AlertManager:
                 "target_price": str(target_price),
                 "condition_type": condition_type,
                 "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                "notification_type": "price_alert"
             },
             'user_id': alert['user_id']  # For logging purposes
         }

@@ -455,7 +455,7 @@ class BinanceMarketData:
         
         try:
             # Disable client-side pings to prevent timeout errors
-            async with websockets.connect(socket_url, ping_interval=None) as websocket:
+            async with websockets.connect(socket_url) as websocket:
                 async for msg_text in websocket:
                     msg = json.loads(msg_text)
                     data = msg.get('data', {})
