@@ -31,6 +31,8 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.price_alerts_table = "price_alerts"
         self.pattern_alerts_table = "pattern_alerts" # New table for pattern alerts
         self.redis_client = redis_cache
+        self.market_analysis_table = "market_analysis"  # Assuming this is the table for market analysis
+        self.storage_bucket_name = "analysis-artifacts" # Define bucket name
     
     async def get_firebase_repo(self):
         unique_id = f"app_{uuid.uuid4()}"
@@ -701,19 +703,244 @@ class SupabaseCryptoRepository(CryptoRepository):
             print(f"Error fetching paginated symbols: {e}")
             return None
 
-    async def search_symbols_by_query(self, query: str, limit: int = 20):
+    # Updated methods for your crypto_repository.py
+    async def get_market_analysis_count(self, user_id: str) -> int:
+        """Get the current number of market analysis records for a user."""
+        try:
+            result = self.client.table(self.market_analysis_table).select("user_id").eq("user_id", user_id).execute()
+            return len(result.data)
+        except Exception as e:
+            logger.error(f"Error fetching market analysis count for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch market analysis count")
+        
+    async def check_market_analysis_limit(self, user_id: str, PLAN_LIMITS: dict) -> bool:
+        """Check if the user has reached their market analysis limit."""
+        try:
+            # Ensure subscription exists
+            await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
+            
+            # Get subscription limits
+            limits = await self.get_subscription_limits(user_id)
+            market_analysis_limit = limits["market_analysis_limit"]
+            
+            # Get current analysis count
+            current_count = await self.get_market_analysis_count(user_id)
+            
+            if market_analysis_limit != -1 and current_count >= market_analysis_limit:
+                return False  # Limit reached
+            
+            return True  # Within limit
+            
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error checking market analysis limit for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to check market analysis limit")
+
+    async def create_analysis_record(self, user_id: str, symbol: str, interval: str, timeframe: str, status: str = "processing", PLAN_LIMITS: dict = None):
+        """Create a market analysis record with plan limit checking."""
+        try:
+            data = {
+                "user_id": user_id,
+                "symbol": symbol,
+                "interval": interval,
+                "timeframe": timeframe,
+                "status": status,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            result = self.client.table(self.market_analysis_table).insert(data).execute()
+
+            if result.data:
+                created_record = result.data[0]
+                logger.info(f"Created market analysis record for user {user_id} with ID {created_record['id']}")
+                return created_record["id"]
+            else:
+                logger.error(f"Market analysis record creation failed for user {user_id}: No data returned")
+                raise HTTPException(status_code=500, detail="Failed to create analysis record")
+
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error creating market analysis record for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create analysis record")
+
+    async def update_analysis_record(self, analysis_id: str, updates: dict):
+        """Update an existing market analysis record."""
+        try:
+            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+            if updates.get("status") == "completed" and "completed_at" not in updates:
+                updates["completed_at"] = datetime.now(timezone.utc).isoformat()
+
+            # Ensure ALL data is properly serialized for JSON compatibility
+            def serialize_for_json(obj):
+                """Recursively serialize any object to be JSON compatible"""
+                if obj is None:
+                    return None
+                elif isinstance(obj, (str, int, float, bool)):
+                    return obj
+                elif isinstance(obj, (list, tuple)):
+                    return [serialize_for_json(item) for item in obj]
+                elif isinstance(obj, dict):
+                    return {k: serialize_for_json(v) for k, v in obj.items()}
+                elif hasattr(obj, 'isoformat'):  # datetime objects
+                    return obj.isoformat()
+                else:
+                    # Convert to string as fallback
+                    return str(obj)
+
+            # Serialize the entire updates dictionary
+            try:
+                # Log the structure of updates before serialization
+                logger.debug(f"Updates structure for {analysis_id}: {list(updates.keys())}")
+                if "analysis_data" in updates:
+                    logger.debug(f"Analysis data keys: {list(updates['analysis_data'].keys())}")
+                    if "patterns" in updates["analysis_data"]:
+                        logger.debug(f"Number of patterns: {len(updates['analysis_data']['patterns'])}")
+                
+                updates = serialize_for_json(updates)
+                logger.debug(f"Successfully serialized updates for {analysis_id}")
+                
+                # Test JSON serialization to catch any remaining issues
+                import json
+                json.dumps(updates)
+                logger.debug(f"JSON serialization test passed for {analysis_id}")
+                
+            except Exception as serialization_error:
+                logger.error(f"Error serializing updates for {analysis_id}: {serialization_error}")
+                logger.error(f"Updates structure: {list(updates.keys()) if isinstance(updates, dict) else type(updates)}")
+                # If serialization fails, try to remove problematic fields
+                if isinstance(updates, dict) and "analysis_data" in updates:
+                    updates.pop("analysis_data", None)
+                    logger.warning(f"Removed analysis_data from updates for {analysis_id} due to serialization error")
+
+            # Final verification - ensure updates is JSON serializable
+            try:
+                import json
+                json.dumps(updates)
+                logger.debug(f"Final JSON verification passed for {analysis_id}")
+            except Exception as json_error:
+                logger.error(f"Final JSON verification failed for {analysis_id}: {json_error}")
+                # Try to identify and fix the problematic data
+                if isinstance(updates, dict) and "analysis_data" in updates:
+                    logger.error("Removing analysis_data due to JSON serialization failure")
+                    updates.pop("analysis_data", None)
+                    # Try again
+                    try:
+                        json.dumps(updates)
+                        logger.info(f"JSON verification passed after removing analysis_data for {analysis_id}")
+                    except Exception as final_error:
+                        logger.error(f"JSON verification still failed after removing analysis_data: {final_error}")
+                        return None
+
+            result = self.client.table(self.market_analysis_table).update(updates).eq("id", analysis_id).execute()
+
+            if not result.data:
+                # Log a warning instead of raising 404 to prevent process termination
+                logger.warning(f"Attempted to update a non-existent analysis record: {analysis_id}")
+                return None
+
+            logger.info(f"Updated market analysis record {analysis_id}")
+            return result.data[0]
+
+        except Exception as e:
+            logger.error(f"Error updating market analysis record {analysis_id}: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Avoid raising HTTPException in background tasks if possible
+            # Consider a more robust error handling/retry mechanism
+            return None
+
+    # --- NEW METHOD ---
+    async def upload_chart_image(self, file_bytes: bytes, analysis_id: str, user_id: str) -> str:
         """
-        Searches for symbols matching the query in 'symbol' or 'asset' columns.
+        Uploads a chart image to Supabase Storage.
+
+        Args:
+            file_bytes: The image file in bytes.
+            analysis_id: The unique ID of the analysis.
+            user_id: The ID of the user.
+
+        Returns:
+            The public URL of the uploaded image.
         """
         try:
-            # Using 'ilike' for case-insensitive pattern matching
-            # Fixed: Proper PostgREST syntax for OR queries
-            response = self.client.table(self.table) \
-                .select('symbol', 'asset') \
-                .or_(f"symbol.ilike.%{query}%,asset.ilike.%{query}%") \
-                .limit(limit) \
-                .execute()
-            return response.data
+            # Construct a unique and organized file path
+            file_path = f"public/{user_id}/{analysis_id}.png"
+            
+            # Upload the file
+            # The `file_options={"content-type": "image/png"}` is important
+            self.client.storage.from_(self.storage_bucket_name).upload(
+                path=file_path,
+                file=file_bytes,
+                file_options={"content-type": "image/png", "upsert": "true"}
+            )
+            logger.info(f"Successfully uploaded chart to {file_path} in bucket {self.storage_bucket_name}")
+
+            # Get the public URL for the uploaded file
+            public_url = self.client.storage.from_(self.storage_bucket_name).get_public_url(file_path)
+            logger.info(f"Public URL for {analysis_id}: {public_url}")
+            
+            return public_url
         except Exception as e:
-            print(f"Error searching symbols: {e}")
-            return None
+            logger.error(f"Failed to upload chart image for analysis {analysis_id}: {e}")
+            # Depending on requirements, you might re-raise or return a default/error URL
+            raise HTTPException(status_code=500, detail="Failed to upload chart image.")
+    
+    async def get_analysis_record(self, analysis_id: str):
+        """Get a specific market analysis record by ID."""
+        try:
+            result = self.client.table(self.market_analysis_table).select("*").eq("id", analysis_id).execute()
+            
+            if result.data and len(result.data) > 0:
+                return result.data[0]
+            else:
+                raise HTTPException(status_code=404, detail="Analysis record not found")
+                
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error fetching market analysis record {analysis_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch analysis record")
+
+    async def get_user_analysis_records(self, user_id: str, limit: int = 50, offset: int = 0) -> List[dict]:
+        """Get all market analysis records for a user with pagination."""
+        try:
+            result = self.client.table(self.market_analysis_table)\
+                .select("*")\
+                .eq("user_id", user_id)\
+                .order("created_at", desc=True)\
+                .range(offset, offset + limit - 1)\
+                .execute()
+            
+            return result.data
+            
+        except Exception as e:
+            logger.error(f"Error fetching analysis records for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch analysis records")
+
+    async def delete_analysis_record(self, user_id: str, analysis_id: str):
+        """Delete a market analysis record (ensuring it belongs to the user)."""
+        try:
+            # First verify the record belongs to the user
+            verify_result = self.client.table(self.market_analysis_table)\
+                .select("id").eq("id", analysis_id).eq("user_id", user_id).execute()
+            
+            if not verify_result.data:
+                raise HTTPException(status_code=404, detail="Analysis record not found or access denied")
+            
+            # Delete the record
+            delete_result = self.client.table(self.market_analysis_table).delete().eq("id", analysis_id).execute()
+            
+            if not delete_result.data:
+                raise HTTPException(status_code=404, detail="Analysis record not found for deletion")
+            
+            logger.info(f"Deleted market analysis record {analysis_id} for user {user_id}")
+            
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Error deleting market analysis record {analysis_id} for user {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to delete analysis record")

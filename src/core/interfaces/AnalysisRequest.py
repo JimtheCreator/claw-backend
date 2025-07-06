@@ -12,3 +12,4 @@ class AnalysisRequest(BaseModel):
         if not re.match(r'^\d+[mhdwM]$', v):
             raise ValueError('Invalid timeframe format. Use format like "30m", "4h", "2d"')
         return v
+

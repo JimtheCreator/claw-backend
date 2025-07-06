@@ -59,25 +59,33 @@ class PatternInstance:
         """Convert to dictionary for API responses"""
         demand_interaction_processed = None
         if self.demand_zone_interaction is not None:
-            demand_interaction_processed = {
-                k: float(v) if isinstance(v, (float, np.floating)) else v
-                for k, v in self.demand_zone_interaction.items()
-            }
-            # REMOVED: demand_interaction = json.dumps(demand_interaction_processed)
-            # Now it will be a dictionary, not a string.
+            demand_interaction_processed = {}
+            for k, v in self.demand_zone_interaction.items():
+                if isinstance(v, (float, np.floating)):
+                    demand_interaction_processed[k] = float(v)
+                elif isinstance(v, (int, np.integer)):
+                    demand_interaction_processed[k] = int(v)
+                elif isinstance(v, (bool, np.bool_)):
+                    demand_interaction_processed[k] = bool(v)
+                elif isinstance(v, np.ndarray):
+                    demand_interaction_processed[k] = v.tolist()
+                else:
+                    demand_interaction_processed[k] = v
         
         supply_interaction_processed = None
         if self.supply_zone_interaction is not None:
-            supply_interaction_processed = {
-                k: float(v) if isinstance(v, (float, np.floating)) else v
-                for k, v in self.supply_zone_interaction.items()
-            }
-            # REMOVED: supply_interaction = json.dumps(supply_interaction_processed)
-            # Now it will be a dictionary, not a string.
-        
-        # If volume_confirmation_at_zone is now Optional[bool]
-        # The conversion to boolean is no longer needed here if it's already boolean or None.
-        # It can be directly used.
+            supply_interaction_processed = {}
+            for k, v in self.supply_zone_interaction.items():
+                if isinstance(v, (float, np.floating)):
+                    supply_interaction_processed[k] = float(v)
+                elif isinstance(v, (int, np.integer)):
+                    supply_interaction_processed[k] = int(v)
+                elif isinstance(v, (bool, np.bool_)):
+                    supply_interaction_processed[k] = bool(v)
+                elif isinstance(v, np.ndarray):
+                    supply_interaction_processed[k] = v.tolist()
+                else:
+                    supply_interaction_processed[k] = v
 
         return {
             "pattern": self.pattern_name,
@@ -114,6 +122,23 @@ class MarketContext:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses"""
+        def process_value(v):
+            """Helper function to process values for JSON serialization"""
+            if isinstance(v, (float, np.floating)):
+                return round(v, 4)
+            elif isinstance(v, (int, np.integer)):
+                return int(v)
+            elif isinstance(v, (bool, np.bool_)):
+                return bool(v)
+            elif isinstance(v, np.ndarray):
+                return v.tolist()
+            else:
+                return v
+        
+        def process_dict(d):
+            """Helper function to process dictionary values"""
+            return {k: process_value(v) for k, v in d.items()}
+        
         return {
             "scenario": self.scenario.value,
             "volatility": round(self.volatility, 2),
@@ -121,8 +146,8 @@ class MarketContext:
             "volume_profile": self.volume_profile,
             "support_levels": [round(s, 4) for s in self.support_levels][:3],
             "resistance_levels": [round(r, 4) for r in self.resistance_levels][:3],
-            "demand_zones": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in dz.items()} for dz in self.demand_zones[:3]], # Top 3 relevant
-            "supply_zones": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in sz.items()} for sz in self.supply_zones[:3]], # Top 3 relevant
+            "demand_zones": [process_dict(dz) for dz in self.demand_zones[:3]], # Top 3 relevant
+            "supply_zones": [process_dict(sz) for sz in self.supply_zones[:3]], # Top 3 relevant
             "context": {
                 "primary_pattern_type": self.context.get("primary_pattern_type", "unknown"),
                 "market_structure": self.context.get("market_structure", "unknown"),
@@ -169,8 +194,6 @@ class MarketAnalyzer:
 
     }
 
-
-
     # Helper mapping for confidence levels to descriptive terms
     CONFIDENCE_LEVELS = {
         0.8: "very high confidence",
@@ -184,8 +207,8 @@ class MarketAnalyzer:
     def __init__(
         self,
         interval: str,
-        window_sizes: List[int] = None,
-        min_pattern_length: int = 3,
+        window_sizes: Optional[List[int]] = None,
+        min_pattern_length: int = 1,
         overlap_threshold: float = 0.5,
         pattern_history_size: int = 20
     ):
@@ -208,7 +231,7 @@ class MarketAnalyzer:
         }
 
         """Initialize the analyzer with configuration parameters"""
-        self.window_sizes = window_sizes or [5, 10, 15, 20, 30, 50]  # Added more window sizes
+        self.window_sizes = window_sizes or [1, 2, 3, 5, 6, 7, 10, 12, 15, 20, 30, 50]  # Added smaller window sizes for short-candle patterns
         self.min_pattern_length = min_pattern_length
         self.overlap_threshold = overlap_threshold
         self.pattern_history = deque(maxlen=pattern_history_size)  # Store recent patterns
@@ -224,7 +247,7 @@ class MarketAnalyzer:
     async def analyze_market(
         self,
         ohlcv: Dict[str, List],
-        detect_patterns: List[str] = None
+        detect_patterns: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         try:
             df = self._prepare_dataframe(ohlcv)
@@ -357,7 +380,7 @@ class MarketAnalyzer:
         return df
 
     # In MarketAnalyzer class (main_analysis_structure.py)
-    def _calculate_atr(self, df: pd.DataFrame, period: int = None) -> pd.Series:
+    def _calculate_atr(self, df: pd.DataFrame, period: Optional[int] = None) -> pd.Series:
         """Calculate Average True Range with dynamic period"""
         # Determine period based on interval if not provided
         if period is None:
@@ -386,7 +409,7 @@ class MarketAnalyzer:
     async def _detect_patterns_with_windows(
         self,
         df: pd.DataFrame,
-        patterns_to_detect: List[str] = None
+        patterns_to_detect: Optional[List[str]] = None
     ) -> List[PatternInstance]:
         all_detected_patterns = []
         if not patterns_to_detect:
@@ -404,8 +427,6 @@ class MarketAnalyzer:
         # These are calculated once per analyze_market call.
         demand_zones = self.current_context.demand_zones if self.current_context else []
         supply_zones = self.current_context.supply_zones if self.current_context else []
-
-        
 
         for window_size in adaptive_window_sizes:
             if window_size > len(df) or window_size < self.min_pattern_length:
@@ -427,12 +448,139 @@ class MarketAnalyzer:
                 market_structure_local = self._detect_local_structure(window_data)
                 relevant_patterns = self._get_structure_relevant_patterns(market_structure_local, patterns_to_detect)
 
+                # NEW: Smart pattern selection to prevent conflicts
+                # Analyze the window data to determine which patterns are most likely
+                window_highs = window_data['high'].values
+                window_lows = window_data['low'].values
+                window_closes = window_data['close'].values
+                
+                # Calculate basic statistics to guide pattern selection
+                price_range = np.max(window_highs) - np.min(window_lows)
+                avg_price = np.mean(window_closes)
+                volatility = price_range / avg_price if avg_price > 0 else 0
+                
+                # Determine if this window is more suitable for bullish or bearish patterns
+                trend_direction = "neutral"
+                if len(window_closes) > 5:
+                    recent_trend = (window_closes[-1] - window_closes[0]) / window_closes[0]
+                    if recent_trend > 0.02:
+                        trend_direction = "bullish"
+                    elif recent_trend < -0.02:
+                        trend_direction = "bearish"
+                
+                # Filter patterns based on window characteristics
+                filtered_patterns = []
                 for pattern_name in relevant_patterns:
+                    # Only detect engulfing on 2-candle windows
+                    if pattern_name == "engulfing" and window_size != 2:
+                        continue
+                    
+                    # Single-candle patterns (1 candle required)
+                    single_candle_patterns = [
+                        "doji", "standard_doji", "gravestone_doji", "dragonfly_doji",
+                        "spinning_top", "marubozu", "bullish_marubozu", "bearish_marubozu"
+                    ]
+                    if pattern_name in single_candle_patterns and window_size != 1:
+                        continue
+                    
+                    # Two-candle patterns (2 candles required)
+                    two_candle_patterns = [
+                        "dark_cloud_cover", "piercing_pattern", "kicker", "bullish_kicker", "bearish_kicker",
+                        "harami", "bullish_harami", "bearish_harami", "bullish_harami_cross", "bearish_harami_cross",
+                        "tweezers_top", "tweezers_bottom"
+                    ]
+                    if pattern_name in two_candle_patterns and window_size != 2:
+                        continue
+                    
+                    # Three-candle patterns (3 candles required)
+                    three_candle_patterns = [
+                        "three_outside_up", "three_outside_down", "three_inside_up", "three_inside_down",
+                        "three_white_soldiers", "three_black_crows", "three_line_strike",
+                        "evening_star", "morning_star"
+                    ]
+                    if pattern_name in three_candle_patterns and window_size != 3:
+                        continue
+                    
+                    # Five-candle patterns (5 candles required)
+                    five_candle_patterns = [
+                        "hammer", "hanging_man", "inverted_hammer", "shooting_star", "bullish_shooting_star", "bearish_shooting_star",
+                        "abandoned_baby", "bullish_abandoned_baby", "bearish_abandoned_baby"
+                    ]
+                    if pattern_name in five_candle_patterns and window_size != 5:
+                        continue
+                    
+                    # Six-candle patterns (6 candles required)
+                    six_candle_patterns = [
+                        "hikkake", "bullish_hikkake", "bearish_hikkake", "mat_hold", "bullish_mat_hold", "bearish_mat_hold"
+                    ]
+                    if pattern_name in six_candle_patterns and window_size != 6:
+                        continue
+                    
+                    # Seven-candle patterns (7 candles required)
+                    seven_candle_patterns = [
+                        "rising_three_methods", "falling_three_methods"
+                    ]
+                    if pattern_name in seven_candle_patterns and window_size != 7:
+                        continue
+                    
+                    # Large patterns (20+ candles required)
+                    large_patterns = [
+                        "cup_and_handle", "cup_with_handle", "inverse_cup_and_handle"
+                    ]
+                    if pattern_name in large_patterns and window_size < 20:
+                        continue
+                    
+                    # Medium patterns (12+ candles required)
+                    medium_patterns = [
+                        "rectangle", "ascending_triangle", "descending_triangle", "symmetrical_triangle",
+                        "ascending_channel", "descending_channel", "horizontal_channel",
+                        "wedge_falling", "wedge_rising", "broadening_wedge"
+                    ]
+                    if pattern_name in medium_patterns and window_size < 12:
+                        continue
+                    
+                    # Flag/Pennant patterns (10+ candles required)
+                    flag_patterns = [
+                        "flag_bullish", "flag_bearish", "pennant", "bullish_pennant", "bearish_pennant"
+                    ]
+                    if pattern_name in flag_patterns and window_size < 10:
+                        continue
+                    
+                    # NEW: Smart filtering for double patterns to prevent conflicts
+                    if pattern_name in ["double_top", "double_bottom"]:
+                        # For double patterns, be more selective based on trend direction
+                        if trend_direction == "bullish" and pattern_name == "double_top":
+                            continue  # Skip bearish pattern in bullish trend
+                        elif trend_direction == "bearish" and pattern_name == "double_bottom":
+                            continue  # Skip bullish pattern in bearish trend
+                        
+                        # If we have both double_top and double_bottom in the same window,
+                        # prioritize based on the more prominent feature
+                        if "double_top" in relevant_patterns and "double_bottom" in relevant_patterns:
+                            # Check which feature is more prominent
+                            peaks = argrelextrema(window_highs, np.greater, order=2)[0]
+                            troughs = argrelextrema(window_lows, np.less, order=2)[0]
+                            
+                            if len(peaks) >= 2 and len(troughs) >= 2:
+                                # Calculate prominence of peaks vs troughs
+                                peak_prominence = np.std(window_highs[peaks[-2:]])
+                                trough_prominence = np.std(window_lows[troughs[-2:]])
+                                
+                                if pattern_name == "double_top" and trough_prominence > peak_prominence:
+                                    continue  # Skip double_top if troughs are more prominent
+                                elif pattern_name == "double_bottom" and peak_prominence > trough_prominence:
+                                    continue  # Skip double_bottom if peaks are more prominent
+                    
+                    filtered_patterns.append(pattern_name)
+                
+                # Now detect patterns using the filtered list
+                for pattern_name in filtered_patterns:
                     detector = PatternDetector()
                     detected, confidence, pattern_type = await detector.detect(pattern_name, window_ohlcv)
 
                     if detected and confidence > confidence_threshold:
-                        key_levels = detector.find_key_levels(window_ohlcv)
+                        # Pass pattern_type to find_key_levels for pattern-specific keys
+                        key_levels = detector.find_key_levels(window_ohlcv, pattern_type=pattern_type)
                         # Adjust key levels that are indices
                         adjusted_key_levels = {
                             k: (v + start_idx if isinstance(v, int) and 'idx' in k else v)
@@ -508,30 +656,29 @@ class MarketAnalyzer:
                             volume_ratio = avg_volume_in_window / baseline_volume
                             high_volume_candles = sum(1 for v in window_volumes if v > baseline_volume * 1.5)
                             zone_intersection = False
-                            # Check each candle in pattern window
                             for low, high in zip(window_lows, window_highs):
-                                if (dz['bottom'] <= high) and (dz['top'] >= low):
+                                if (sz['bottom'] <= high) and (sz['top'] >= low): # Correctly use 'sz'
                                     zone_intersection = True
                                     break
                             
                             if zone_intersection:
-                                pattern_instance.demand_zone_interaction = {
-                                    "type": "test_bounce_from_demand",
-                                    "zone_id": dz['id'],
-                                    "strength": dz['strength'],
-                                    "zone_bottom": dz['bottom'],
-                                    "zone_top": dz['top']
+                                pattern_instance.supply_zone_interaction = { # Correctly set 'supply_zone_interaction'
+                                    "type": "test_rejection_from_supply", # A more appropriate type for supply zones
+                                    "zone_id": sz['id'], # Correctly use 'sz'
+                                    "strength": sz['strength'], # Correctly use 'sz'
+                                    "zone_bottom": sz['bottom'], # Correctly use 'sz'
+                                    "zone_top": sz['top'] # Correctly use 'sz'
                                 }
 
-                            if "bearish" in pattern_name or "top" in pattern_name or "head_and_shoulder" == pattern_name and "inverse" not in pattern_name :
-                                pattern_instance.confidence = min(1.0, pattern_instance.confidence + (0.1 * sz['strength']))
-                            
-                            # Confirm if pattern volume is above average AND has spikes
-                            pattern_instance.volume_confirmation_at_zone = (
-                                volume_ratio > 1.2 and  # Whole pattern volume 20% above baseline
-                                high_volume_candles >= 2  # At least 2 standout spikes
-                            )
-                            break
+                                if "bearish" in pattern_name or "top" in pattern_name or "head_and_shoulder" == pattern_name and "inverse" not in pattern_name:
+                                    pattern_instance.confidence = min(1.0, pattern_instance.confidence + (0.1 * sz['strength']))
+                                
+                                # This is also where you should put your volume confirmation logic for supply zones
+                                pattern_instance.volume_confirmation_at_zone = (
+                                    volume_ratio > 1.2 and
+                                    high_volume_candles >= 2
+                                )
+                                break # Found interaction       
 
                         self._add_with_smart_redundancy_check(all_detected_patterns, pattern_instance)
 
@@ -557,21 +704,20 @@ class MarketAnalyzer:
         patterns.append(new_pattern)
 
     def _analyze_market_context(
-        self,
-        df: pd.DataFrame,
-        patterns: List[PatternInstance]
+    self,
+    df: pd.DataFrame,
+    patterns: List[PatternInstance]
     ) -> MarketContext:
         """Determine the current market context/scenario"""
         # Get the most recent data (last 20% of the dataframe)
         recent_data = df.iloc[-int(len(df)*0.2):].copy()
         trend_strength = self._calculate_trend_strength(df) # Existing method
-        
+
         # 1. Calculate volatility
         volatility_metric = self._calculate_volatility(recent_data)
-        
+
         # 3. Analyze volume profile
         volume_profile = self._analyze_volume_profile(recent_data)
-
 
         # 4. Find support and resistance levels
         support_levels = self._find_support_levels(df)
@@ -598,17 +744,28 @@ class MarketAnalyzer:
 
         current_price = df['close'].iloc[-1]
         demand_supply_summary = "N/A"
-        if demand_zones and supply_zones:
-            closest_dz = min(demand_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price > z['top'] else current_price - z['top']) if current_price > demand_zones[0]['top'] else demand_zones[0]
-            closest_sz = min(supply_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price < z['bottom'] else z['bottom'] - current_price) if current_price < supply_zones[0]['bottom'] else supply_zones[0]
-            demand_supply_summary = f"Nearest Demand: {closest_dz['bottom']:.2f}-{closest_dz['top']:.2f} (Str: {closest_dz['strength']}). Nearest Supply: {closest_sz['bottom']:.2f}-{closest_sz['top']:.2f} (Str: {closest_sz['strength']})."
-        elif demand_zones:
-            closest_dz = min(demand_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price > z['top'] else current_price - z['top']) if current_price > demand_zones[0]['top'] else demand_zones[0]
-            demand_supply_summary = f"Nearest Demand: {closest_dz['bottom']:.2f}-{closest_dz['top']:.2f} (Str: {closest_dz['strength']})."
-        elif supply_zones:
-            closest_sz = min(supply_zones, key=lambda z: abs(z['avg_price'] - current_price) if current_price < z['bottom'] else z['bottom'] - current_price) if current_price < supply_zones[0]['bottom'] else supply_zones[0]
-            demand_supply_summary = f"Nearest Supply: {closest_sz['bottom']:.2f}-{closest_sz['top']:.2f} (Str: {closest_sz['strength']})."
 
+        # --- START: Corrected Logic for Nearest Zone Selection ---
+
+        # Find the nearest demand zone (must be below the current price)
+        demand_zones_below = [z for z in demand_zones if z['top'] < current_price]
+        closest_dz = max(demand_zones_below, key=lambda z: z['top'], default=None)
+
+        # Find the nearest supply zone (must be above the current price)
+        supply_zones_above = [z for z in supply_zones if z['bottom'] > current_price]
+        closest_sz = min(supply_zones_above, key=lambda z: z['bottom'], default=None)
+
+        # Generate the summary string based on the correctly identified zones
+        summary_parts = []
+        if closest_dz:
+            summary_parts.append(f"Nearest Demand: {closest_dz['bottom']:.2f}-{closest_dz['top']:.2f} (Str: {closest_dz['strength']})")
+        if closest_sz:
+            summary_parts.append(f"Nearest Supply: {closest_sz['bottom']:.2f}-{closest_sz['top']:.2f} (Str: {closest_sz['strength']})")
+
+        if summary_parts:
+            demand_supply_summary = ". ".join(summary_parts) + "."
+
+        # --- END: Corrected Logic ---
 
         # Enhanced context determination
         context_details = {
@@ -792,59 +949,122 @@ class MarketAnalyzer:
         Add a pattern to the list with enhanced redundancy checks, prioritizing recent and high-confidence patterns.
         Handles cases where a smaller, higher-confidence pattern is found within a larger, lower-confidence one.
         """
+        # CRITICAL FIX: Check for identical patterns with different classifications first
+        for existing_pattern in patterns_list[:]:  # Copy for safe iteration
+            # Check if patterns have identical candle indexes but different names
+            if (existing_pattern.candle_indexes == new_pattern.candle_indexes and 
+                existing_pattern.pattern_name != new_pattern.pattern_name):
+                
+                # This is a critical issue - identical data classified as different patterns
+                logger.warning(f"CRITICAL: Identical patterns detected with different classifications!")
+                logger.warning(f"  Existing: {existing_pattern.pattern_name} (confidence: {existing_pattern.confidence})")
+                logger.warning(f"  New: {new_pattern.pattern_name} (confidence: {new_pattern.confidence})")
+                logger.warning(f"  Candle indexes: {existing_pattern.candle_indexes[:5]}...{existing_pattern.candle_indexes[-5:]}")
+                
+                # Keep the higher confidence pattern and log the conflict
+                if new_pattern.confidence > existing_pattern.confidence:
+                    try:
+                        patterns_list.remove(existing_pattern)
+                        patterns_list.append(new_pattern)
+                        logger.info(f"RESOLVED: Kept {new_pattern.pattern_name} over {existing_pattern.pattern_name} due to higher confidence")
+                    except ValueError:
+                        pass
+                else:
+                    logger.info(f"RESOLVED: Kept existing {existing_pattern.pattern_name} over {new_pattern.pattern_name} due to higher confidence")
+                return
+        
         # Check for overlapping patterns
         for existing_pattern in patterns_list[:]:  # Copy for safe iteration
             overlap_ratio = self._calculate_pattern_overlap(existing_pattern, new_pattern)
             same_pattern_type = existing_pattern.pattern_name == new_pattern.pattern_name
 
-            # Define a significant overlap threshold
-            significant_overlap_threshold = 0.6
+            # Define overlap thresholds - stricter for same pattern types
+            significant_overlap_threshold = 0.3  # 30% for different pattern types
+            same_pattern_overlap_threshold = 0.15  # 15% for same pattern types
+            
+            # Even stricter for double patterns which tend to overlap heavily
+            if same_pattern_type and new_pattern.pattern_name in ["double_top", "double_bottom", "triple_top", "triple_bottom"]:
+                same_pattern_overlap_threshold = 0.08  # 8% for double/triple patterns
+            
+            # Use appropriate threshold based on pattern type
+            threshold = same_pattern_overlap_threshold if same_pattern_type else significant_overlap_threshold
 
-            if overlap_ratio > significant_overlap_threshold:
+            if overlap_ratio > threshold:
                 if same_pattern_type:
-                    # If same pattern type and significant overlap, keep the one with higher confidence and recency
-                    # Assign a score based on confidence and how recent the pattern ends
-                    existing_score = existing_pattern.confidence * (1 + existing_pattern.end_idx / len(patterns_list)) # Simple recency weighting
-                    new_score = new_pattern.confidence * (1 + new_pattern.end_idx / len(patterns_list))
-
+                    # For same pattern type, prioritize QUALITY over SIZE
+                    new_pattern_size = new_pattern.end_idx - new_pattern.start_idx
+                    existing_pattern_size = existing_pattern.end_idx - existing_pattern.start_idx
+                    
+                    # NEW: Better scoring system that prioritizes quality over quantity
+                    # Score = confidence * (1 + size_bonus) * recency_factor
+                    # Size bonus: diminishing returns for larger patterns
+                    # Recency factor: slight preference for more recent patterns
+                    
+                    # Size bonus with diminishing returns (logarithmic)
+                    new_size_bonus = min(0.5, np.log(new_pattern_size + 1) * 0.1)
+                    existing_size_bonus = min(0.5, np.log(existing_pattern_size + 1) * 0.1)
+                    
+                    # Recency factor (slight preference for recent patterns)
+                    new_recency_factor = 1.0 + (new_pattern.end_idx / 10000) * 0.1
+                    existing_recency_factor = 1.0 + (existing_pattern.end_idx / 10000) * 0.1
+                    
+                    # Calculate quality-focused scores
+                    new_score = new_pattern.confidence * (1 + new_size_bonus) * new_recency_factor
+                    existing_score = existing_pattern.confidence * (1 + existing_size_bonus) * existing_recency_factor
+                    
                     if new_score > existing_score:
                         try:
                             patterns_list.remove(existing_pattern)
                             patterns_list.append(new_pattern)
+                            logger.info(f"OVERLAP FIXED: Replaced {existing_pattern.pattern_name} (score: {existing_score:.3f}) with {new_pattern.pattern_name} (score: {new_score:.3f}) - overlap: {overlap_ratio:.1%}")
                         except ValueError:
-                            # Handle case where existing_pattern was already removed
                             pass
-                        return # New pattern replaced the existing one
+                        return
                     else:
-                        return # Existing pattern is better or equal, so discard new one
+                        logger.info(f"OVERLAP KEPT: Kept existing {existing_pattern.pattern_name} (score: {existing_score:.3f}), rejected new {new_pattern.pattern_name} (score: {new_score:.3f}) - overlap: {overlap_ratio:.1%}")
+                        return  # Keep existing pattern if it's better
 
                 # Handle conflicting patterns (e.g., bullish and bearish in same area)
                 if self._are_conflicting_patterns(existing_pattern, new_pattern):
-                     # Keep the pattern with significantly higher confidence
+                    logger.warning(f"CONFLICTING PATTERNS: {existing_pattern.pattern_name} vs {new_pattern.pattern_name} with {overlap_ratio:.1%} overlap")
+                    
+                    # Keep the pattern with significantly higher confidence
                     confidence_diff = abs(new_pattern.confidence - existing_pattern.confidence)
-                    if confidence_diff > 0.15: # Require a notable difference in confidence
+                    if confidence_diff > 0.15:
                         if new_pattern.confidence > existing_pattern.confidence:
                             try:
                                 patterns_list.remove(existing_pattern)
                             except ValueError:
                                 pass
                             patterns_list.append(new_pattern)
-                            return # New pattern replaced the conflicting one
+                            logger.info(f"RESOLVED: Kept {new_pattern.pattern_name} over {existing_pattern.pattern_name} due to higher confidence")
+                            return
                         else:
-                             return # Existing conflicting pattern has higher or similar confidence
+                            logger.info(f"RESOLVED: Kept existing {existing_pattern.pattern_name} over {new_pattern.pattern_name} due to higher confidence")
+                            return
+                    else:
+                        # If confidence is similar, be more restrictive about overlaps
+                        if overlap_ratio > 0.5:  # High overlap threshold for conflicting patterns
+                            logger.info(f"REJECTED: High overlap conflicting patterns with similar confidence - keeping existing")
+                            return
 
-                # If patterns overlap but are different and not conflicting, keep both (they might be related signals)
-                # Unless one is a smaller pattern fully contained within a larger, less certain one
-                if (new_pattern.start_idx >= existing_pattern.start_idx and
-                    new_pattern.end_idx <= existing_pattern.end_idx and
-                    new_pattern.confidence > existing_pattern.confidence + 0.1): # Smaller, higher confidence within larger, lower confidence
+                # For overlapping but different patterns, be more restrictive
+                # Only keep if they're significantly different in time or type
+                time_overlap = min(new_pattern.end_idx, existing_pattern.end_idx) - max(new_pattern.start_idx, existing_pattern.start_idx)
+                time_separation = abs(new_pattern.start_idx - existing_pattern.start_idx) + abs(new_pattern.end_idx - existing_pattern.end_idx)
+                
+                # Stricter time-based filtering for overlapping patterns
+                if time_overlap > 0 and time_separation < 8:  # Increased from 5 for stricter time separation
+                    # Keep the higher confidence one with larger margin
+                    if new_pattern.confidence > existing_pattern.confidence + 0.15:  # Increased from 0.1
                         try:
                             patterns_list.remove(existing_pattern)
                         except ValueError:
                             pass
                         patterns_list.append(new_pattern)
-                        return # New pattern replaced the less certain larger one
-
+                        return
+                    else:
+                        return  # Keep existing pattern
 
         # If we reach here, pattern is not redundant or replaced an existing one
         patterns_list.append(new_pattern)
@@ -852,8 +1072,8 @@ class MarketAnalyzer:
         # Sort patterns by confidence (highest first) and then recency
         patterns_list.sort(key=lambda p: (p.confidence, p.end_idx), reverse=True)
 
-        # Limit list size to avoid excessive patterns - increased limit slightly
-        max_patterns = 15
+        # Reduce max patterns to avoid clutter
+        max_patterns = 8  # Further reduced from 10 to minimize clutter
         if len(patterns_list) > max_patterns:
             patterns_list[:] = patterns_list[:max_patterns]
 
@@ -2359,7 +2579,6 @@ class MarketAnalyzer:
     # Helper method in MarketAnalyzer (optional, for populating existing support_levels)
     def _extract_levels_from_zones(self, zones: List[Dict[str, float]], key: str) -> List[float]:
         return sorted([zone[key] for zone in zones if key in zone])[:3]
-
 
 # === Extended pattern API ===
 class PatternAPI:

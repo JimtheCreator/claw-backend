@@ -2,19 +2,13 @@
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
-from typing import Tuple, Dict, List, Optional, Any, Union
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
-from collections import deque
-import asyncio
+from typing import Tuple, Dict, List, Any, Optional, Callable
 from common.logger import logger
-from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 
 # === Pattern Registry (Enhanced) ===
 _pattern_registry: Dict[str, Dict[str, Any]] = {}
 
-def register_pattern(name: str, types: List[str] = None) -> callable:
+def register_pattern(name: str, types: Optional[List[str]] = None) -> Callable:
     """
     Decorator to register pattern detection functions.
     
@@ -24,7 +18,7 @@ def register_pattern(name: str, types: List[str] = None) -> callable:
                                      that the function can return. If None, the 
                                      'name' is used as the single type.
     """
-    def decorator(func: callable) -> callable:
+    def decorator(func: Callable) -> Callable:
         # If no specific types are provided, assume the type is the pattern's name
         pattern_types = types if types is not None else [name]
         _pattern_registry[name] = {"function": func, "types": pattern_types}
@@ -35,6 +29,7 @@ class PatternDetector:
     def __init__(self):
         """Initialize with any required technical indicators"""
         self.min_swings = 3  # Configurable parameter
+        self._pattern_key_levels = {}  # Store pattern-specific key levels
     
     async def detect(self, pattern_name: str, ohlcv: dict) -> Tuple[bool, float, str]:
         if pattern_name not in _pattern_registry:
@@ -49,59 +44,112 @@ class PatternDetector:
     @register_pattern("rectangle", types=["rectangle"])
     async def _detect_rectangle(self, ohlcv: dict) -> Tuple[bool, float, str]:
         """
-        Detect rectangle patterns (consolidation zones)
+        Improved rectangle pattern detection (consolidation zones):
+        - Requires at least 4 clear touches on both support and resistance
+        - Ensures price stays within a tight range for most of the window
+        - Rejects if there is a clear slope (trend) or triangle-like convergence
+        - Uses regression to check for flatness of top/bottom bands
+        - More strict criteria to reduce false positives
         """
         try:
             pattern_type = "rectangle"
             highs = np.array(ohlcv['high'])
             lows = np.array(ohlcv['low'])
-            
-            # Define thresholds for rectangle detection
-            min_width = 5  # Minimum number of candles
-            max_height_pct = 0.05  # Maximum height as percentage of price
+            closes = np.array(ohlcv['close'])
+            min_width = 12  # Increased minimum candles for reliability
+            max_height_pct = 0.035  # Tighter range (reduced from 0.045)
+            min_touches = 4  # Increased from 3 to 4
+            min_touch_quality = 0.8  # New: minimum quality for touches
             
             if len(highs) < min_width:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
-            # Find the high and low bands
-            top_band = np.percentile(highs, 90)
-            bottom_band = np.percentile(lows, 10)
+            # Find bands using more conservative percentiles
+            top_band = float(np.percentile(highs, 90))  # Reduced from 92
+            bottom_band = float(np.percentile(lows, 10))  # Increased from 8
+            avg_price = (top_band + bottom_band) / 2.0
             
-            # Calculate height as percentage of average price
-            avg_price = (top_band + bottom_band) / 2
+            # Check for division by zero
+            if avg_price == 0:
+                return False, 0.0, ""
+                
             height_pct = (top_band - bottom_band) / avg_price
             
-            # Check if height percentage is within bounds
             if height_pct > max_height_pct:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
-            # Count touches of each band (with tolerance)
-            touch_tolerance = (top_band - bottom_band) * 0.2
-            top_touches = sum(1 for h in highs if h > top_band - touch_tolerance)
-            bottom_touches = sum(1 for l in lows if l < bottom_band + touch_tolerance)
+            # Stricter flatness check: regression slope of highs/lows should be very near zero
+            x = np.arange(len(highs))
+            high_slope = float(np.polyfit(x, highs, 1)[0])
+            low_slope = float(np.polyfit(x, lows, 1)[0])
             
-            # Need at least 2 touches on each band
-            if top_touches < 2 or bottom_touches < 2:
-                return False, 0.0, ""  # ✅ Three values returned
+            # Reduced tolerance for slope
+            if abs(high_slope/avg_price) > 0.0005 or abs(low_slope/avg_price) > 0.0005:
+                return False, 0.0, ""  # Too much slope, likely a channel/triangle
                 
-            # Calculate confidence based on number of touches and consistency
-            confidence = 0.5
-            confidence += min(0.2, 0.05 * (top_touches + bottom_touches))
+            # Improved touch detection with quality scoring
+            touch_tol = (top_band - bottom_band) * 0.15  # Reduced from 0.18
+            top_touches = 0
+            bot_touches = 0
+            top_touch_quality = 0
+            bot_touch_quality = 0
             
-            # Higher confidence for tighter rectangles
-            if height_pct < max_height_pct / 2:
-                confidence += 0.1
+            for h in highs:
+                if h > top_band - touch_tol:
+                    top_touches += 1
+                    # Quality: closer to band = higher quality
+                    quality = 1 - (h - (top_band - touch_tol)) / touch_tol
+                    top_touch_quality += quality
+                    
+            for l in lows:
+                if l < bottom_band + touch_tol:
+                    bot_touches += 1
+                    # Quality: closer to band = higher quality
+                    quality = 1 - ((bottom_band + touch_tol) - l) / touch_tol
+                    bot_touch_quality += quality
+            
+            if top_touches < min_touches or bot_touches < min_touches:
+                return False, 0.0, ""
                 
-            # Higher confidence for more price points staying within the bands
-            points_within = sum(1 for i in range(len(highs)) if highs[i] <= top_band and lows[i] >= bottom_band)
-            pct_within = points_within / len(highs)
-            confidence += pct_within * 0.2
+            # Check touch quality
+            avg_top_quality = top_touch_quality / top_touches if top_touches > 0 else 0
+            avg_bot_quality = bot_touch_quality / bot_touches if bot_touches > 0 else 0
             
-            return True, round(confidence, 2), pattern_type
+            if avg_top_quality < min_touch_quality or avg_bot_quality < min_touch_quality:
+                return False, 0.0, ""
+                
+            # Most closes should be inside the bands (increased requirement)
+            closes_within = sum(1 for c in closes if bottom_band <= c <= top_band)
+            if closes_within / float(len(closes)) < 0.8:  # Increased from 0.7
+                return False, 0.0, ""
+                
+            # Check for price distribution - should be relatively uniform within bands
+            price_distribution = np.histogram(closes, bins=5)[0]
+            if max(price_distribution) / sum(price_distribution) > 0.4:  # Not too concentrated
+                return False, 0.0, ""
+                
+            # Confidence calculation with stricter criteria
+            confidence = 0.5  # Reduced base confidence
+            confidence += min(0.15, 0.03 * float(top_touches + bot_touches - 2*min_touches))
+            confidence += max(0.0, 0.1 - height_pct*3)  # Stricter height penalty
+            confidence += (closes_within / float(len(closes))) * 0.1
+            confidence += (avg_top_quality + avg_bot_quality) * 0.1  # Touch quality bonus
+            
+            # Store rectangle-specific key levels for plotting
+            self._pattern_key_levels = {
+                'rectangle_top': top_band,
+                'rectangle_bottom': bottom_band,
+                'rectangle_height': top_band - bottom_band,
+                'top_touches': top_touches,
+                'bottom_touches': bot_touches,
+                'touch_quality': (avg_top_quality + avg_bot_quality) / 2
+            }
+            
+            return True, round(min(confidence, 0.95), 2), pattern_type
             
         except Exception as e:
             logger.error(f"Rectangle detection error: {str(e)}")
-            return False, 0.0, ""  # ✅ Three values returned
+            return False, 0.0, ""
 
     @register_pattern("engulfing", types=["bullish_engulfing", "bearish_engulfing"])
     async def _detect_engulfing(self, ohlcv: dict) -> Tuple[bool, float, str]:
@@ -271,6 +319,11 @@ class PatternDetector:
             pennant_start_height = consolidation_highs[0] - consolidation_lows[0]
             pennant_end_height = consolidation_highs[-1] - consolidation_lows[-1]
             avg_price = np.mean(closes[consolidation_start:consolidation_end+1])
+            
+            # Check for division by zero
+            if avg_price == 0:
+                return False, 0.0, ""
+                
             pennant_height_pct = max(pennant_start_height, pennant_end_height) / avg_price
             
             # Pennant should be smaller than the specified threshold
@@ -362,7 +415,7 @@ class PatternDetector:
             std_swing = np.std(swing_changes)
             
             # Confidence based on swing consistency
-            confidence = min(1.0, avg_swing/(std_swing + 1e-9)) * 0.5
+            confidence = min(1.0, float(avg_swing/(std_swing + 1e-9))) * 0.5
             confidence += 0.3 if len(valid_swings) >= 5 else 0
             confidence += 0.2 if deviation_pct >= 2 else 0
             
@@ -424,6 +477,29 @@ class PatternDetector:
                 
                 # Adjust confidence based on R-squared
                 confidence *= (r_squared_peak + r_squared_trough) / 2
+            
+            # Store triangle-specific key levels for plotting
+            self._pattern_key_levels = {
+                'triangle_type': triangle_type,
+                'peak_slope': float(peak_slope),
+                'trough_slope': float(trough_slope),
+                'peak_points': [(float(x), float(y)) for x, y in zip(recent_peaks, highs[recent_peaks])],
+                'trough_points': [(float(x), float(y)) for x, y in zip(recent_troughs, lows[recent_troughs])],
+                'resistance_line': {
+                    'start_idx': float(recent_peaks[0]),
+                    'start_price': float(highs[recent_peaks[0]]),
+                    'end_idx': float(recent_peaks[-1]),
+                    'end_price': float(highs[recent_peaks[-1]]),
+                    'slope': float(peak_slope)
+                },
+                'support_line': {
+                    'start_idx': float(recent_troughs[0]),
+                    'start_price': float(lows[recent_troughs[0]]),
+                    'end_idx': float(recent_troughs[-1]),
+                    'end_price': float(lows[recent_troughs[-1]]),
+                    'slope': float(trough_slope)
+                }
+            }
             
             return True, round(confidence, 2), triangle_type
             
@@ -530,6 +606,7 @@ class PatternDetector:
         """
         try:
             highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
             closes = np.array(ohlcv['close'])
             pattern_type = "double_top"
             
@@ -538,7 +615,7 @@ class PatternDetector:
             
             # Need at least 2 peaks
             if len(peaks) < 2:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             # Look at last two peaks
             last_peaks = peaks[-2:]
@@ -547,20 +624,38 @@ class PatternDetector:
             # Check if peaks are within 3% of each other
             diff_pct = abs(peak_heights[0] - peak_heights[1]) / peak_heights[0]
             if diff_pct > 0.03:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             # Check for valley between peaks
             valley_idx = np.argmin(closes[last_peaks[0]:last_peaks[1]])
             valley_idx += last_peaks[0]  # Adjust index to full array
             
             if valley_idx == last_peaks[0] or valley_idx == last_peaks[1]:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             valley_value = closes[valley_idx]
             
             # Valley should be noticeably lower than peaks
             if (peak_heights[0] - valley_value) / peak_heights[0] < 0.02:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
+            
+            # NEW: Check if this is actually a double bottom pattern instead
+            # If the lows are more prominent than the highs, this might be a double bottom
+            troughs = argrelextrema(lows, np.less, order=2)[0]
+            if len(troughs) >= 2:
+                last_troughs = troughs[-2:]
+                trough_depths = lows[last_troughs]
+                trough_diff_pct = abs(trough_depths[0] - trough_depths[1]) / trough_depths[0]
+                
+                # If troughs are more prominent (closer together) than peaks, this is likely a double bottom
+                if trough_diff_pct < diff_pct and trough_diff_pct < 0.025:
+                    return False, 0.0, ""
+            
+            # NEW: Ensure the pattern is actually bearish by checking the overall trend
+            # Calculate the trend from the first peak to the end
+            trend_from_first_peak = (closes[-1] - closes[last_peaks[0]]) / closes[last_peaks[0]]
+            if trend_from_first_peak > 0.01:  # If price is higher than first peak, this might not be a bearish pattern
+                return False, 0.0, ""
                 
             # Success - calculate confidence
             confidence = 0.6
@@ -578,12 +673,16 @@ class PatternDetector:
             peak_separation = last_peaks[1] - last_peaks[0]
             if peak_separation > 5:
                 confidence += 0.1
+            
+            # NEW: Higher confidence if the pattern shows clear bearish momentum
+            if trend_from_first_peak < -0.02:
+                confidence += 0.1
                 
             return True, round(confidence, 2), pattern_type
             
         except Exception as e:
             logger.error(f"Double top detection error: {str(e)}")
-            return False, 0.0, ""  # ✅ Three values returned
+            return False, 0.0, ""
 
     @register_pattern("double_bottom", types=["double_bottom"])
     async def _detect_double_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
@@ -591,6 +690,7 @@ class PatternDetector:
         Detect double bottom patterns (bullish)
         """
         try:
+            highs = np.array(ohlcv['high'])
             lows = np.array(ohlcv['low'])
             closes = np.array(ohlcv['close'])
             pattern_type = "double_bottom"
@@ -600,7 +700,7 @@ class PatternDetector:
             
             # Need at least 2 troughs
             if len(troughs) < 2:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             # Look at last two troughs
             last_troughs = troughs[-2:]
@@ -609,20 +709,38 @@ class PatternDetector:
             # Check if troughs are within 3% of each other
             diff_pct = abs(trough_depths[0] - trough_depths[1]) / trough_depths[0]
             if diff_pct > 0.03:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             # Check for peak between troughs
             peak_idx = np.argmax(closes[last_troughs[0]:last_troughs[1]])
             peak_idx += last_troughs[0]  # Adjust index to full array
             
             if peak_idx == last_troughs[0] or peak_idx == last_troughs[1]:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
                 
             peak_value = closes[peak_idx]
             
             # Peak should be noticeably higher than troughs
             if (peak_value - trough_depths[0]) / trough_depths[0] < 0.02:
-                return False, 0.0, ""  # ✅ Three values returned
+                return False, 0.0, ""
+            
+            # NEW: Check if this is actually a double top pattern instead
+            # If the highs are more prominent than the lows, this might be a double top
+            peaks = argrelextrema(highs, np.greater, order=2)[0]
+            if len(peaks) >= 2:
+                last_peaks = peaks[-2:]
+                peak_heights = highs[last_peaks]
+                peak_diff_pct = abs(peak_heights[0] - peak_heights[1]) / peak_heights[0]
+                
+                # If peaks are more prominent (closer together) than troughs, this is likely a double top
+                if peak_diff_pct < diff_pct and peak_diff_pct < 0.025:
+                    return False, 0.0, ""
+            
+            # NEW: Ensure the pattern is actually bullish by checking the overall trend
+            # Calculate the trend from the first trough to the end
+            trend_from_first_trough = (closes[-1] - closes[last_troughs[0]]) / closes[last_troughs[0]]
+            if trend_from_first_trough < -0.01:  # If price is lower than first trough, this might not be a bullish pattern
+                return False, 0.0, ""
                 
             # Success - calculate confidence
             confidence = 0.6
@@ -640,12 +758,16 @@ class PatternDetector:
             trough_separation = last_troughs[1] - last_troughs[0]
             if trough_separation > 5:
                 confidence += 0.1
+            
+            # NEW: Higher confidence if the pattern shows clear bullish momentum
+            if trend_from_first_trough > 0.02:
+                confidence += 0.1
                 
             return True, round(confidence, 2), pattern_type
             
         except Exception as e:
             logger.error(f"Double bottom detection error: {str(e)}")
-            return False, 0.0, ""  # ✅ Three values returned
+            return False, 0.0, ""
             
     # New pattern detection methods to be added to the PatternDetector class
     @register_pattern("triple_top", types=["triple_top"])
@@ -1182,6 +1304,7 @@ class PatternDetector:
         """
         Detect doji candlestick patterns (indecision, potential reversal)
         Doji have almost equal open and close prices with significant wicks
+        Enhanced with stricter criteria to reduce overlapping detections
         """
         try:
             opens = np.array(ohlcv['open'])
@@ -1210,8 +1333,8 @@ class PatternDetector:
             # Doji has very small body compared to range
             body_ratio = body / candle_range
             
-            # Typical doji has body less than 10% of total range
-            if body_ratio > 0.1:
+            # Stricter doji criteria: body should be less than 5% of total range (reduced from 10%)
+            if body_ratio > 0.05:
                 return False, 0.0, ""  # ✅ Three values returned
             
             # Calculate upper and lower shadows
@@ -1222,23 +1345,38 @@ class PatternDetector:
                 upper_shadow = curr_high - curr_open
                 lower_shadow = curr_close - curr_low
             
-            # Calculate confidence based on doji quality
-            confidence = 0.6
-            
-            # Higher confidence for smaller body ratio
-            if body_ratio < 0.05:
-                confidence += 0.1
-            
-            # Higher confidence for significant shadows on both sides
+            # Calculate shadow ratios
             upper_shadow_ratio = upper_shadow / candle_range
             lower_shadow_ratio = lower_shadow / candle_range
             
+            # Stricter shadow requirements: at least one shadow should be significant
+            if upper_shadow_ratio < 0.2 and lower_shadow_ratio < 0.2:
+                return False, 0.0, ""  # Both shadows too small
+            
+            # Calculate confidence based on doji quality
+            confidence = 0.5  # Reduced base confidence from 0.6
+            
+            # Higher confidence for smaller body ratio
+            if body_ratio < 0.02:  # Very small body
+                confidence += 0.15
+            elif body_ratio < 0.03:  # Small body
+                confidence += 0.1
+            
+            # Higher confidence for significant shadows on both sides
             if upper_shadow_ratio > 0.3 and lower_shadow_ratio > 0.3:
-                confidence += 0.1  # Balanced shadows (more reliable signal)
+                confidence += 0.15  # Balanced shadows (more reliable signal)
+            elif upper_shadow_ratio > 0.4 or lower_shadow_ratio > 0.4:
+                confidence += 0.1  # One very long shadow
             
             # Long-legged doji (very large shadows) are stronger signals
-            if upper_shadow_ratio + lower_shadow_ratio > 0.8:
+            if upper_shadow_ratio + lower_shadow_ratio > 0.85:
                 confidence += 0.1
+            
+            # Check for context: doji should be significant relative to recent price action
+            if len(opens) >= 5:
+                recent_avg_range = np.mean([highs[i] - lows[i] for i in range(-5, 0)])
+                if candle_range < recent_avg_range * 0.5:
+                    confidence -= 0.1  # Penalty for small range relative to recent action
             
             # Classify doji subtypes for context
             subtype = "standard_doji"
@@ -1247,8 +1385,20 @@ class PatternDetector:
             elif lower_shadow_ratio > 0.65 and upper_shadow_ratio < 0.2:
                 subtype = "dragonfly_doji"  # bullish after downtrend
             
-            # Log the detected subtype
-            logger.info(f"Detected {subtype} pattern")
+            # Additional quality check: ensure the doji is not just noise
+            # Check if the body is significantly smaller than recent average body sizes
+            if len(opens) >= 3:
+                recent_bodies = [abs(closes[i] - opens[i]) for i in range(-3, 0)]
+                avg_recent_body = float(np.mean(recent_bodies))
+                if body > avg_recent_body * 0.3:  # Body should be much smaller than recent average
+                    confidence -= 0.1
+            
+            # Cap confidence at 0.9 to avoid overconfidence
+            confidence = min(confidence, 0.9)
+            
+            # Only return true if confidence is above threshold
+            if confidence < 0.6:
+                return False, 0.0, ""
             
             return True, round(confidence, 2), subtype
             
@@ -1658,6 +1808,9 @@ class PatternDetector:
                 return False, 0.0, ""  # ✅ Three values returned
             
             # Channel width should be reasonable (not too narrow or wide)
+            if avg_price == 0:
+                return False, 0.0, ""
+                
             width_percent = channel_width / avg_price
             if width_percent < 0.01 or width_percent > 0.2:
                 return False, 0.0, ""  # ✅ Three values returned
@@ -3342,11 +3495,674 @@ class PatternDetector:
             logger.error(f"Three Black Crows detection error: {str(e)}")
             return False, 0.0, ""
 
-    def find_key_levels(self, ohlcv: dict) -> Dict[str, float]:
-        """Find key price levels from detected patterns and swing points"""
+    @register_pattern("diamond_top", types=["diamond_top"])
+    async def _detect_diamond_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects a diamond top reversal pattern (rare, but powerful).
+        Looks for a broadening then narrowing of price range at a high.
+        """
+        try:
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            n = len(highs)
+            if n < 10:
+                return False, 0.0, ""
+            mid = n // 2
+            left_range = float(highs[:mid].max() - lows[:mid].min())
+            right_range = float(highs[mid:].max() - lows[mid:].min())
+            # Broadening then narrowing
+            if left_range < right_range * 0.8:
+                return False, 0.0, ""
+            if right_range > left_range * 0.7:
+                return False, 0.0, ""
+            # Peak near the middle
+            peak_idx = int(np.argmax(highs))
+            if abs(peak_idx - mid) > n//4:
+                return False, 0.0, ""
+            confidence = 0.7
+            return True, confidence, "diamond_top"
+        except Exception as e:
+            logger.error(f"Diamond top detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("bump_and_run", types=["bump_and_run"])
+    async def _detect_bump_and_run(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the bump-and-run reversal (BARR) pattern.
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 12:
+                return False, 0.0, ""
+            # Identify lead-in trend (first 1/3)
+            lead_slope = float(np.polyfit(np.arange(n//3), closes[:n//3], 1)[0])
+            # Bump: sharp move
+            bump_slope = float(np.polyfit(np.arange(n//3, 2*n//3), closes[n//3:2*n//3], 1)[0])
+            # Run: reversal
+            run_slope = float(np.polyfit(np.arange(2*n//3, n), closes[2*n//3:], 1)[0])
+            if abs(lead_slope) < 0.001:
+                return False, 0.0, ""
+            if abs(bump_slope) < abs(lead_slope)*2:
+                return False, 0.0, ""
+            if np.sign(run_slope) == np.sign(bump_slope):
+                return False, 0.0, ""
+            confidence = 0.65
+            return True, confidence, "bump_and_run"
+        except Exception as e:
+            logger.error(f"Bump and run detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("cup_with_handle", types=["cup_with_handle"])
+    async def _detect_cup_with_handle(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the cup-with-handle pattern (variation of cup and handle, with a shallower handle).
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 10:
+                return False, 0.0, ""
+            mid = n // 2
+            left = closes[:mid]
+            right = closes[mid:]
+            # Cup: U-shape
+            if closes[0] < float(left.min()) or closes[-1] < float(right.min()):
+                return False, 0.0, ""
+            if abs(float(left.min()) - float(right.min())) > 0.03 * float(closes.mean()):
+                return False, 0.0, ""
+            # Handle: right side, shallow dip
+            handle = right[-(n//5):]
+            if float(handle.min()) > float(right.min()) or float(handle.max()) < float(right.max()):
+                return False, 0.0, ""
+            confidence = 0.68
+            return True, confidence, "cup_with_handle"
+        except Exception as e:
+            logger.error(f"Cup with handle detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("inverse_cup_and_handle", types=["inverse_cup_and_handle"])
+    async def _detect_inverse_cup_and_handle(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the inverse cup and handle (bearish reversal).
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 10:
+                return False, 0.0, ""
+            mid = n // 2
+            left = closes[:mid]
+            right = closes[mid:]
+            # Inverse cup: n-shape
+            if closes[0] > float(left.max()) or closes[-1] > float(right.max()):
+                return False, 0.0, ""
+            if abs(float(left.max()) - float(right.max())) > 0.03 * float(closes.mean()):
+                return False, 0.0, ""
+            # Handle: right side, shallow bounce
+            handle = right[-(n//5):]
+            if float(handle.max()) < float(right.max()) or float(handle.min()) > float(right.min()):
+                return False, 0.0, ""
+            confidence = 0.68
+            return True, confidence, "inverse_cup_and_handle"
+        except Exception as e:
+            logger.error(f"Inverse cup and handle detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("horn_top", types=["horn_top"])
+    async def _detect_horn_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the rare "horn top" pattern (double spike at the top, with a dip between).
+        """
+        try:
+            highs = np.array(ohlcv['high'])
+            n = len(highs)
+            if n < 7:
+                return False, 0.0, ""
+            # Find two peaks separated by a dip
+            peak1 = int(np.argmax(highs[:n//2]))
+            peak2 = int(np.argmax(highs[n//2:])) + n//2
+            if abs(peak1 - peak2) < 2:
+                return False, 0.0, ""
+            dip = highs[min(peak1, peak2)+1:max(peak1, peak2)]
+            # Fix: avoid numpy float in min()
+            min_peak = float(highs[peak1]) if float(highs[peak1]) < float(highs[peak2]) else float(highs[peak2])
+            if len(dip) == 0 or float(dip.min()) > min_peak * 0.98:
+                return False, 0.0, ""
+            confidence = 0.66
+            return True, confidence, "horn_top"
+        except Exception as e:
+            logger.error(f"Horn top detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("broadening_wedge", types=["broadening_wedge"])
+    async def _detect_broadening_wedge(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects a broadening wedge (megaphone) pattern: higher highs and lower lows.
+        """
+        try:
+            highs = np.array(ohlcv['high'])
+            lows = np.array(ohlcv['low'])
+            n = len(highs)
+            if n < 8:
+                return False, 0.0, ""
+            # Check for higher highs and lower lows
+            first_half_high = float(highs[:n//2].max())
+            second_half_high = float(highs[n//2:].max())
+            first_half_low = float(lows[:n//2].min())
+            second_half_low = float(lows[n//2:].min())
+            if second_half_high <= first_half_high or second_half_low >= first_half_low:
+                return False, 0.0, ""
+            confidence = 0.65
+            return True, confidence, "broadening_wedge"
+        except Exception as e:
+            logger.error(f"Broadening wedge detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("pipe_bottom", types=["pipe_bottom"])
+    async def _detect_pipe_bottom(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects a pipe bottom: two sharp lows at the bottom, often a reversal.
+        """
+        try:
+            lows = np.array(ohlcv['low'])
+            n = len(lows)
+            if n < 6:
+                return False, 0.0, ""
+            min1 = int(np.argmin(lows[:n//2]))
+            min2 = int(np.argmin(lows[n//2:])) + n//2
+            if abs(min1 - min2) < 1:
+                return False, 0.0, ""
+            # Fix: ensure both arguments to min() are float
+            if abs(float(lows[min1]) - float(lows[min2])) > 0.01 * float(lows.mean()):
+                return False, 0.0, ""
+            confidence = 0.64
+            return True, confidence, "pipe_bottom"
+        except Exception as e:
+            logger.error(f"Pipe bottom detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("catapult", types=["catapult"])
+    async def _detect_catapult(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the catapult pattern: a breakout, pullback, and then a new high.
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 7:
+                return False, 0.0, ""
+            # Look for breakout, pullback, new high
+            breakout = closes[n//3]
+            pullback = closes[2*n//3]
+            if pullback < breakout * 0.98:
+                return False, 0.0, ""
+            if closes[-1] <= breakout:
+                return False, 0.0, ""
+            confidence = 0.67
+            return True, confidence, "catapult"
+        except Exception as e:
+            logger.error(f"Catapult detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("scallop", types=["scallop"])
+    async def _detect_scallop(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the scallop pattern: a rounded bottom with a quick rally.
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 8:
+                return False, 0.0, ""
+            # Rounded bottom: min in first half, then rally
+            min_idx = int(np.argmin(closes[:n//2]))
+            if closes[-1] < closes[min_idx] * 1.05:
+                return False, 0.0, ""
+            confidence = 0.63
+            return True, confidence, "scallop"
+        except Exception as e:
+            logger.error(f"Scallop detection error: {str(e)}")
+            return False, 0.0, ""
+
+    @register_pattern("tower_top", types=["tower_top"])
+    async def _detect_tower_top(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Detects the tower top: a sharp rally, pause, then sharp drop (rare reversal).
+        """
+        try:
+            closes = np.array(ohlcv['close'])
+            n = len(closes)
+            if n < 8:
+                return False, 0.0, ""
+            # Sharp rally, pause, sharp drop
+            first = closes[:n//3]
+            middle = closes[n//3:2*n//3]
+            last = closes[2*n//3:]
+            if first[-1] < first[0] * 1.05:
+                return False, 0.0, ""
+            if abs(middle.mean() - first[-1]) > 0.02 * closes.mean():
+                return False, 0.0, ""
+            if last[-1] > middle.mean() * 0.98:
+                return False, 0.0, ""
+            confidence = 0.65
+            return True, confidence, "tower_top"
+        except Exception as e:
+            logger.error(f"Tower top detection error: {str(e)}")
+            return False, 0.0, ""
+
+    def find_key_levels(self, ohlcv: dict, pattern_type: Optional[str] = None) -> Dict[str, float]:
+        """Find key price levels from detected patterns and swing points, pattern-specific."""
         highs = np.array(ohlcv['high'])
         lows = np.array(ohlcv['low'])
         closes = np.array(ohlcv['close'])
+        opens = np.array(ohlcv['open']) if 'open' in ohlcv else None
+
+        # Single-candle patterns (1 candle required)
+        if pattern_type is not None and any(doji_type in pattern_type for doji_type in ["doji", "standard_doji", "gravestone_doji", "dragonfly_doji"]):
+            return {
+                "latest_close": float(closes[-1]),
+                "avg_high_5": float(np.mean(highs[-5:])),
+                "avg_low_5": float(np.mean(lows[-5:])),
+                "doji_high": float(highs[-1]),
+                "doji_low": float(lows[-1]),
+                "doji_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                "doji_close": float(closes[-1])
+            }
+
+        # Spinning top pattern
+        if pattern_type is not None and "spinning_top" in pattern_type:
+            return {
+                "latest_close": float(closes[-1]),
+                "avg_high_5": float(np.mean(highs[-5:])),
+                "avg_low_5": float(np.mean(lows[-5:])),
+                "spinning_top_high": float(highs[-1]),
+                "spinning_top_low": float(lows[-1]),
+                "spinning_top_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                "spinning_top_close": float(closes[-1])
+            }
+
+        # Marubozu patterns
+        if pattern_type is not None and "marubozu" in pattern_type:
+            body_size = float(abs(closes[-1] - opens[-1])) if opens is not None and len(opens) > 0 and len(closes) > 0 else 0.0
+            return {
+                "latest_close": float(closes[-1]),
+                "avg_high_5": float(np.mean(highs[-5:])),
+                "avg_low_5": float(np.mean(lows[-5:])),
+                "marubozu_high": float(highs[-1]),
+                "marubozu_low": float(lows[-1]),
+                "marubozu_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                "marubozu_close": float(closes[-1]),
+                "body_size": body_size
+            }
+
+        # Two-candle patterns (2 candles required)
+        if pattern_type is not None and "engulfing" in pattern_type:
+            if opens is not None and len(opens) >= 2 and len(closes) >= 2:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-2]),
+                    "prev_close": float(closes[-2]),
+                    "curr_open": float(opens[-1]),
+                    "curr_close": float(closes[-1]),
+                    "engulfed_range": float(abs(closes[-1] - opens[-2]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Dark cloud cover and piercing pattern
+        if pattern_type is not None and ("dark_cloud_cover" in pattern_type or "piercing_pattern" in pattern_type):
+            if opens is not None and len(opens) >= 2 and len(closes) >= 2:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-2]),
+                    "prev_close": float(closes[-2]),
+                    "curr_open": float(opens[-1]),
+                    "curr_close": float(closes[-1]),
+                    "pattern_midpoint": float((opens[-2] + closes[-2]) / 2)
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Kicker patterns
+        if pattern_type is not None and "kicker" in pattern_type:
+            if opens is not None and len(opens) >= 2 and len(closes) >= 2:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-2]),
+                    "prev_close": float(closes[-2]),
+                    "curr_open": float(opens[-1]),
+                    "curr_close": float(closes[-1]),
+                    "gap_size": float(abs(opens[-1] - closes[-2]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Harami patterns
+        if pattern_type is not None and "harami" in pattern_type:
+            if opens is not None and len(opens) >= 2 and len(closes) >= 2:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-2]),
+                    "prev_close": float(closes[-2]),
+                    "curr_open": float(opens[-1]),
+                    "curr_close": float(closes[-1]),
+                    "harami_containment": float(abs(opens[-2] - closes[-2]) - abs(opens[-1] - closes[-1]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Tweezers patterns
+        if pattern_type is not None and ("tweezers_top" in pattern_type or "tweezers_bottom" in pattern_type):
+            if len(highs) >= 2 and len(lows) >= 2:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "tweezers_high": float(highs[-1]),
+                    "tweezers_low": float(lows[-1]),
+                    "prev_high": float(highs[-2]),
+                    "prev_low": float(lows[-2]),
+                    "tweezers_level": float(highs[-1]) if "top" in pattern_type else float(lows[-1])
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Three-candle patterns (3 candles required)
+        if pattern_type is not None and any(three_candle in pattern_type for three_candle in [
+            "three_outside_up", "three_outside_down", "three_inside_up", "three_inside_down",
+            "three_white_soldiers", "three_black_crows", "three_line_strike"
+        ]):
+            if len(closes) >= 3:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-3]),
+                    "second_candle_close": float(closes[-2]),
+                    "third_candle_close": float(closes[-1]),
+                    "pattern_range": float(max(closes[-3:]) - min(closes[-3:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Evening star and morning star
+        if pattern_type is not None and ("evening_star" in pattern_type or "morning_star" in pattern_type):
+            if len(closes) >= 3:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-3]),
+                    "second_candle_close": float(closes[-2]),
+                    "third_candle_close": float(closes[-1]),
+                    "star_gap_up": float(closes[-2] - closes[-3]) if "morning" in pattern_type else 0.0,
+                    "star_gap_down": float(closes[-3] - closes[-2]) if "evening" in pattern_type else 0.0
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Five-candle patterns (5 candles required)
+        if pattern_type is not None and any(five_candle in pattern_type for five_candle in [
+            "hammer", "hanging_man", "inverted_hammer", "shooting_star", "bullish_shooting_star", "bearish_shooting_star"
+        ]):
+            lower_shadow = float(closes[-1] - lows[-1]) if len(closes) > 0 and len(lows) > 0 else 0.0
+            upper_shadow = float(highs[-1] - closes[-1]) if len(highs) > 0 and len(closes) > 0 else 0.0
+            return {
+                "latest_close": float(closes[-1]),
+                "avg_high_5": float(np.mean(highs[-5:])),
+                "avg_low_5": float(np.mean(lows[-5:])),
+                "pattern_high": float(highs[-1]),
+                "pattern_low": float(lows[-1]),
+                "pattern_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                "pattern_close": float(closes[-1]),
+                "lower_shadow": lower_shadow,
+                "upper_shadow": upper_shadow
+            }
+
+        # Abandoned baby patterns
+        if pattern_type is not None and "abandoned_baby" in pattern_type:
+            if len(closes) >= 3:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-3]),
+                    "second_candle_close": float(closes[-2]),
+                    "third_candle_close": float(closes[-1]),
+                    "baby_gap": float(abs(closes[-2] - closes[-3]) + abs(closes[-1] - closes[-2]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Six-candle patterns (6 candles required)
+        if pattern_type is not None and any(six_candle in pattern_type for six_candle in [
+            "hikkake", "bullish_hikkake", "bearish_hikkake", "mat_hold", "bullish_mat_hold", "bearish_mat_hold"
+        ]):
+            if len(closes) >= 6:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_start": float(closes[-6]),
+                    "pattern_end": float(closes[-1]),
+                    "pattern_range": float(max(closes[-6:]) - min(closes[-6:])),
+                    "avg_high_6": float(np.mean(highs[-6:])),
+                    "avg_low_6": float(np.mean(lows[-6:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Seven-candle patterns (7 candles required)
+        if pattern_type is not None and ("rising_three_methods" in pattern_type or "falling_three_methods" in pattern_type):
+            if len(closes) >= 7:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_start": float(closes[-7]),
+                    "pattern_end": float(closes[-1]),
+                    "three_methods_range": float(max(closes[-7:]) - min(closes[-7:])),
+                    "avg_high_7": float(np.mean(highs[-7:])),
+                    "avg_low_7": float(np.mean(lows[-7:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Large patterns (20+ candles required)
+        if pattern_type is not None and any(large_pattern in pattern_type for large_pattern in [
+            "cup_and_handle", "cup_with_handle", "inverse_cup_and_handle"
+        ]):
+            if len(closes) >= 20:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "cup_depth": float(min(closes[-20:])),
+                    "cup_rim": float(max(closes[-20:])),
+                    "handle_start": float(closes[-10]),
+                    "handle_end": float(closes[-1]),
+                    "pattern_range": float(max(closes[-20:]) - min(closes[-20:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Medium patterns (12+ candles required)
+        if pattern_type is not None and any(medium_pattern in pattern_type for medium_pattern in [
+            "rectangle", "ascending_triangle", "descending_triangle", "symmetrical_triangle",
+            "ascending_channel", "descending_channel", "horizontal_channel",
+            "wedge_falling", "wedge_rising", "broadening_wedge"
+        ]):
+            if len(closes) >= 12:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_top": float(max(highs[-12:])),
+                    "pattern_bottom": float(min(lows[-12:])),
+                    "pattern_height": float(max(highs[-12:]) - min(lows[-12:])),
+                    "pattern_start": float(closes[-12]),
+                    "pattern_end": float(closes[-1])
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Flag/Pennant patterns (10+ candles required)
+        if pattern_type is not None and any(flag_pattern in pattern_type for flag_pattern in [
+            "flag_bullish", "flag_bearish", "pennant", "bullish_pennant", "bearish_pennant"
+        ]):
+            if len(closes) >= 10:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "flag_pole_start": float(closes[-10]),
+                    "flag_pole_end": float(closes[-7]),
+                    "flag_start": float(closes[-7]),
+                    "flag_end": float(closes[-1]),
+                    "flag_range": float(max(highs[-7:]) - min(lows[-7:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Head and shoulders patterns
+        if pattern_type is not None and ("head_and_shoulders" in pattern_type or "inverse_head_and_shoulders" in pattern_type):
+            if len(closes) >= 15:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "left_shoulder": float(max(highs[-15:-10])),
+                    "head": float(max(highs[-10:-5])),
+                    "right_shoulder": float(max(highs[-5:])),
+                    "neckline": float(min(lows[-15:])),
+                    "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Double top/bottom patterns
+        if pattern_type is not None and ("double_top" in pattern_type or "double_bottom" in pattern_type):
+            if len(closes) >= 10:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_peak": float(max(highs[-10:-5])),
+                    "second_peak": float(max(highs[-5:])),
+                    "valley": float(min(lows[-10:])),
+                    "pattern_range": float(max(highs[-10:]) - min(lows[-10:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Triple top/bottom patterns
+        if pattern_type is not None and ("triple_top" in pattern_type or "triple_bottom" in pattern_type):
+            if len(closes) >= 15:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_peak": float(max(highs[-15:-10])),
+                    "second_peak": float(max(highs[-10:-5])),
+                    "third_peak": float(max(highs[-5:])),
+                    "support_level": float(min(lows[-15:])),
+                    "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Island reversal patterns
+        if pattern_type is not None and "island_reversal" in pattern_type:
+            if len(closes) >= 5:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "island_gap_up": float(closes[-3] - closes[-4]),
+                    "island_gap_down": float(closes[-2] - closes[-1]),
+                    "island_high": float(max(highs[-5:])),
+                    "island_low": float(min(lows[-5:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Diamond top patterns
+        if pattern_type is not None and "diamond_top" in pattern_type:
+            if len(closes) >= 12:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "diamond_top": float(max(highs[-12:])),
+                    "diamond_bottom": float(min(lows[-12:])),
+                    "diamond_width": float(len(closes[-12:])),
+                    "pattern_range": float(max(highs[-12:]) - min(lows[-12:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Bump and run patterns
+        if pattern_type is not None and "bump_and_run" in pattern_type:
+            if len(closes) >= 20:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "run_start": float(closes[-20]),
+                    "bump_peak": float(max(highs[-20:])),
+                    "run_end": float(closes[-1]),
+                    "pattern_range": float(max(highs[-20:]) - min(lows[-20:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Horn top patterns
+        if pattern_type is not None and "horn_top" in pattern_type:
+            if len(closes) >= 8:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "horn_left": float(max(highs[-8:-4])),
+                    "horn_right": float(max(highs[-4:])),
+                    "horn_base": float(min(lows[-8:])),
+                    "pattern_range": float(max(highs[-8:]) - min(lows[-8:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Pipe bottom patterns
+        if pattern_type is not None and "pipe_bottom" in pattern_type:
+            if len(closes) >= 6:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pipe_left": float(min(lows[-6:-3])),
+                    "pipe_right": float(min(lows[-3:])),
+                    "pipe_top": float(max(highs[-6:])),
+                    "pattern_range": float(max(highs[-6:]) - min(lows[-6:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Catapult patterns
+        if pattern_type is not None and "catapult" in pattern_type:
+            if len(closes) >= 10:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "catapult_base": float(min(lows[-10:])),
+                    "catapult_launch": float(max(highs[-5:])),
+                    "catapult_range": float(max(highs[-10:]) - min(lows[-10:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Scallop patterns
+        if pattern_type is not None and "scallop" in pattern_type:
+            if len(closes) >= 8:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "scallop_bottom": float(min(closes[-8:])),
+                    "scallop_top": float(max(closes[-8:])),
+                    "scallop_range": float(max(closes[-8:]) - min(closes[-8:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Tower top patterns
+        if pattern_type is not None and "tower_top" in pattern_type:
+            if len(closes) >= 8:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "tower_base": float(closes[-8]),
+                    "tower_peak": float(max(closes[-8:])),
+                    "tower_collapse": float(closes[-1]),
+                    "tower_range": float(max(closes[-8:]) - min(closes[-8:]))
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
+
+        # Zigzag patterns
+        if pattern_type is not None and "zigzag" in pattern_type:
+            if len(closes) >= 10:
+                return {
+                    "latest_close": float(closes[-1]),
+                    "zigzag_high": float(max(highs[-10:])),
+                    "zigzag_low": float(min(lows[-10:])),
+                    "zigzag_range": float(max(highs[-10:]) - min(lows[-10:])),
+                    "zigzag_start": float(closes[-10]),
+                    "zigzag_end": float(closes[-1])
+                }
+            else:
+                return {"latest_close": float(closes[-1])}
 
         # Latest price and averages
         latest_close = closes[-1]
@@ -3369,15 +4185,70 @@ class PatternDetector:
         recent_peaks = sorted(peaks[peaks > len(highs) - 50], key=lambda x: x, reverse=True)[:3] # Consider last 50 bars
         if len(recent_peaks) > 0:
             for i, idx in enumerate(recent_peaks):
-                key_levels[f'resistance{i+1}'] = highs[idx]
+                key_levels[f'resistance{i+1}'] = float(highs[idx])
 
         # Add recent troughs as supports (sorted to get strongest/most recent)
         recent_troughs = sorted(troughs[troughs > len(lows) - 50], key=lambda x: x, reverse=True)[:3] # Consider last 50 bars
         if len(recent_troughs) > 0:
              for i, idx in enumerate(recent_troughs):
-                key_levels[f'support{i+1}'] = lows[idx]
+                key_levels[f'support{i+1}'] = float(lows[idx])
 
+        # Add pattern-specific key levels for better plotting
+        # For rectangles, add the actual boundaries
+        if len(highs) >= 12:  # Minimum for rectangle detection
+            top_band = float(np.percentile(highs, 90))
+            bottom_band = float(np.percentile(lows, 10))
+            key_levels['rectangle_top'] = top_band
+            key_levels['rectangle_bottom'] = bottom_band
+            key_levels['rectangle_height'] = top_band - bottom_band
 
+        # For triangles and channels, add trendline points
+        if len(highs) >= 8:
+            # Calculate trendlines for potential triangle/channel patterns
+            x = np.arange(len(highs))
+            
+            # High trendline
+            high_coef = np.polyfit(x, highs, 1)
+            high_slope = float(high_coef[0])
+            high_intercept = float(high_coef[1])
+            
+            # Low trendline  
+            low_coef = np.polyfit(x, lows, 1)
+            low_slope = float(low_coef[0])
+            low_intercept = float(low_coef[1])
+            
+            # Add trendline points for plotting
+            key_levels['high_trendline_start'] = high_intercept
+            key_levels['high_trendline_end'] = high_intercept + high_slope * (len(highs) - 1)
+            key_levels['high_trendline_slope'] = high_slope
+            
+            key_levels['low_trendline_start'] = low_intercept
+            key_levels['low_trendline_end'] = low_intercept + low_slope * (len(highs) - 1)
+            key_levels['low_trendline_slope'] = low_slope
+
+        # Add swing points for better pattern visualization
+        if len(peaks) > 0:
+            # Get the most significant peaks
+            peak_values = highs[peaks]
+            significant_peaks = peaks[np.argsort(peak_values)[-3:]]  # Top 3 peaks
+            for i, idx in enumerate(significant_peaks):
+                key_levels[f'peak_{i+1}_idx'] = float(idx)
+                key_levels[f'peak_{i+1}_value'] = float(highs[idx])
+
+        if len(troughs) > 0:
+            # Get the most significant troughs
+            trough_values = lows[troughs]
+            significant_troughs = troughs[np.argsort(trough_values)[:3]]  # Bottom 3 troughs
+            for i, idx in enumerate(significant_troughs):
+                key_levels[f'trough_{i+1}_idx'] = float(idx)
+                key_levels[f'trough_{i+1}_value'] = float(lows[idx])
+
+        # Add pattern-specific key levels if available
+        if hasattr(self, '_pattern_key_levels') and self._pattern_key_levels:
+            key_levels.update(self._pattern_key_levels)
+            # Clear after use to avoid carrying over to next pattern
+            self._pattern_key_levels = {}
+            
         return key_levels
 
 

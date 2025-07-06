@@ -198,28 +198,26 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         return " or ".join([f'r._field == "{field}"' for field in fields])
 
     async def _get_downsampled_data(
-        self, 
-        symbol: str, 
-        interval: str, 
+        self,
+        symbol: str,
+        interval: str,
         start_time: datetime,
         end_time: datetime,
-        page: int = 1, 
+        page: int = 1,
         page_size: int = 500
     ) -> list[MarketDataEntity]:
         """Get downsampled data for chart rendering optimization"""
-        # Calculate target number of points based on typical chart resolution
-        # Most charts look good with 200-500 data points
         target_points = 300
-        
-        # Calculate appropriate window duration based on date range
         date_range_seconds = (end_time - start_time).total_seconds()
-        window_seconds = max(int(date_range_seconds / target_points), 60)  # At least 1 minute
-        
-        # Convert to Flux duration string (e.g., "1h", "30m")
+        window_seconds = max(int(date_range_seconds / target_points), 60)
         window_duration = self._seconds_to_flux_duration(window_seconds)
-        
         offset = (page - 1) * page_size
-        
+
+        # --- FIX ---
+        # The previous query used a custom `fn` in `aggregateWindow` that was syntactically
+        # incorrect for InfluxDB v2.7+. The correct approach is to group the data,
+        # then use `reduce()` to create the OHLCV record for each window. This
+        # ensures the output is a stream of records as expected by the subsequent `pivot` function.
         query = f'''
         from(bucket: "{self.bucket}")
         |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
@@ -227,41 +225,45 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         |> filter(fn: (r) => r.symbol == "{symbol}")
         |> filter(fn: (r) => r.interval == "{interval}")
         |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
-        |> aggregateWindow(
-            every: {window_duration},
-            fn: (column, tables=<-) => {{
-                open = tables |> filter(fn: (r) => r._field == "open") |> first() |> findRecord(fn: (key) => true, idx: 0)
-                high = tables |> filter(fn: (r) => r._field == "high") |> max() |> findRecord(fn: (key) => true, idx: 0)
-                low = tables |> filter(fn: (r) => r._field == "low") |> min() |> findRecord(fn: (key) => true, idx: 0)
-                close = tables |> filter(fn: (r) => r._field == "close") |> last() |> findRecord(fn: (key) => true, idx: 0)
-                volume_sum = tables |> filter(fn: (r) => r._field == "volume") |> sum()
-                
-                return {{
-                    r: {{
-                        _time: open._time,
-                        open: open._value,
-                        high: high._value,
-                        low: low._value,
-                        close: close._value,
-                        volume: volume_sum
-                    }}
-                }}
+        |> aggregateWindow(every: {window_duration}, fn: first, createEmpty: false)
+        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> group(columns: ["_time", "symbol", "interval"])
+        |> reduce(
+            identity: {{
+                open: 0.0,
+                high: 0.0,
+                low: 0.0,
+                close: 0.0,
+                volume: 0.0,
+                time: time(v: 0),
+                symbol: "",
+                interval: ""
             }},
-            createEmpty: false
+            fn: (r, accumulator) => ({{
+                open: if r._field == "open" then r._value else accumulator.open,
+                high: if r._field == "high" then r._value else accumulator.high,
+                low: if r._field == "low" then r._value else accumulator.low,
+                close: if r._field == "close" then r._value else accumulator.close,
+                volume: if r._field == "volume" then r._value else accumulator.volume,
+                time: r._time,
+                symbol: r.symbol,
+                interval: r.interval
+            }})
         )
-        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
-        |> sort(columns: ["_time"], desc: false)
+        |> sort(columns: ["time"], desc: false)
         |> limit(n: {page_size}, offset: {offset})
         '''
-        
+
         try:
             result = self.client.query_api().query(query)
             parsed_records = []
             for table in result:
                 for record in table.records:
+                    # Adjust parsing for the new query structure
                     parsed = self.parse_flux_record(record)
                     if parsed:
                         try:
+                            # The record now directly contains the fields
                             parsed_records.append(MarketDataEntity(**parsed))
                         except ValidationError as e:
                             logger.error(f"Invalid MarketDataEntity: {str(e)}")

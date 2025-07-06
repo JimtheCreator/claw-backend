@@ -31,3 +31,7 @@ pytest-tornado
 pytest-trio
 pytest-twisted
 twisted
+plotly
+sse-starlette
+pandas
+kaleido

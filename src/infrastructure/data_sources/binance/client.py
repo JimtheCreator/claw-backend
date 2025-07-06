@@ -139,12 +139,13 @@ class BinanceMarketData:
     
     # Modified to use connection pooling and with timeout
     async def get_klines(
-        self, 
-        symbol: str, 
+        self,
+        symbol: str,
         interval: str,
         limit: int = 500,
-        start_time: Optional[int] = None, 
-        end_time: Optional[int] = None
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        max_retries: int = 3 # Add max_retries parameter
     ) -> list:
         """Fetch OHLCV data (Open, High, Low, Close, Volume)"""
         # Validate interval first
@@ -153,68 +154,83 @@ class BinanceMarketData:
             "1h", "2h", "4h", "6h", "8h", "12h",
             "1d", "3d", "1w", "1M"
         ]
-        
+
         if interval not in valid_intervals:
             logger.error(f"Invalid interval requested: {interval}")
             raise ValueError(f"Invalid interval: {interval}. Valid intervals: {valid_intervals}")
 
-        try:
-            await self._throttle()  
-            
-            # Get a client from the pool if available
-            client = await self.get_pooled_client()
-            
-            # Validate symbol format
-            if not symbol.isalnum():
-                raise ValueError("Invalid symbol")
+        # --- Start of new retry logic ---
+        for attempt in range(max_retries):
+            try:
+                await self._throttle()
 
-            # Add debug logging for raw response
-            logger.debug(f"Fetching {limit} {interval} klines for {symbol}")
-            
-            # Use a timeout for the API call
-            klines = await asyncio.wait_for(
-                client.get_klines(
-                    symbol=symbol,
-                    interval=interval,
-                    limit=limit,
-                    startTime=start_time,
-                    endTime=end_time
-                ),
-                timeout=self._connection_timeout
-            )
+                # Get a client from the pool if available
+                client = await self.get_pooled_client()
 
-            # Validate response structure
-            if not isinstance(klines, list) or len(klines) == 0:
-                logger.warning(f"No klines data returned for {symbol}/{interval}")
-                return []
-            
-            # Validate structure
-            if len(klines[0]) < 6:
-                logger.error(f"Malformed kline data for {symbol}/{interval}")
-                return []
+                # Validate symbol format
+                if not symbol.isalnum():
+                    raise ValueError("Invalid symbol")
 
-            # Filter out all-zero or malformed candles
-            valid_klines = [
-                k for k in klines 
-                if len(k) >= 6 and all(float(val) > 0 for val in k[1:6])
-            ]
+                # Add debug logging for raw response
+                logger.debug(f"Attempt {attempt + 1}/{max_retries}: Fetching {limit} {interval} klines for {symbol}")
 
-            if not valid_klines:
-                logger.warning(f"Filtered out all klines for {symbol}/{interval} due to zero values")
-                return []
+                # Use a timeout for the API call
+                klines = await asyncio.wait_for(
+                    client.get_klines(
+                        symbol=symbol,
+                        interval=interval,
+                        limit=limit,
+                        startTime=start_time,
+                        endTime=end_time
+                    ),
+                    timeout=self._connection_timeout
+                )
 
-            return valid_klines
+                # Validate response structure
+                if not isinstance(klines, list) or len(klines) == 0:
+                    logger.warning(f"No klines data returned for {symbol}/{interval} on attempt {attempt + 1}")
+                    # If it's not the last attempt, wait and retry
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2 ** attempt) # Exponential backoff
+                        continue
+                    return [] # Return empty list after last attempt
+
+                # Validate structure
+                if len(klines[0]) < 6:
+                    logger.error(f"Malformed kline data for {symbol}/{interval}")
+                    return []
+
+                # Filter out all-zero or malformed candles
+                valid_klines = [
+                    k for k in klines
+                    if len(k) >= 6 and all(float(val) > 0 for val in k[1:6])
+                ]
+
+                if not valid_klines:
+                    logger.warning(f"Filtered out all klines for {symbol}/{interval} due to zero values")
+                    return []
+
+                return valid_klines # Success, return the data
 
 
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout fetching klines for {symbol}")
-            return []
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching klines for {symbol}: {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Unexpected error fetching klines for {symbol}: {e}")
-            return []
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout fetching klines for {symbol} on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt) # Exponential backoff
+                    continue
+            except BinanceAPIException as e:
+                logger.error(f"Binance API Error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt) # Exponential backoff
+                    continue
+            except Exception as e:
+                logger.error(f"Unexpected error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt) # Exponential backoff
+                    continue
+        # --- End of new retry logic ---
+        
+        return [] # Return empty list if all retries fail
         
 
     async def get_exchange_info(self):

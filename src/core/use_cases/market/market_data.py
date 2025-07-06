@@ -174,57 +174,42 @@ async def fetch_crypto_data_paginated(
         
         # Set default start_time if not provided
         if not start_time:
-            # Use a reasonable default based on the interval if not specified
             start_time = calculate_start_time(interval)
         
         # Set default end_time if not provided
         if not end_time:
             end_time = datetime.now(timezone.utc)
         
-        # Check if a background task is already running for this symbol+interval
         task_key = (symbol, interval)
         is_background_active = ACTIVE_BACKGROUND_TASKS.get(task_key, False)
         
-        # If background task is active, we may need to fetch directly from Binance
         if is_background_active:
             logger.info(f"Background task active for {symbol} ({interval}), checking if we can fetch from InfluxDB")
             
-            # Check if we have at least some data in InfluxDB
             last_timestamp = await repo.get_last_update_timestamp(symbol, interval)
             
             if last_timestamp and (datetime.now(timezone.utc) - last_timestamp).total_seconds() < 3600:
-                # We have relatively recent data, fetch from InfluxDB with pagination
                 logger.info(f"Using InfluxDB data despite active background task for {symbol} ({interval})")
                 historical = await repo.get_historical_data(
                     symbol, interval, start_time, end_time, page, page_size
                 )
                 return historical
             else:
-                # No recent data, need to fetch from Binance directly
                 logger.info(f"No recent data, fetching from Binance for {symbol} ({interval})")
                 binance = BinanceMarketData()
                 await binance.ensure_connected()
                 
-                # Calculate pagination for Binance API
-                # Binance API limit parameter has a different meaning from our page_size
-                # It's the max number of items to return in one request
-                binance_limit = min(1000, page_size)  # Binance max is 1000
-                
-                # Calculate start and end times for this page
-                # This is approximate since we don't know exact timestamps without querying first
+                binance_limit = min(1000, page_size)
                 interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
                 skip_ms = interval_ms * (page - 1) * page_size
                 
-                # Adjust start time based on pagination
                 binance_start_ms = int(start_time.timestamp() * 1000) + skip_ms
                 binance_end_ms = int(end_time.timestamp() * 1000)
                 
-                # Ensure start_time doesn't exceed end_time
                 if binance_start_ms >= binance_end_ms:
                     logger.warning(f"Pagination exceeded available data range for {symbol} ({interval})")
                     return []
                 
-                # Fetch from Binance with adjusted parameters
                 klines = await binance.get_klines(
                     symbol=symbol,
                     interval=interval,
@@ -235,7 +220,6 @@ async def fetch_crypto_data_paginated(
                 
                 await binance.disconnect()
                 
-                # Process the klines
                 data_entities = []
                 for k in klines:
                     if len(k) >= 6 and all(k[1:6]):
@@ -254,78 +238,84 @@ async def fetch_crypto_data_paginated(
                 logger.info(f"Fetched {len(data_entities)} records from Binance for {symbol} ({interval})")
                 return data_entities
         
-        # Normal flow - try to fetch from InfluxDB with pagination
         historical = await repo.get_historical_data(
             symbol, interval, start_time, end_time, page, page_size
         )
         
-        # If data is found, return it
         if historical:
-            # Check for stale data (only if not already being updated by background task)
-            if not is_background_active and page == 1:  # Only check for first page
+            if not is_background_active and page == 1:
                 try:
                     last_candle_time = historical[-1].timestamp
                     stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=INTERVAL_MINUTES[interval])
                     
                     if last_candle_time < stale_threshold:
-                        logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing data")
+                        logger.info(f"Stale data detected for {symbol} ({interval}), fetching all missing data.")
                         
-                        # Fetch missing data from Binance
                         binance = BinanceMarketData()
                         await binance.ensure_connected()
                         
                         missing_data = []
-                        current_start_ms = int((last_candle_time + timedelta(minutes=1)).timestamp() * 1000)
+                        # Correctly calculate the start time for the next candle using the interval
+                        interval_duration = timedelta(minutes=INTERVAL_MINUTES[interval])
+                        current_start_time = last_candle_time + interval_duration
+                        current_start_ms = int(current_start_time.timestamp() * 1000)
                         end_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-                        
-                        klines = await binance.get_klines(
-                            symbol=symbol,
-                            interval=interval,
-                            start_time=current_start_ms,
-                            end_time=end_time_ms,
-                            limit=1000
-                        )
-                        
-                        # Process the klines for missing data
-                        for k in klines:
-                            if len(k) >= 6 and all(k[1:6]):
-                                entity = MarketDataEntity(
-                                    symbol=symbol,
-                                    interval=interval,
-                                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                                    open=float(k[1]),
-                                    high=float(k[2]),
-                                    low=float(k[3]),
-                                    close=float(k[4]),
-                                    volume=float(k[5])
-                                )
-                                missing_data.append(entity)
-                        
+
+                        # Loop to fetch all missing data until the present
+                        while current_start_ms < end_time_ms:
+                            klines = await binance.get_klines(
+                                symbol=symbol,
+                                interval=interval,
+                                start_time=current_start_ms,
+                                end_time=end_time_ms,
+                                limit=1000
+                            )
+
+                            if not klines:
+                                # No more data from Binance, we are up-to-date
+                                break
+
+                            batch_entities = []
+                            for k in klines:
+                                if len(k) >= 6 and all(k[1:6]):
+                                    entity = MarketDataEntity(
+                                        symbol=symbol,
+                                        interval=interval,
+                                        timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                                        open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                                        close=float(k[4]), volume=float(k[5])
+                                    )
+                                    batch_entities.append(entity)
+                            
+                            if not batch_entities:
+                                break # No valid entities processed, exit loop
+
+                            missing_data.extend(batch_entities)
+                            
+                            # Update start time for the next iteration to avoid re-fetching
+                            current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1
+                            await asyncio.sleep(0.5) # Avoid hitting API rate limits
+
                         await binance.disconnect()
                         
                         if missing_data and background_tasks:
-                            # Save missing data in the background
                             background_tasks.add_task(
                                 batch_save_market_data, repo, missing_data, symbol, interval
                             )
-                            logger.info(f"Added background task to save {len(missing_data)} missing candles")
+                            logger.info(f"Added background task to save {len(missing_data)} missing candles.")
                         
-                        # Add missing data to result for first page
                         historical.extend(missing_data)
                 except Exception as e:
                     logger.error(f"Error checking for stale data: {str(e)}")
             
             return historical
         
-        # No data in InfluxDB, fetch from Binance
+        # No data in InfluxDB, fetch from Binance (This part is fine)
         try:
             logger.info(f"No data found in InfluxDB for {symbol} ({interval}), fetching from Binance")
-            
-            # Calculate pagination for Binance
             binance = BinanceMarketData()
             await binance.ensure_connected()
             
-            # Same pagination logic as above
             binance_limit = min(1000, page_size)
             interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
             skip_ms = interval_ms * (page - 1) * page_size
@@ -338,42 +328,27 @@ async def fetch_crypto_data_paginated(
                 return []
             
             klines = await binance.get_klines(
-                symbol=symbol,
-                interval=interval,
-                limit=binance_limit,
-                start_time=binance_start_ms,
-                end_time=binance_end_ms
+                symbol=symbol, interval=interval, limit=binance_limit,
+                start_time=binance_start_ms, end_time=binance_end_ms
             )
             
             await binance.disconnect()
             
-            # Process the klines
             data_entities = []
             for k in klines:
                 if len(k) >= 6 and all(k[1:6]):
                     entity = MarketDataEntity(
-                        symbol=symbol,
-                        interval=interval,
-                        timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                        open=float(k[1]),
-                        high=float(k[2]),
-                        low=float(k[3]),
-                        close=float(k[4]),
-                        volume=float(k[5])
+                        symbol=symbol, interval=interval, timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                        open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                        close=float(k[4]), volume=float(k[5])
                     )
                     data_entities.append(entity)
             
-            # Only start background task for initial load (first page)
             if data_entities and background_tasks and page == 1:
-                # Get the full data range for background task
                 logger.info(f"Initiating background task to get and save full historical data")
-                
-                # Start a background task to fetch and save all historical data
                 background_tasks.add_task(
                     fetch_and_save_full_history, 
-                    symbol, 
-                    interval, 
-                    calculate_start_time(interval)
+                    symbol, interval, calculate_start_time(interval)
                 )
             
             logger.info(f"Returning {len(data_entities)} records from Binance for page {page}")
@@ -404,22 +379,32 @@ async def fetch_and_save_full_history(symbol: str, interval: str, start_time: da
         
         # Fetch data in batches
         all_data = []
-        current_start_ms = int(start_time.timestamp() * 1000)
+        # Keep track of the last successful timestamp
+        last_timestamp_ms = int(start_time.timestamp() * 1000)
         end_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
         
-        while current_start_ms < end_time_ms:
+        while last_timestamp_ms < end_time_ms:
             try:
+                # Always start the next fetch from the last known good timestamp
+                current_start_ms = last_timestamp_ms
+
                 klines = await binance.get_klines(
                     symbol=symbol,
                     interval=interval,
-                    limit=1000,  # Maximum limit for Binance
+                    limit=1000,
                     start_time=current_start_ms,
                     end_time=end_time_ms
                 )
                 
+                # If no data is returned, we don't stop. We advance our time window
+                # to check for the next period. This prevents getting stuck.
                 if not klines:
-                    logger.info(f"No more data available from Binance for {symbol} ({interval})")
-                    break
+                    logger.info(f"No data returned for window starting at {datetime.fromtimestamp(current_start_ms/1000, tz=timezone.utc)}. Advancing window.")
+                    # Advance the start time by the maximum possible duration of the fetch (1000 * interval)
+                    interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
+                    last_timestamp_ms += 1000 * interval_ms
+                    await asyncio.sleep(0.5) # Prevent rapid-fire empty requests
+                    continue # Continue to the next iteration of the while loop
                 
                 # Process batch
                 batch_entities = []
@@ -443,26 +428,25 @@ async def fetch_and_save_full_history(symbol: str, interval: str, start_time: da
                     
                     # Update progress
                     all_data.extend(batch_entities)
-                    last_timestamp = int(batch_entities[-1].timestamp.timestamp() * 1000)
-                    current_start_ms = last_timestamp + 1
+
+                    # IMPORTANT: Update the last successful timestamp
+                    last_timestamp_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1 # +1 to ensure we don't re-fetch the last candle
                     
                     logger.info(f"Saved batch of {len(batch_entities)} records. "
                                f"Progress: {batch_entities[-1].timestamp} "
                                f"({len(all_data)} total records saved)")
                 else:
-                    # Safety check - if no valid entities, move forward
+                    # If processing resulted in no valid entities, still advance the time
                     interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-                    current_start_ms += interval_ms * 1000
+                    last_timestamp_ms += 1000 * interval_ms
                 
                 # Small delay to avoid API rate limits
                 await asyncio.sleep(0.5)
                 
             except Exception as e:
-                logger.error(f"Error in background fetch batch: {str(e)}")
-                # Continue with next batch despite errors
-                interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-                current_start_ms += interval_ms * 1000
-                await asyncio.sleep(1)  # Longer delay after error
+                logger.error(f"Error in background fetch batch: {str(e)}. Retrying after delay.")
+                # On error, wait and let the loop retry from the same `last_timestamp_ms`
+                await asyncio.sleep(5) 
         
         await binance.disconnect()
         logger.info(f"✅ Background task completed: Saved {len(all_data)} total records for {symbol} ({interval})")

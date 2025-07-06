@@ -152,6 +152,24 @@ class RedisCache:
         if not self._initialized:
             raise RuntimeError("Redis is not initialized.")
         await self._redis.xgroup_create(stream, group, mkstream=mkstream)
+
+    async def xlen(self, stream: str) -> int:
+        """Returns the number of messages in a Redis stream."""
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        return await self._redis.xlen(stream)
+
+    async def xpending(self, stream: str, group: str) -> dict:
+        """Returns pending messages information for a consumer group."""
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        return await self._redis.xpending(stream, group)
+
+    async def xinfo_consumers(self, stream: str, group: str) -> list:
+        """Returns consumer information for a consumer group."""
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        return await self._redis.xinfo_consumers(stream, group)
     
     async def lpush(self, key: str, value: str):
             if not self._initialized:
