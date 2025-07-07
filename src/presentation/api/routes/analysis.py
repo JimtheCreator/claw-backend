@@ -17,6 +17,7 @@ from common.logger import logger
 from core.interfaces.AnalysisRequest import AnalysisRequest
 from core.interfaces.AnalysisResult import AnalysisResult
 from core.use_cases.market_analysis.analysis_structure.main_analysis_structure import PatternAPI
+from core.use_cases.market_analysis.enhanced_pattern_api import EnhancedPatternAPI
 from core.use_cases.market_analysis.data_access import get_ohlcv_from_db
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from stripe_payments.src.plan_limits import PLAN_LIMITS as plan_limits
@@ -53,6 +54,10 @@ def get_llm_client() -> DeepSeekClient:
 def get_analysis_service() -> AnalysisService:
     """Provide an AnalysisService instance."""
     return AnalysisService()
+
+def get_enhanced_pattern_api(interval: str) -> EnhancedPatternAPI:
+    """Provide an EnhancedPatternAPI instance."""
+    return EnhancedPatternAPI(interval=interval, use_trader_aware=True)
 
 # Utility Functions
 def safe_json_dumps(obj: Any) -> str:
@@ -111,10 +116,13 @@ async def analyze_market_immediate(
         analysis_id = await supabase.create_analysis_record(user_id, symbol, interval, request.timeframe, "processing", plan_limits)
 
         # 5. Perform Full Analysis (Pattern, Chart, LLM)
-        pattern_api = PatternAPI(interval=interval)
-        analysis_result = await pattern_api.analyze_market_data(ohlcv=ohlcv)
+        enhanced_pattern_api = get_enhanced_pattern_api(interval)
+        analysis_result = await enhanced_pattern_api.analyze_market_data(ohlcv=ohlcv)
 
-        chart_generator = ChartGenerator(analysis_data=analysis_result, ohlcv_data=ohlcv)
+        # Convert ohlcv dict to DataFrame for ChartGenerator
+        import pandas as pd
+        ohlcv_df = pd.DataFrame(ohlcv)
+        chart_generator = ChartGenerator(analysis_data=analysis_result, ohlcv_data=ohlcv_df)
         image_bytes = chart_generator.create_chart_image()
         
         image_url = await supabase.upload_chart_image(image_bytes, analysis_id, user_id)
@@ -391,3 +399,171 @@ async def get_analysis_status(
     except Exception as e:
         logger.error(f"Error getting analysis status for {analysis_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
+
+
+# --- NEW TRADER-AWARE ANALYSIS ENDPOINTS ---
+
+@router.post(
+    "/analyze-trader-aware/{symbol}/{interval}",
+    summary="Run trader-aware market analysis with enhanced pattern detection and scoring",
+)
+async def analyze_market_trader_aware(
+    symbol: str = Path(..., example="BTCUSDT"),
+    interval: str = Path(..., example="1h"),
+    request: AnalysisRequest = Body(...),
+    supabase: SupabaseCryptoRepository = Depends(get_supabase_repo),
+    llm_client: DeepSeekClient = Depends(get_llm_client),
+):
+    """
+    Analyzes market patterns using the enhanced trader-aware system.
+    
+    This endpoint provides:
+    - Trend detection and analysis
+    - Support/resistance zone identification
+    - Contextual pattern scanning near key zones
+    - Candlestick confirmation patterns
+    - Weighted scoring based on confluence factors
+    - Ranked list of high-probability setups
+    """
+    try:
+        # 1. Validate user_id is not None
+        if not request.user_id:
+            raise HTTPException(status_code=400, detail="user_id is required")
+        
+        user_id = request.user_id
+        
+        # 2. Check User and Plan Limits
+        if not await supabase.check_market_analysis_limit(user_id, plan_limits):
+            raise HTTPException(status_code=429, detail="Market analysis limit reached.")
+
+        # 3. Fetch Data
+        ohlcv = await get_ohlcv_from_db(symbol, interval, request.timeframe)
+        candle_count = len(ohlcv.get("close", []))
+        
+        # 4. Create initial DB record
+        logger.info(f"Running trader-aware analysis for {symbol} ({candle_count} candles)")
+        analysis_id = await supabase.create_analysis_record(user_id, symbol, interval, request.timeframe, "processing", plan_limits)
+
+        # 5. Perform Trader-Aware Analysis
+        enhanced_pattern_api = get_enhanced_pattern_api(interval)
+        
+        # Get raw trader-aware result
+        trader_aware_result = enhanced_pattern_api.get_trader_aware_result(ohlcv)
+        
+        # Get chart data for frontend
+        chart_data = enhanced_pattern_api.get_chart_data(ohlcv)
+        
+        # Get trading signals
+        trading_signals = enhanced_pattern_api.get_trading_signals(ohlcv)
+        
+        # 6. Generate Chart Image
+        import pandas as pd
+        ohlcv_df = pd.DataFrame(ohlcv)
+        chart_generator = ChartGenerator(analysis_data=trader_aware_result, ohlcv_data=ohlcv_df)
+        image_bytes = chart_generator.create_chart_image()
+        image_url = await supabase.upload_chart_image(image_bytes, analysis_id, user_id)
+        
+        # 7. Generate LLM Summary
+        llm_summary = llm_client.generate_summary(trader_aware_result)
+        
+        # 8. Prepare Final Result
+        final_result = {
+            **trader_aware_result,
+            "chart_data": chart_data,
+            "trading_signals": trading_signals,
+            "image_url": image_url,
+            "llm_summary": llm_summary,
+        }
+
+        # 9. Store completed result in DB
+        final_updates = {
+            "analysis_data": final_result,
+            "status": "completed",
+            "image_url": image_url,
+            "llm_summary": llm_summary,
+        }
+        await supabase.update_analysis_record(analysis_id, final_updates)
+        
+        logger.info(f"Trader-aware analysis {analysis_id} completed.")
+        
+        return final_result
+
+    except DataUnavailableError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Trader-aware analysis error for {symbol}: {e}", exc_info=True)
+        if 'analysis_id' in locals():
+             await supabase.update_analysis_record(analysis_id, {"status": "failed", "error_message": str(e)})
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+@router.get(
+    "/analysis/trading-signals/{symbol}/{interval}",
+    summary="Get trading signals from trader-aware analysis",
+)
+async def get_trading_signals(
+    symbol: str = Path(..., example="BTCUSDT"),
+    interval: str = Path(..., example="1h"),
+    timeframe: str = Query(..., description="Analysis timeframe"),
+    supabase: SupabaseCryptoRepository = Depends(get_supabase_repo),
+):
+    """
+    Get trading signals from the latest trader-aware analysis.
+    """
+    try:
+        # Fetch Data
+        ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+        
+        # Get trading signals
+        enhanced_pattern_api = get_enhanced_pattern_api(interval)
+        trading_signals = enhanced_pattern_api.get_trading_signals(ohlcv)
+        
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "timeframe": timeframe,
+            "trading_signals": trading_signals,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except DataUnavailableError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting trading signals for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+@router.get(
+    "/analysis/chart-data/{symbol}/{interval}",
+    summary="Get chart-ready data from trader-aware analysis",
+)
+async def get_chart_data(
+    symbol: str = Path(..., example="BTCUSDT"),
+    interval: str = Path(..., example="1h"),
+    timeframe: str = Query(..., description="Analysis timeframe"),
+    supabase: SupabaseCryptoRepository = Depends(get_supabase_repo),
+):
+    """
+    Get chart-ready data from the latest trader-aware analysis.
+    """
+    try:
+        # Fetch Data
+        ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+        
+        # Get chart data
+        enhanced_pattern_api = get_enhanced_pattern_api(interval)
+        chart_data = enhanced_pattern_api.get_chart_data(ohlcv)
+        
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "timeframe": timeframe,
+            "chart_data": chart_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except DataUnavailableError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error getting chart data for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
