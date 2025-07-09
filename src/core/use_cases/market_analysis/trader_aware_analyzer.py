@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Any
 from common.logger import logger
 
 from .analysis_pipeline import TraderAwareAnalysisPipeline
+import numpy as np
 
 
 class TraderAwareAnalyzer:

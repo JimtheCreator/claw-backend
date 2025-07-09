@@ -18,7 +18,7 @@ class ZoneDetector:
     and swing level analysis.
     """
     
-    def __init__(self, cluster_threshold: float = 0.02, min_touches: int = 2):
+    def __init__(self, cluster_threshold: float = 0.001, min_touches: int = 1):
         """
         Initialize the zone detector.
         
@@ -45,6 +45,7 @@ class ZoneDetector:
         """
         try:
             df = pd.DataFrame(ohlcv)
+            logger.info(f"[ZoneDetector] OHLCV shape: {df.shape}, head: {df.head(3)}")
             highs = df['high'].values
             lows = df['low'].values
             closes = df['close'].values
@@ -52,11 +53,15 @@ class ZoneDetector:
             
             # Detect support and resistance zones
             support_zones = self._detect_support_zones(lows, closes, volumes)
+            logger.info(f"[ZoneDetector] support_zones: {support_zones}")
             resistance_zones = self._detect_resistance_zones(highs, closes, volumes)
+            logger.info(f"[ZoneDetector] resistance_zones: {resistance_zones}")
             
             # Detect demand and supply zones (broader areas)
             demand_zones = self._detect_demand_zones(lows, closes, volumes)
+            logger.info(f"[ZoneDetector] demand_zones: {demand_zones}")
             supply_zones = self._detect_supply_zones(highs, closes, volumes)
+            logger.info(f"[ZoneDetector] supply_zones: {supply_zones}")
             
             return {
                 'support_zones': support_zones,

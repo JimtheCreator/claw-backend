@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from common.logger import logger
-from .detect_patterns import PatternDetector
+from .detect_patterns import PatternDetector, initialized_pattern_registry
+import inspect
 
 
 class PatternScanner:
@@ -57,8 +58,7 @@ class PatternScanner:
             "descending_triangle", "wedge_rising", "wedge_falling", "broadening_wedge"
         }
     
-    async def scan_patterns(self, ohlcv: Dict[str, List], zones: Dict[str, List[Dict]], 
-                     trend: Dict[str, Any], window_sizes: List[int] = None) -> List[Dict]:
+    async def scan_patterns(self, ohlcv: Dict[str, List], zones: Dict[str, List[Dict]], trend: Dict[str, Any], window_sizes: List[int] = []) -> List[Dict]:
         """
         Scan for patterns only when price is near relevant zones.
         
@@ -72,14 +72,16 @@ class PatternScanner:
             List of detected pattern dictionaries with context
         """
         try:
-            if window_sizes is None:
-                window_sizes = await self._get_adaptive_window_sizes(len(ohlcv['close']))
-
+            if window_sizes is None or not window_sizes:
+                window_sizes = [10, 20, 30, 50, 100]
+                logger.info(f"[PatternScanner] Forced window_sizes for testing: {window_sizes}")
+            logger.info(f"[PatternScanner] window_sizes: {window_sizes}")
             detected_patterns = []
             current_price = ohlcv['close'][-1]
             
-            # Find zones near current price
+            # Find nearby zones (always await since _find_nearby_zones is async)
             nearby_zones = await self._find_nearby_zones(zones, current_price)
+            logger.info(f"[PatternScanner] nearby_zones: {nearby_zones}")
             
             if not nearby_zones:
                 logger.info("No zones near current price, skipping pattern scan")
@@ -93,12 +95,13 @@ class PatternScanner:
                 patterns = await self._scan_window_patterns(
                     ohlcv, nearby_zones, trend, window_size
                 )
+                logger.info(f"[PatternScanner] window_size {window_size}: found {len(patterns)} patterns")
                 detected_patterns.extend(patterns)
             
             # Remove duplicates and rank by relevance
             unique_patterns = await self._remove_duplicate_patterns(detected_patterns)
             ranked_patterns = await self._rank_patterns_by_context(unique_patterns, zones, trend)
-            
+            logger.info(f"[PatternScanner] ranked_patterns: {ranked_patterns}")
             return ranked_patterns
             
         except Exception as e:
@@ -182,7 +185,55 @@ class PatternScanner:
             # Scan for patterns
             for pattern_name in relevant_patterns:
                 try:
-                    detected, confidence, pattern_type = await self.pattern_detector.detect(pattern_name, window_ohlcv)
+                    # Get the actual pattern function from the registry
+                    pattern_entry = initialized_pattern_registry[pattern_name]
+                    # If the registry entry is a dict, get the 'function' key
+                    if isinstance(pattern_entry, dict) and 'function' in pattern_entry:
+                        pattern_func = pattern_entry['function']
+                    else:
+                        pattern_func = pattern_entry
+                    if callable(pattern_func):
+                        # Dynamically match arguments using inspect
+                        sig = inspect.signature(pattern_func)
+                        params = list(sig.parameters)
+                        # Remove 'self' if present
+                        if params and params[0] == 'self':
+                            params = params[1:]
+                        # Map available arguments
+                        arg_map = {
+                            'ohlcv': window_ohlcv,
+                            'window_ohlcv': window_ohlcv,
+                            'window_zones': window_zones,
+                            'zones': window_zones,
+                            'trend': trend,
+                            'pattern_name': pattern_name,
+                            'window_size': window_size
+                        }
+                        # Build argument list in order
+                        args = [self.pattern_detector]  # always pass self (PatternDetector instance)
+                        for p in params:
+                            if p in arg_map:
+                                args.append(arg_map[p])
+                            else:
+                                raise ValueError(f"Unknown parameter {p} for {pattern_func.__name__}")
+                        if inspect.iscoroutinefunction(pattern_func):
+                            result = await pattern_func(*args)
+                        else:
+                            result = pattern_func(*args)
+                    else:
+                        logger.warning(f"[PatternScanner] pattern_func for {pattern_name} is not callable: {type(pattern_func)}")
+                        continue
+                    
+                    # Handle both tuple and dict returns
+                    if isinstance(result, tuple):
+                        detected, confidence, pattern_type = result
+                    elif isinstance(result, dict):
+                        detected = result.get('detected', False)
+                        confidence = result.get('confidence', 0.0)
+                        pattern_type = result.get('pattern_type', '')
+                    else:
+                        logger.warning(f"[PatternScanner] Unexpected result type from {pattern_name}: {type(result)}")
+                        continue
                     
                     if detected and confidence > 0.5:  # Minimum confidence threshold
                         # Get key levels from pattern detector
@@ -239,7 +290,7 @@ class PatternScanner:
         relevant_patterns = []
         
         # Get all registered patterns from the pattern detector
-        all_patterns = list(self.pattern_detector._pattern_registry.keys())
+        all_patterns = list(initialized_pattern_registry.keys())
         
         # Filter patterns based on context
         for pattern_name in all_patterns:
@@ -358,7 +409,7 @@ class PatternScanner:
         
         # Average proximity of associated zones
         proximities = [zone.get('proximity', 0.0) for zone in pattern['associated_zones']]
-        return np.mean(proximities) if proximities else 0.0
+        return float(np.mean(proximities)) if proximities else 0.0
 
     async def _calculate_trend_relevance(self, pattern: Dict, trend: Dict[str, Any]) -> float:
         """Calculate how relevant the pattern is to the current trend."""

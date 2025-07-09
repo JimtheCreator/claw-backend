@@ -95,7 +95,7 @@ class TraderAwareAnalysisPipeline:
             
             # Step 3: Scan for contextual patterns
             logger.info("Step 3: Scanning for contextual patterns...")
-            detected_patterns = self.pattern_scanner.scan_patterns(
+            detected_patterns = await self.pattern_scanner.scan_patterns(
                 ohlcv, zones, trend_info, patterns_to_detect
             )
             logger.info(f"Detected {len(detected_patterns)} patterns")

@@ -6,7 +6,7 @@ detected setups based on multiple factors including trend, zones, patterns, and 
 """
 
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from common.logger import logger
 
 
@@ -317,22 +317,27 @@ class SetupScorer:
         total_score = symmetry_score + level_clarity_score + pattern_specific_score
         return max(0.0, min(1.0, total_score))
     
-    def get_top_setups(self, scored_patterns: List[Dict], top_n: int = 5) -> List[Dict]:
+    def is_pattern_near_key_level(self, pattern: dict, support_levels: list, resistance_levels: list, threshold: float = 0.01) -> bool:
+        """Return True if any key level of the pattern is within threshold of a support or resistance."""
+        key_levels = pattern.get('key_levels', {})
+        price_points = [v for k, v in key_levels.items() if isinstance(v, (int, float))]
+        all_levels = support_levels + resistance_levels
+        if not all_levels or not price_points:
+            return False
+        return any(abs(p - lvl) / max(1, abs(lvl)) < threshold for p in price_points for lvl in all_levels)
+
+    def get_top_setups(self, scored_patterns: List[Dict], top_n: int = 5, support_levels: list = None, resistance_levels: list = None) -> List[Dict]:
         """
-        Get the top N ranked setups.
-        
-        Args:
-            scored_patterns: List of scored pattern dictionaries
-            top_n: Number of top setups to return
-            
-        Returns:
-            List of top N setup dictionaries
+        Get the top N ranked setups, but only return those near support/resistance if levels are provided.
         """
         if not scored_patterns:
             return []
-        
-        # Return top N patterns
-        return scored_patterns[:top_n]
+        filtered = scored_patterns
+        if support_levels is not None and resistance_levels is not None:
+            filtered = [p for p in scored_patterns if self.is_pattern_near_key_level(p, support_levels, resistance_levels)]
+        if not filtered:
+            filtered = scored_patterns[:top_n]  # fallback to top N if none near key levels
+        return filtered[:top_n]
     
     def filter_setups_by_score(self, scored_patterns: List[Dict], min_score: float = 0.6) -> List[Dict]:
         """

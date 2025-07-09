@@ -3751,7 +3751,7 @@ class PatternDetector:
             logger.error(f"Tower top detection error: {str(e)}")
             return False, 0.0, ""
 
-    def find_key_levels(self, ohlcv: dict, pattern_type: Optional[str] = None) -> Dict[str, float]:
+    async def find_key_levels(self, ohlcv: dict, pattern_type: Optional[str] = None) -> Dict[str, float]:
         """Find key price levels from detected patterns and swing points, pattern-specific."""
         highs = np.array(ohlcv['high'])
         lows = np.array(ohlcv['low'])
@@ -3808,7 +3808,14 @@ class PatternDetector:
                     "engulfed_range": float(abs(closes[-1] - opens[-2]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "prev_close": float(closes[-1]),
+                    "curr_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "curr_close": float(closes[-1]),
+                    "engulfed_range": 0.0
+                }
 
         # Dark cloud cover and piercing pattern
         if pattern_type is not None and ("dark_cloud_cover" in pattern_type or "piercing_pattern" in pattern_type):
@@ -3822,7 +3829,14 @@ class PatternDetector:
                     "pattern_midpoint": float((opens[-2] + closes[-2]) / 2)
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "prev_close": float(closes[-1]),
+                    "curr_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "curr_close": float(closes[-1]),
+                    "pattern_midpoint": float(closes[-1])
+                }
 
         # Kicker patterns
         if pattern_type is not None and "kicker" in pattern_type:
@@ -3836,7 +3850,14 @@ class PatternDetector:
                     "gap_size": float(abs(opens[-1] - closes[-2]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "prev_close": float(closes[-1]),
+                    "curr_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "curr_close": float(closes[-1]),
+                    "gap_size": 0.0
+                }
 
         # Harami patterns
         if pattern_type is not None and "harami" in pattern_type:
@@ -3850,7 +3871,14 @@ class PatternDetector:
                     "harami_containment": float(abs(opens[-2] - closes[-2]) - abs(opens[-1] - closes[-1]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "prev_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "prev_close": float(closes[-1]),
+                    "curr_open": float(opens[-1]) if opens is not None else float(closes[-1]),
+                    "curr_close": float(closes[-1]),
+                    "harami_containment": 0.0
+                }
 
         # Tweezers patterns
         if pattern_type is not None and ("tweezers_top" in pattern_type or "tweezers_bottom" in pattern_type):
@@ -3864,7 +3892,14 @@ class PatternDetector:
                     "tweezers_level": float(highs[-1]) if "top" in pattern_type else float(lows[-1])
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "tweezers_high": float(highs[-1]),
+                    "tweezers_low": float(lows[-1]),
+                    "prev_high": float(highs[-1]),
+                    "prev_low": float(lows[-1]),
+                    "tweezers_level": float(highs[-1]) if "top" in pattern_type else float(lows[-1])
+                }
 
         # Three-candle patterns (3 candles required)
         if pattern_type is not None and any(three_candle in pattern_type for three_candle in [
@@ -3880,7 +3915,13 @@ class PatternDetector:
                     "pattern_range": float(max(closes[-3:]) - min(closes[-3:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-1]),
+                    "second_candle_close": float(closes[-1]),
+                    "third_candle_close": float(closes[-1]),
+                    "pattern_range": 0.0
+                }
 
         # Evening star and morning star
         if pattern_type is not None and ("evening_star" in pattern_type or "morning_star" in pattern_type):
@@ -3894,7 +3935,14 @@ class PatternDetector:
                     "star_gap_down": float(closes[-3] - closes[-2]) if "evening" in pattern_type else 0.0
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-1]),
+                    "second_candle_close": float(closes[-1]),
+                    "third_candle_close": float(closes[-1]),
+                    "star_gap_up": 0.0,
+                    "star_gap_down": 0.0
+                }
 
         # Five-candle patterns (5 candles required)
         if pattern_type is not None and any(five_candle in pattern_type for five_candle in [
@@ -3925,7 +3973,13 @@ class PatternDetector:
                     "baby_gap": float(abs(closes[-2] - closes[-3]) + abs(closes[-1] - closes[-2]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "first_candle_close": float(closes[-1]),
+                    "second_candle_close": float(closes[-1]),
+                    "third_candle_close": float(closes[-1]),
+                    "baby_gap": 0.0
+                }
 
         # Six-candle patterns (6 candles required)
         if pattern_type is not None and any(six_candle in pattern_type for six_candle in [
@@ -3941,7 +3995,14 @@ class PatternDetector:
                     "avg_low_6": float(np.mean(lows[-6:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_start": float(closes[0]),
+                    "pattern_end": float(closes[-1]),
+                    "pattern_range": float(max(closes) - min(closes)),
+                    "avg_high_6": float(np.mean(highs)),
+                    "avg_low_6": float(np.mean(lows))
+                }
 
         # Seven-candle patterns (7 candles required)
         if pattern_type is not None and ("rising_three_methods" in pattern_type or "falling_three_methods" in pattern_type):
@@ -3955,7 +4016,14 @@ class PatternDetector:
                     "avg_low_7": float(np.mean(lows[-7:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_start": float(closes[0]),
+                    "pattern_end": float(closes[-1]),
+                    "three_methods_range": float(max(closes) - min(closes)),
+                    "avg_high_7": float(np.mean(highs)),
+                    "avg_low_7": float(np.mean(lows))
+                }
 
         # Large patterns (20+ candles required)
         if pattern_type is not None and any(large_pattern in pattern_type for large_pattern in [
@@ -3971,7 +4039,14 @@ class PatternDetector:
                     "pattern_range": float(max(closes[-20:]) - min(closes[-20:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "cup_depth": float(min(closes)),
+                    "cup_rim": float(max(closes)),
+                    "handle_start": float(closes[len(closes)//2]),
+                    "handle_end": float(closes[-1]),
+                    "pattern_range": float(max(closes) - min(closes))
+                }
 
         # Medium patterns (12+ candles required)
         if pattern_type is not None and any(medium_pattern in pattern_type for medium_pattern in [
@@ -3989,7 +4064,14 @@ class PatternDetector:
                     "pattern_end": float(closes[-1])
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "pattern_top": float(max(highs)),
+                    "pattern_bottom": float(min(lows)),
+                    "pattern_height": float(max(highs) - min(lows)),
+                    "pattern_start": float(closes[0]),
+                    "pattern_end": float(closes[-1])
+                }
 
         # Flag/Pennant patterns (10+ candles required)
         if pattern_type is not None and any(flag_pattern in pattern_type for flag_pattern in [
@@ -4002,13 +4084,24 @@ class PatternDetector:
                     "flag_pole_end": float(closes[-7]),
                     "flag_start": float(closes[-7]),
                     "flag_end": float(closes[-1]),
-                    "flag_range": float(max(highs[-7:]) - min(lows[-7:]))
+                    "pole_height": float(closes[-7] - closes[-10]),
+                    "flag_range": float(max(closes[-7:]) - min(closes[-7:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
+                return {
+                    "latest_close": float(closes[-1]),
+                    "flag_pole_start": float(closes[0]),
+                    "flag_pole_end": float(closes[len(closes)//2]),
+                    "flag_start": float(closes[len(closes)//2]),
+                    "flag_end": float(closes[-1]),
+                    "pole_height": float(closes[len(closes)//2] - closes[0]),
+                    "flag_range": float(max(closes[len(closes)//2:]) - min(closes[len(closes)//2:]))
+                }
 
-        # Head and shoulders patterns
-        if pattern_type is not None and ("head_and_shoulders" in pattern_type or "inverse_head_and_shoulders" in pattern_type):
+        # Head and shoulders patterns (15+ candles required)
+        if pattern_type is not None and any(hs_pattern in pattern_type for hs_pattern in [
+            "head_and_shoulders", "bearish_head_and_shoulders", "inverse_head_and_shoulders"
+        ]):
             if len(closes) >= 15:
                 return {
                     "latest_close": float(closes[-1]),
@@ -4019,237 +4112,132 @@ class PatternDetector:
                     "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
                 }
             else:
-                return {"latest_close": float(closes[-1])}
-
-        # Double top/bottom patterns
-        if pattern_type is not None and ("double_top" in pattern_type or "double_bottom" in pattern_type):
-            if len(closes) >= 10:
                 return {
                     "latest_close": float(closes[-1]),
-                    "first_peak": float(max(highs[-10:-5])),
-                    "second_peak": float(max(highs[-5:])),
-                    "valley": float(min(lows[-10:])),
-                    "pattern_range": float(max(highs[-10:]) - min(lows[-10:]))
+                    "left_shoulder": float(max(highs[:len(highs)//3])),
+                    "head": float(max(highs[len(highs)//3:2*len(highs)//3])),
+                    "right_shoulder": float(max(highs[2*len(highs)//3:])),
+                    "neckline": float(min(lows)),
+                    "pattern_range": float(max(highs) - min(lows))
                 }
-            else:
-                return {"latest_close": float(closes[-1])}
 
-        # Triple top/bottom patterns
-        if pattern_type is not None and ("triple_top" in pattern_type or "triple_bottom" in pattern_type):
+        # Double top/bottom patterns (10+ candles required)
+        if pattern_type is not None and any(double_pattern in pattern_type for double_pattern in [
+            "double_top", "double_bottom"
+        ]):
+            if len(closes) >= 10:
+                if "double_top" in pattern_type:
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_peak": float(max(highs[-10:-5])),
+                        "second_peak": float(max(highs[-5:])),
+                        "valley": float(min(lows[-10:])),
+                        "pattern_range": float(max(highs[-10:]) - min(lows[-10:]))
+                    }
+                else:  # double_bottom
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_trough": float(min(lows[-10:-5])),
+                        "second_trough": float(min(lows[-5:])),
+                        "peak": float(max(highs[-10:])),
+                        "pattern_range": float(max(highs[-10:]) - min(lows[-10:]))
+                    }
+            else:
+                if "double_top" in pattern_type:
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_peak": float(max(highs[:len(highs)//2])),
+                        "second_peak": float(max(highs[len(highs)//2:])),
+                        "valley": float(min(lows)),
+                        "pattern_range": float(max(highs) - min(lows))
+                    }
+                else:  # double_bottom
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_trough": float(min(lows[:len(lows)//2])),
+                        "second_trough": float(min(lows[len(lows)//2:])),
+                        "peak": float(max(highs)),
+                        "pattern_range": float(max(highs) - min(lows))
+                    }
+
+        # Triple top/bottom patterns (15+ candles required)
+        if pattern_type is not None and any(triple_pattern in pattern_type for triple_pattern in [
+            "triple_top", "triple_bottom"
+        ]):
             if len(closes) >= 15:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "first_peak": float(max(highs[-15:-10])),
-                    "second_peak": float(max(highs[-10:-5])),
-                    "third_peak": float(max(highs[-5:])),
-                    "support_level": float(min(lows[-15:])),
-                    "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
-                }
+                if "triple_top" in pattern_type:
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_peak": float(max(highs[-15:-10])),
+                        "second_peak": float(max(highs[-10:-5])),
+                        "third_peak": float(max(highs[-5:])),
+                        "valley1": float(min(lows[-15:-5])),
+                        "valley2": float(min(lows[-5:])),
+                        "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
+                    }
+                else:  # triple_bottom
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_trough": float(min(lows[-15:-10])),
+                        "second_trough": float(min(lows[-10:-5])),
+                        "third_trough": float(min(lows[-5:])),
+                        "peak1": float(max(highs[-15:-5])),
+                        "peak2": float(max(highs[-5:])),
+                        "pattern_range": float(max(highs[-15:]) - min(lows[-15:]))
+                    }
             else:
-                return {"latest_close": float(closes[-1])}
+                if "triple_top" in pattern_type:
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_peak": float(max(highs[:len(highs)//3])),
+                        "second_peak": float(max(highs[len(highs)//3:2*len(highs)//3])),
+                        "third_peak": float(max(highs[2*len(highs)//3:])),
+                        "valley1": float(min(lows[:len(lows)//2])),
+                        "valley2": float(min(lows[len(lows)//2:])),
+                        "pattern_range": float(max(highs) - min(lows))
+                    }
+                else:  # triple_bottom
+                    return {
+                        "latest_close": float(closes[-1]),
+                        "first_trough": float(min(lows[:len(lows)//3])),
+                        "second_trough": float(min(lows[len(lows)//3:2*len(lows)//3])),
+                        "third_trough": float(min(lows[2*len(lows)//3:])),
+                        "peak1": float(max(highs[:len(highs)//2])),
+                        "peak2": float(max(highs[len(highs)//2:])),
+                        "pattern_range": float(max(highs) - min(lows))
+                    }
 
-        # Island reversal patterns
-        if pattern_type is not None and "island_reversal" in pattern_type:
-            if len(closes) >= 5:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "island_gap_up": float(closes[-3] - closes[-4]),
-                    "island_gap_down": float(closes[-2] - closes[-1]),
-                    "island_high": float(max(highs[-5:])),
-                    "island_low": float(min(lows[-5:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
+        # Special patterns
+        if pattern_type is not None and any(special_pattern in pattern_type for special_pattern in [
+            "diamond_top", "bump_and_run", "catapult", "scallop", "tower_top", "horn_top", "pipe_bottom", "zigzag"
+        ]):
+            return {
+                "latest_close": float(closes[-1]),
+                "pattern_top": float(max(highs)),
+                "pattern_bottom": float(min(lows)),
+                "pattern_height": float(max(highs) - min(lows)),
+                "pattern_start": float(closes[0]),
+                "pattern_end": float(closes[-1]),
+                "pattern_range": float(max(closes) - min(closes))
+            }
 
-        # Diamond top patterns
-        if pattern_type is not None and "diamond_top" in pattern_type:
-            if len(closes) >= 12:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "diamond_top": float(max(highs[-12:])),
-                    "diamond_bottom": float(min(lows[-12:])),
-                    "diamond_width": float(len(closes[-12:])),
-                    "pattern_range": float(max(highs[-12:]) - min(lows[-12:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Bump and run patterns
-        if pattern_type is not None and "bump_and_run" in pattern_type:
-            if len(closes) >= 20:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "run_start": float(closes[-20]),
-                    "bump_peak": float(max(highs[-20:])),
-                    "run_end": float(closes[-1]),
-                    "pattern_range": float(max(highs[-20:]) - min(lows[-20:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Horn top patterns
-        if pattern_type is not None and "horn_top" in pattern_type:
-            if len(closes) >= 8:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "horn_left": float(max(highs[-8:-4])),
-                    "horn_right": float(max(highs[-4:])),
-                    "horn_base": float(min(lows[-8:])),
-                    "pattern_range": float(max(highs[-8:]) - min(lows[-8:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Pipe bottom patterns
-        if pattern_type is not None and "pipe_bottom" in pattern_type:
-            if len(closes) >= 6:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "pipe_left": float(min(lows[-6:-3])),
-                    "pipe_right": float(min(lows[-3:])),
-                    "pipe_top": float(max(highs[-6:])),
-                    "pattern_range": float(max(highs[-6:]) - min(lows[-6:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Catapult patterns
-        if pattern_type is not None and "catapult" in pattern_type:
-            if len(closes) >= 10:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "catapult_base": float(min(lows[-10:])),
-                    "catapult_launch": float(max(highs[-5:])),
-                    "catapult_range": float(max(highs[-10:]) - min(lows[-10:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Scallop patterns
-        if pattern_type is not None and "scallop" in pattern_type:
-            if len(closes) >= 8:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "scallop_bottom": float(min(closes[-8:])),
-                    "scallop_top": float(max(closes[-8:])),
-                    "scallop_range": float(max(closes[-8:]) - min(closes[-8:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Tower top patterns
-        if pattern_type is not None and "tower_top" in pattern_type:
-            if len(closes) >= 8:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "tower_base": float(closes[-8]),
-                    "tower_peak": float(max(closes[-8:])),
-                    "tower_collapse": float(closes[-1]),
-                    "tower_range": float(max(closes[-8:]) - min(closes[-8:]))
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Zigzag patterns
-        if pattern_type is not None and "zigzag" in pattern_type:
-            if len(closes) >= 10:
-                return {
-                    "latest_close": float(closes[-1]),
-                    "zigzag_high": float(max(highs[-10:])),
-                    "zigzag_low": float(min(lows[-10:])),
-                    "zigzag_range": float(max(highs[-10:]) - min(lows[-10:])),
-                    "zigzag_start": float(closes[-10]),
-                    "zigzag_end": float(closes[-1])
-                }
-            else:
-                return {"latest_close": float(closes[-1])}
-
-        # Latest price and averages
-        latest_close = closes[-1]
-        avg_high = np.mean(highs[-5:])
-        avg_low = np.mean(lows[-5:])
-
-        # Find local extremes (potential support and resistance)
-        # Adjusted: Consider a smaller order for potentially more levels
-        peaks = argrelextrema(highs, np.greater, order=2)[0] # Changed order to 1
-        troughs = argrelextrema(lows, np.less, order=2)[0]   # Changed order to 1
-
-        # Calculate key levels
-        key_levels = {
-            'latest_close': latest_close,
-            'avg_high_5': avg_high,
-            'avg_low_5': avg_low
+        # Default fallback for any unrecognized pattern
+        return {
+            "latest_close": float(closes[-1]),
+            "pattern_top": float(max(highs)),
+            "pattern_bottom": float(min(lows)),
+            "pattern_height": float(max(highs) - min(lows)),
+            "pattern_start": float(closes[0]),
+            "pattern_end": float(closes[-1])
         }
 
-        # Add recent peaks as resistances (sorted to get strongest/most recent)
-        recent_peaks = sorted(peaks[peaks > len(highs) - 50], key=lambda x: x, reverse=True)[:3] # Consider last 50 bars
-        if len(recent_peaks) > 0:
-            for i, idx in enumerate(recent_peaks):
-                key_levels[f'resistance{i+1}'] = float(highs[idx])
-
-        # Add recent troughs as supports (sorted to get strongest/most recent)
-        recent_troughs = sorted(troughs[troughs > len(lows) - 50], key=lambda x: x, reverse=True)[:3] # Consider last 50 bars
-        if len(recent_troughs) > 0:
-             for i, idx in enumerate(recent_troughs):
-                key_levels[f'support{i+1}'] = float(lows[idx])
-
-        # Add pattern-specific key levels for better plotting
-        # For rectangles, add the actual boundaries
-        if len(highs) >= 12:  # Minimum for rectangle detection
-            top_band = float(np.percentile(highs, 90))
-            bottom_band = float(np.percentile(lows, 10))
-            key_levels['rectangle_top'] = top_band
-            key_levels['rectangle_bottom'] = bottom_band
-            key_levels['rectangle_height'] = top_band - bottom_band
-
-        # For triangles and channels, add trendline points
-        if len(highs) >= 8:
-            # Calculate trendlines for potential triangle/channel patterns
-            x = np.arange(len(highs))
-            
-            # High trendline
-            high_coef = np.polyfit(x, highs, 1)
-            high_slope = float(high_coef[0])
-            high_intercept = float(high_coef[1])
-            
-            # Low trendline  
-            low_coef = np.polyfit(x, lows, 1)
-            low_slope = float(low_coef[0])
-            low_intercept = float(low_coef[1])
-            
-            # Add trendline points for plotting
-            key_levels['high_trendline_start'] = high_intercept
-            key_levels['high_trendline_end'] = high_intercept + high_slope * (len(highs) - 1)
-            key_levels['high_trendline_slope'] = high_slope
-            
-            key_levels['low_trendline_start'] = low_intercept
-            key_levels['low_trendline_end'] = low_intercept + low_slope * (len(highs) - 1)
-            key_levels['low_trendline_slope'] = low_slope
-
-        # Add swing points for better pattern visualization
-        if len(peaks) > 0:
-            # Get the most significant peaks
-            peak_values = highs[peaks]
-            significant_peaks = peaks[np.argsort(peak_values)[-3:]]  # Top 3 peaks
-            for i, idx in enumerate(significant_peaks):
-                key_levels[f'peak_{i+1}_idx'] = float(idx)
-                key_levels[f'peak_{i+1}_value'] = float(highs[idx])
-
-        if len(troughs) > 0:
-            # Get the most significant troughs
-            trough_values = lows[troughs]
-            significant_troughs = troughs[np.argsort(trough_values)[:3]]  # Bottom 3 troughs
-            for i, idx in enumerate(significant_troughs):
-                key_levels[f'trough_{i+1}_idx'] = float(idx)
-                key_levels[f'trough_{i+1}_value'] = float(lows[idx])
-
-        # Add pattern-specific key levels if available
-        if hasattr(self, '_pattern_key_levels') and self._pattern_key_levels:
-            key_levels.update(self._pattern_key_levels)
-            # Clear after use to avoid carrying over to next pattern
-            self._pattern_key_levels = {}
-            
-        return key_levels
+    @register_pattern("head_and_shoulder", types=["bearish_head_and_shoulders", "inverse_head_and_shoulders"])
+    async def _detect_head_and_shoulder(self, ohlcv: dict) -> Tuple[bool, float, str]:
+        """
+        Alias for head_and_shoulders pattern detection (for trader naming compatibility).
+        Calls the existing head_and_shoulders detection logic.
+        """
+        return await self._detect_head_and_shoulders(ohlcv)
 
 
 initialized_pattern_registry = _pattern_registry

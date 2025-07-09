@@ -18,7 +18,7 @@ class TrendDetector:
     Provides trend direction, slope, and key swing points for pattern context.
     """
     
-    def __init__(self, atr_period: int = 14, swing_threshold: float = 0.02):
+    def __init__(self, atr_period: int = 14, swing_threshold: float = 0.001):
         """
         Initialize the trend detector.
         
@@ -46,21 +46,26 @@ class TrendDetector:
         """
         try:
             df = pd.DataFrame(ohlcv)
-            highs = df['high'].values
-            lows = df['low'].values
-            closes = df['close'].values
+            logger.info(f"[TrendDetector] OHLCV shape: {df.shape}, head: {df.head(3)}")
+            highs = np.asarray(df['high'])
+            lows = np.asarray(df['low'])
+            closes = np.asarray(df['close'])
             
             # Calculate ATR for adaptive thresholds
             atr = self._calculate_atr(df)
+            logger.info(f"[TrendDetector] ATR (last 5): {atr[-5:] if len(atr) >= 5 else atr}")
             
             # Find swing highs and lows
             swing_highs, swing_lows = self._find_swing_points(highs, lows, atr)
+            logger.info(f"[TrendDetector] swing_highs: {swing_highs}, swing_lows: {swing_lows}")
             
             # Determine trend direction and slope
             trend_info = self._calculate_trend_direction(swing_highs, swing_lows, closes)
+            logger.info(f"[TrendDetector] trend_info: {trend_info}")
             
             # Calculate trend strength
             strength = self._calculate_trend_strength(swing_highs, swing_lows, closes, trend_info['direction'])
+            logger.info(f"[TrendDetector] trend_strength: {strength}")
             
             return {
                 'direction': trend_info['direction'],
@@ -87,70 +92,42 @@ class TrendDetector:
     
     def _calculate_atr(self, df: pd.DataFrame) -> np.ndarray:
         """Calculate Average True Range."""
-        high = df['high'].values
-        low = df['low'].values
-        close = df['close'].values
+        high = np.asarray(df['high'])
+        low = np.asarray(df['low'])
+        close = np.asarray(df['close'])
         
         tr1 = high - low
         tr2 = np.abs(high - np.roll(close, 1))
         tr3 = np.abs(low - np.roll(close, 1))
         
         tr = np.maximum(tr1, np.maximum(tr2, tr3))
-        atr = pd.Series(tr).rolling(window=self.atr_period).mean().values
-        
-        return atr
+        atr = pd.Series(tr).rolling(window=self.atr_period).mean()
+        return np.asarray(atr)
     
     def _find_swing_points(self, highs: np.ndarray, lows: np.ndarray, atr: np.ndarray) -> Tuple[List[Dict], List[Dict]]:
         """
-        Find swing highs and lows using adaptive thresholds.
-        
+        Find swing highs and lows using dynamic order (like old engine).
         Returns:
             Tuple of (swing_highs, swing_lows) lists, each containing dicts with 'idx' and 'price'
         """
         swing_highs = []
         swing_lows = []
-        
-        # Use scipy to find local extrema
-        high_peaks = argrelextrema(highs, np.greater, order=2)[0]
-        low_peaks = argrelextrema(lows, np.less, order=2)[0]
-        
-        # Filter peaks using adaptive threshold
+        n = len(highs)
+        if n < 20:
+            return [], []
+        # Use dynamic order: 5% of data length, min 2, max 10
+        order = max(2, min(10, int(n * 0.05)))
+        high_peaks = argrelextrema(highs, np.greater, order=order)[0]
+        low_peaks = argrelextrema(lows, np.less, order=order)[0]
+        # Always return at least the top 3 highs/lows if not enough extrema found
+        if len(high_peaks) < 2:
+            high_peaks = np.argsort(highs)[-3:]
+        if len(low_peaks) < 2:
+            low_peaks = np.argsort(lows)[:3]
         for idx in high_peaks:
-            if idx < len(atr) and atr[idx] > 0:
-                # Use ATR-based threshold, fallback to percentage
-                threshold = max(atr[idx] * 0.5, highs[idx] * self.swing_threshold)
-                
-                # Check if this peak is significantly higher than surrounding points
-                left_range = max(0, idx - 5)
-                right_range = min(len(highs), idx + 6)
-                
-                left_avg = np.mean(highs[left_range:idx])
-                right_avg = np.mean(highs[idx+1:right_range])
-                
-                if (highs[idx] > left_avg + threshold and 
-                    highs[idx] > right_avg + threshold):
-                    swing_highs.append({
-                        'idx': int(idx),
-                        'price': float(highs[idx])
-                    })
-        
+            swing_highs.append({'idx': int(idx), 'price': float(highs[idx])})
         for idx in low_peaks:
-            if idx < len(atr) and atr[idx] > 0:
-                threshold = max(atr[idx] * 0.5, lows[idx] * self.swing_threshold)
-                
-                left_range = max(0, idx - 5)
-                right_range = min(len(lows), idx + 6)
-                
-                left_avg = np.mean(lows[left_range:idx])
-                right_avg = np.mean(lows[idx+1:right_range])
-                
-                if (lows[idx] < left_avg - threshold and 
-                    lows[idx] < right_avg - threshold):
-                    swing_lows.append({
-                        'idx': int(idx),
-                        'price': float(lows[idx])
-                    })
-        
+            swing_lows.append({'idx': int(idx), 'price': float(lows[idx])})
         return swing_highs, swing_lows
     
     def _calculate_trend_direction(self, swing_highs: List[Dict], swing_lows: List[Dict], closes: np.ndarray) -> Dict[str, any]:

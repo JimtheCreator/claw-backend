@@ -11,6 +11,7 @@ import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+from core.services.chart_engine import ChartEngine
 
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
@@ -122,8 +123,8 @@ async def analyze_market_immediate(
         # Convert ohlcv dict to DataFrame for ChartGenerator
         import pandas as pd
         ohlcv_df = pd.DataFrame(ohlcv)
-        chart_generator = ChartGenerator(analysis_data=analysis_result, ohlcv_data=ohlcv_df)
-        image_bytes = chart_generator.create_chart_image()
+        chart_engine = ChartEngine(analysis_data=analysis_result, ohlcv_data=ohlcv_df)
+        image_bytes = chart_engine.create_chart()
         
         image_url = await supabase.upload_chart_image(image_bytes, analysis_id, user_id)
         
