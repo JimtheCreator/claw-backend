@@ -7,7 +7,7 @@ from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRep
 from infrastructure.database.redis.cache import redis_cache
 # You'll need to create this notification service
 from infrastructure.notifications.notification_service import NotificationService 
-from core.use_cases.market_analysis.detect_patterns import _pattern_registry  # Import your pattern registry
+from core.use_cases.market_analysis.detect_patterns_engine import _pattern_registry  # Import your pattern registry
 
 import asyncio
 import json
@@ -18,7 +18,7 @@ from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRep
 from infrastructure.database.redis.cache import redis_cache
 # You'll need to create this notification service
 from infrastructure.notifications.notification_service import NotificationService 
-from core.use_cases.market_analysis.detect_patterns import _pattern_registry  # Import your pattern registry
+from core.use_cases.market_analysis.detect_patterns_engine import _pattern_registry  # Import your pattern registry
 
 # Import the async Supabase client
 from supabase import create_client, Client

@@ -11,7 +11,7 @@ from fastapi import HTTPException
 import math
 import asyncio
 from common.logger import logger
-from core.use_cases.market_analysis.detect_patterns import PatternDetector, initialized_pattern_registry
+from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 import traceback
 import json
 

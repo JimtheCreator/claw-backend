@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Path, Body, Query
 from core.interfaces.AnalysisRequest import AnalysisRequest
 from core.interfaces.AnalysisResult import AnalysisResult
 # Update the endpoint imports:
-from core.use_cases.market_analysis.detect_patterns import PatternDetector
+from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector
 
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from core.use_cases.market_analysis.analysis_structure.main_analysis_structure import PatternAPI

@@ -1,0 +1,256 @@
+[
+    {
+        "pattern_name": "morning_star",
+        "category": "candlestick",
+        "confidence": 0.8,
+        "priority": 1,
+        "start_index": 17,
+        "end_index": 19,
+        "start_time": "2025-07-09T17:03:00+00:00",
+        "end_time": "2025-07-09T17:05:00+00:00",
+        "key_levels": {
+            "first_candle_open": 154.65,
+            "first_candle_close": 154.64,
+            "second_candle_open": 154.64,
+            "second_candle_close": 154.63,
+            "third_candle_open": 154.63,
+            "third_candle_close": 154.76,
+            "pattern_range": 0.12999999999999545,
+            "star_gap_up": -0.009999999999990905
+        }
+    },
+    {
+        "pattern_name": "bullish_engulfing",
+        "category": "candlestick",
+        "confidence": 0.9,
+        "priority": 1,
+        "start_index": 68,
+        "end_index": 69,
+        "start_time": "2025-07-09T17:54:00+00:00",
+        "end_time": "2025-07-09T17:55:00+00:00",
+        "key_levels": {
+            "prev_open": 153.41,
+            "prev_close": 153.36,
+            "prev_high": 153.44,
+            "prev_low": 153.34,
+            "curr_open": 153.35,
+            "curr_close": 153.43,
+            "curr_high": 153.43,
+            "curr_low": 153.35,
+            "engulfed_range": 0.020000000000010232
+        }
+    },
+    {
+        "pattern_name": "cup_and_handle",
+        "category": "chart",
+        "confidence": 0.7,
+        "priority": 2,
+        "start_index": 100,
+        "end_index": 249,
+        "start_time": "2025-07-09T18:26:00+00:00",
+        "end_time": "2025-07-09T20:55:00+00:00",
+        "key_levels": {
+            "points": {
+                "cup_start": {
+                    "index": 0,
+                    "price": 155.08,
+                    "timestamp": "2025-07-09T18:26:00+00:00"
+                },
+                "cup_bottom": {
+                    "index": 20,
+                    "price": 154.29,
+                    "timestamp": "2025-07-09T18:46:00+00:00"
+                },
+                "cup_end": {
+                    "index": 99,
+                    "price": 157.0,
+                    "timestamp": "2025-07-09T20:05:00+00:00"
+                },
+                "handle_start": {
+                    "index": 100,
+                    "price": 156.83,
+                    "timestamp": "2025-07-09T20:06:00+00:00"
+                },
+                "handle_end": {
+                    "index": 149,
+                    "price": 156.14,
+                    "timestamp": "2025-07-09T20:55:00+00:00"
+                }
+            },
+            "latest_close": 156.14,
+            "avg_high_5": 156.322,
+            "avg_low_5": 156.096,
+            "pattern_high": 156.15,
+            "pattern_low": 155.85,
+            "pattern_open": 155.94,
+            "pattern_close": 156.14
+        }
+    },
+    {
+        "pattern_name": "diamond_top",
+        "category": "chart",
+        "confidence": 0.7,
+        "priority": 2,
+        "start_index": 252,
+        "end_index": 350,
+        "start_time": "2025-07-09T20:58:00+00:00",
+        "end_time": "2025-07-09T22:36:00+00:00",
+        "key_levels": {
+            "points": {
+                "left_extreme": {
+                    "index": 2,
+                    "price": 155.99,
+                    "timestamp": "2025-07-09T20:58:00+00:00"
+                },
+                "peak": {
+                    "index": 81,
+                    "price": 157.93,
+                    "timestamp": "2025-07-09T22:17:00+00:00"
+                },
+                "right_extreme": {
+                    "index": 100,
+                    "price": 157.29,
+                    "timestamp": "2025-07-09T22:36:00+00:00"
+                }
+            },
+            "support": 155.99,
+            "resistance": 157.93,
+            "pattern_height": 1.9399999999999977
+        }
+    },
+    {
+        "pattern_name": "tweezers_bottom",
+        "category": "candlestick",
+        "confidence": 0.8,
+        "priority": 1,
+        "start_index": 368,
+        "end_index": 369,
+        "start_time": "2025-07-09T22:54:00+00:00",
+        "end_time": "2025-07-09T22:55:00+00:00",
+        "key_levels": {
+            "prev_open": 157.43,
+            "prev_close": 157.35,
+            "prev_high": 157.43,
+            "prev_low": 157.3,
+            "curr_open": 157.35,
+            "curr_close": 157.44,
+            "curr_high": 157.48,
+            "curr_low": 157.3,
+            "prev_body": 0.0800000000000125,
+            "curr_body": 0.09000000000000341,
+            "bottom_diff": 0.0
+        }
+    },
+    {
+        "pattern_name": "cup_and_handle",
+        "category": "chart",
+        "confidence": 0.8,
+        "priority": 2,
+        "start_index": 450,
+        "end_index": 599,
+        "start_time": "2025-07-10T00:16:00+00:00",
+        "end_time": "2025-07-10T02:45:00+00:00",
+        "key_levels": {
+            "points": {
+                "cup_start": {
+                    "index": 0,
+                    "price": 157.35,
+                    "timestamp": "2025-07-10T00:16:00+00:00"
+                },
+                "cup_bottom": {
+                    "index": 43,
+                    "price": 155.94,
+                    "timestamp": "2025-07-10T00:59:00+00:00"
+                },
+                "cup_end": {
+                    "index": 99,
+                    "price": 157.76,
+                    "timestamp": "2025-07-10T01:55:00+00:00"
+                },
+                "handle_start": {
+                    "index": 100,
+                    "price": 157.69,
+                    "timestamp": "2025-07-10T01:56:00+00:00"
+                },
+                "handle_end": {
+                    "index": 149,
+                    "price": 158.2,
+                    "timestamp": "2025-07-10T02:45:00+00:00"
+                }
+            },
+            "latest_close": 158.2,
+            "avg_high_5": 158.244,
+            "avg_low_5": 158.12800000000001,
+            "pattern_high": 158.22,
+            "pattern_low": 158.1,
+            "pattern_open": 158.12,
+            "pattern_close": 158.2
+        }
+    },
+    {
+        "pattern_name": "cup_and_handle",
+        "category": "chart",
+        "confidence": 0.7,
+        "priority": 2,
+        "start_index": 800,
+        "end_index": 949,
+        "start_time": "2025-07-10T06:06:00+00:00",
+        "end_time": "2025-07-10T08:35:00+00:00",
+        "key_levels": {
+            "points": {
+                "cup_start": {
+                    "index": 0,
+                    "price": 156.93,
+                    "timestamp": "2025-07-10T06:06:00+00:00"
+                },
+                "cup_bottom": {
+                    "index": 2,
+                    "price": 156.75,
+                    "timestamp": "2025-07-10T06:08:00+00:00"
+                },
+                "cup_end": {
+                    "index": 99,
+                    "price": 158.27,
+                    "timestamp": "2025-07-10T07:45:00+00:00"
+                },
+                "handle_start": {
+                    "index": 100,
+                    "price": 158.27,
+                    "timestamp": "2025-07-10T07:46:00+00:00"
+                },
+                "handle_end": {
+                    "index": 149,
+                    "price": 158.6,
+                    "timestamp": "2025-07-10T08:35:00+00:00"
+                }
+            },
+            "latest_close": 158.6,
+            "avg_high_5": 158.62,
+            "avg_low_5": 158.53199999999998,
+            "pattern_high": 158.62,
+            "pattern_low": 158.57,
+            "pattern_open": 158.59,
+            "pattern_close": 158.6
+        }
+    },
+    {
+        "pattern_name": "evening_star",
+        "category": "candlestick",
+        "confidence": 0.6,
+        "priority": 1,
+        "start_index": 967,
+        "end_index": 969,
+        "start_time": "2025-07-10T08:53:00+00:00",
+        "end_time": "2025-07-10T08:55:00+00:00",
+        "key_levels": {
+            "first_candle_open": 158.84,
+            "first_candle_close": 159.02,
+            "second_candle_open": 159.03,
+            "second_candle_close": 159.03,
+            "third_candle_open": 159.03,
+            "third_candle_close": 158.95,
+            "pattern_range": 0.0800000000000125,
+            "star_gap_down": -0.009999999999990905
+        }
+    }
+]

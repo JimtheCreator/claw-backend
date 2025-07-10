@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
 from common.logger import logger
-from .detect_patterns import PatternDetector, initialized_pattern_registry
+from .detect_patterns_engine import PatternDetector, initialized_pattern_registry
 import inspect
 
 

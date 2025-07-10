@@ -1,5 +1,5 @@
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
-from core.use_cases.market_analysis.detect_patterns import initialized_pattern_registry
+from core.use_cases.market_analysis.detect_patterns_engine import initialized_pattern_registry
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from pydantic import BaseModel

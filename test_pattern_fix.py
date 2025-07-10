@@ -13,7 +13,7 @@ import os
 # Add the src directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from core.use_cases.market_analysis.detect_patterns import PatternDetector
+from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector
 from core.use_cases.market_analysis.analysis_structure.main_analysis_structure import MarketAnalyzer
 
 def create_test_data():

@@ -9,12 +9,19 @@ import asyncio
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 from fastapi import HTTPException
+
+import os
+import sys
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
+sys.path.append(parent_dir)
+
 from common.logger import logger
 
 from .analysis_structure.main_analysis_structure import PatternAPI, MarketAnalyzer
 from .trader_aware_analyzer import TraderAwareAnalyzer
 from .trader_aware_config import get_config, get_preset_config
-from core.use_cases.market_analysis.detect_patterns import PatternDetector, initialized_pattern_registry
+from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 
 
 class EnhancedPatternAPI:

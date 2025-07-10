@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from common.logger import logger
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from core.use_cases.market_analysis.detect_patterns import PatternDetector, initialized_pattern_registry
+from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 from infrastructure.database.redis.cache import redis_cache
 
 

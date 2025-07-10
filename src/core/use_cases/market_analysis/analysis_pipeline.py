@@ -70,68 +70,108 @@ class TraderAwareAnalysisPipeline:
     async def analyze_market(self, ohlcv: Dict[str, List], 
                            patterns_to_detect: Optional[List[str]] = None) -> Dict[str, Any]:
         """
-        Run the complete trader-aware market analysis.
-        
-        Args:
-            ohlcv: OHLCV data dictionary
-            patterns_to_detect: Optional list of specific patterns to detect
-            
-        Returns:
-            Dictionary containing complete analysis results
+        Run the complete trader-aware market analysis (retail trader style, split windows, big patterns only).
         """
         try:
-            logger.info("Starting trader-aware market analysis...")
-            
-            # Step 1: Detect market trend
-            logger.info("Step 1: Detecting market trend...")
-            trend_info = self.trend_detector.detect_trend(ohlcv)
-            logger.info(f"Trend detected: {trend_info['direction']} (strength: {trend_info['strength']:.2f})")
-            
-            # Step 2: Detect key zones
-            logger.info("Step 2: Detecting key zones...")
-            zones = self.zone_detector.detect_zones(ohlcv)
-            total_zones = sum(len(zone_list) for zone_list in zones.values())
-            logger.info(f"Detected {total_zones} zones")
-            
-            # Step 3: Scan for contextual patterns
-            logger.info("Step 3: Scanning for contextual patterns...")
-            detected_patterns = await self.pattern_scanner.scan_patterns(
-                ohlcv, zones, trend_info, patterns_to_detect
+            logger.info("Starting trader-aware market analysis (split windows, big patterns only)...")
+            n = len(ohlcv['close'])
+            recent_window = 150 if n > 200 else max(50, n // 5)
+            early_window = n - recent_window
+            # --- Step 1: Early window (up to N-150) ---
+            if early_window > 50:
+                ohlcv_early = {k: v[:early_window] for k, v in ohlcv.items()}
+                trend_info_early = self.trend_detector.detect_trend(ohlcv_early)
+                zones_early = self.zone_detector.detect_zones(ohlcv_early)
+                detected_patterns_early = await self.pattern_scanner.scan_patterns(
+                    ohlcv_early, zones_early, trend_info_early, []
+                )
+            else:
+                detected_patterns_early = []
+                trend_info_early = None
+                zones_early = None
+            # --- Step 2: Recent window (last 150 candles) ---
+            ohlcv_recent = {k: v[-recent_window:] for k, v in ohlcv.items()}
+            trend_info_recent = self.trend_detector.detect_trend(ohlcv_recent)
+            zones_recent = self.zone_detector.detect_zones(ohlcv_recent)
+            detected_patterns_recent = await self.pattern_scanner.scan_patterns(
+                ohlcv_recent, zones_recent, trend_info_recent, []
             )
-            logger.info(f"Detected {len(detected_patterns)} patterns")
-            
-            # Step 4: Find candle confirmations (optional)
+            # --- Step 3: Classify and filter big patterns ---
+            def classify_pattern(pattern, trend, zones, window_type, window_len):
+                idx = pattern.get('end_idx', 0)
+                key_levels = pattern.get('key_levels', {})
+                price_points = [v for v in key_levels.values() if isinstance(v, (int, float))]
+                sr_levels = []
+                for zone_type in ['support_zones', 'resistance_zones']:
+                    for zone in (zones.get(zone_type, []) if zones else []):
+                        sr_levels.extend(zone.get('price_range', []))
+                close_to_sr = any(
+                    abs(p - lvl) / max(1, abs(lvl)) < 0.01 for p in price_points for lvl in sr_levels
+                ) if sr_levels and price_points else False
+                trend_align = pattern.get('trader_aware_scores', {}).get('trend_alignment', 0)
+                confidence = pattern.get('confidence', 0)
+                is_latest = (window_type == "recent") and (idx >= window_len - 3)
+                # Pattern span
+                span = pattern.get('end_idx', 0) - pattern.get('start_idx', 0) + 1
+                min_span = max(5, int(0.1 * window_len))
+                if span < min_span:
+                    return 'ignore'  # Too small
+                if close_to_sr and confidence > 0.7 and trend_align > 0.5 and is_latest:
+                    return 'major'
+                elif close_to_sr and confidence > 0.5:
+                    return 'nuanced'
+                else:
+                    return 'minor'
+            # Only include patterns whose end_idx is within their window
+            patterns = []
+            if detected_patterns_early:
+                for p in detected_patterns_early:
+                    if p.get('end_idx', 0) < early_window:
+                        p = dict(p)
+                        p['classification'] = classify_pattern(p, trend_info_early, zones_early, "early", early_window)
+                        if p['classification'] == 'major':
+                            patterns.append(p)
+            for p in detected_patterns_recent:
+                if recent_window > 0 and p.get('end_idx', 0) >= 0 and p.get('end_idx', 0) < recent_window:
+                    p = dict(p)
+                    p['classification'] = classify_pattern(p, trend_info_recent, zones_recent, "recent", recent_window)
+                    if p['classification'] == 'major':
+                        # Adjust indices to match full ohlcv
+                        p['start_idx'] += early_window
+                        p['end_idx'] += early_window
+                        patterns.append(p)
+            # --- Step 4: Candle confirmations (optional) ---
             confirmations = []
-            if self.enable_confirmations and detected_patterns:
-                logger.info("Step 4: Finding candle confirmations...")
-                for pattern in detected_patterns:
+            if self.enable_confirmations and patterns:
+                logger.info("Finding candle confirmations...")
+                for pattern in patterns:
                     pattern_confirmations = self.candle_confirmer.find_confirmations(ohlcv, pattern)
                     confirmations.extend(pattern_confirmations)
                 logger.info(f"Found {len(confirmations)} confirmations")
-            
-            # Step 5: Score and rank setups
-            logger.info("Step 5: Scoring and ranking setups...")
+            # --- Step 5: Score and rank setups ---
+            # Use full S/R and trend for scoring
+            trend_info_full = self.trend_detector.detect_trend(ohlcv)
+            zones_full = self.zone_detector.detect_zones(ohlcv)
             scored_patterns = self.scorer.score_setups(
-                detected_patterns, zones, trend_info, confirmations
+                patterns, zones_full, trend_info_full, confirmations
             )
-            
-            # Filter by minimum score
             filtered_patterns = self.scorer.filter_setups_by_score(
                 scored_patterns, self.min_score_threshold
             )
-            
-            # Get top setups
             top_setups = self.scorer.get_top_setups(filtered_patterns, self.max_setups)
-            
-            # Generate summary
             summary = self.scorer.get_setup_summary(scored_patterns)
-            
-            # Prepare final output
+            # --- Step 6: Prepare output for overlays ---
+            market_context = {
+                'support_levels': [z['center_price'] for z in zones_full.get('support_zones', [])],
+                'resistance_levels': [z['center_price'] for z in zones_full.get('resistance_zones', [])],
+                'demand_zones': zones_full.get('demand_zones', []),
+                'supply_zones': zones_full.get('supply_zones', []),
+                'trend': trend_info_full,
+            }
             result = {
                 'analysis_timestamp': datetime.now().isoformat(),
-                'trend_analysis': trend_info,
-                'zone_analysis': zones,
-                'detected_patterns': detected_patterns,
+                'market_context': market_context,
+                'patterns': patterns,
                 'candle_confirmations': confirmations,
                 'scored_setups': scored_patterns,
                 'top_setups': top_setups,
@@ -142,10 +182,8 @@ class TraderAwareAnalysisPipeline:
                     'enable_confirmations': self.enable_confirmations
                 }
             }
-            
             logger.info(f"Analysis complete. Found {len(top_setups)} high-quality setups.")
             return result
-            
         except Exception as e:
             logger.error(f"Analysis pipeline error: {str(e)}")
             return self._get_error_result(str(e))

@@ -11,7 +11,6 @@ import pandas as pd
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from core.services.chart_engine import ChartEngine
 
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
@@ -23,8 +22,8 @@ from core.use_cases.market_analysis.data_access import get_ohlcv_from_db
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from stripe_payments.src.plan_limits import PLAN_LIMITS as plan_limits
 from core.services.deepseek_client import DeepSeekClient
-from core.services.chart_generator import ChartGenerator
 from infrastructure.notifications.analysis_service import AnalysisService
+from core.services.chart_engine import ChartEngine
 
 # Add parent directory to system path for module imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -124,7 +123,7 @@ async def analyze_market_immediate(
         import pandas as pd
         ohlcv_df = pd.DataFrame(ohlcv)
         chart_engine = ChartEngine(analysis_data=analysis_result, ohlcv_data=ohlcv_df)
-        image_bytes = chart_engine.create_chart()
+        image_bytes = chart_engine.create_chart(output_type="image")
         
         image_url = await supabase.upload_chart_image(image_bytes, analysis_id, user_id)
         
@@ -460,7 +459,7 @@ async def analyze_market_trader_aware(
         # 6. Generate Chart Image
         import pandas as pd
         ohlcv_df = pd.DataFrame(ohlcv)
-        chart_generator = ChartGenerator(analysis_data=trader_aware_result, ohlcv_data=ohlcv_df)
+        chart_generator = ChartEngine(analysis_data=trader_aware_result, ohlcv_data=ohlcv_df)
         image_bytes = chart_generator.create_chart_image()
         image_url = await supabase.upload_chart_image(image_bytes, analysis_id, user_id)
         
