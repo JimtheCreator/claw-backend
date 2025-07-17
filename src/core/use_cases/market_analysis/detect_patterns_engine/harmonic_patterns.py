@@ -251,7 +251,7 @@ def validate_pattern(swings: List[Tuple[int, float, str]], pattern_config: Dict[
     detected_patterns = []
     timestamps = ohlcv.get('timestamp', None)
     
-    MIN_PATTERN_LENGTH = 200  # Minimum number of candles a harmonic pattern must span (greater than chart patterns)
+    MIN_PATTERN_LENGTH = 150  # Minimum number of candles a harmonic pattern must span (greater than chart patterns)
     MIN_POINT_GAP = 30  # Minimum gap between consecutive pattern points
     
     for i in range(len(swings) - number_of_points + 1):

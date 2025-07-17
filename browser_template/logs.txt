@@ -1,0 +1,978 @@
+2025-07-15 03:08:28,168 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for BNBUSDT:5m: ['Three Inside Up']
+2025-07-15 03:08:28,168 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for BNBUSDT:5m: ['Three Inside Up']
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 539, in start  
+    await self.detect_and_publish_patterns(symbol, interval)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 356, in detect_and_publish_patterns
+    logger.info(f"🚀 Running {len(tasks)} pattern detection tasks for {symbol}:{interval}")
+Message: '🚀 Running 1 pattern detection tasks for BNBUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,174 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for BNBUSDT:5m   
+2025-07-15 03:08:28,174 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for BNBUSDT:5m   
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 381, in detect_pattern_with_semaphore
+    logger.info(f"🔍 Looking for pattern: '{pattern_name}' -> normalized: '{normalized_pattern_name}'")
+Message: "🔍 Looking for pattern: 'Three Inside Up' -> normalized: 'three_inside_up'"
+Arguments: ()
+2025-07-15 03:08:28,189 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Three Inside Up' -> normalized: 'three_inside_up'
+2025-07-15 03:08:28,189 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Three Inside Up' -> normalized: 'three_inside_up'
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 392, in detect_pattern_with_semaphore
+    logger.info(f"🎯 Running detector for {normalized_pattern_name} on {symbol}:{interval}")
+Message: '🎯 Running detector for three_inside_up on BNBUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,194 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for three_inside_up on BNBUSDT:5m 
+2025-07-15 03:08:28,194 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for three_inside_up on BNBUSDT:5m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 540, in start  
+    logger.info(f"✅ Initial pattern detection completed for {symbol}:{interval}")
+Message: '✅ Initial pattern detection completed for BNBUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,199 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for BNBUSDT:5m 
+2025-07-15 03:08:28,199 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for BNBUSDT:5m 
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 538, in start  
+    logger.info(f"🔍 Running initial pattern detection for {symbol}:{interval}")
+Message: '🔍 Running initial pattern detection for BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,207 - ClawBackend - INFO - [pattern_alert_worker.py:538] - 🔍 Running initial pattern detection for BTCUSDT:1h   
+2025-07-15 03:08:28,207 - ClawBackend - INFO - [pattern_alert_worker.py:538] - 🔍 Running initial pattern detection for BTCUSDT:1h   
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 539, in start  
+    await self.detect_and_publish_patterns(symbol, interval)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 339, in detect_and_publish_patterns
+    logger.info(f"🎯 Found {len(active_patterns)} active patterns for {symbol}:{interval}: {list(active_patterns.keys())}")
+Message: "🎯 Found 1 active patterns for BTCUSDT:1h: ['Double Top']"
+Arguments: ()
+2025-07-15 03:08:28,212 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for BTCUSDT:1h: ['Double Top']
+2025-07-15 03:08:28,212 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for BTCUSDT:1h: ['Double Top']
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 539, in start  
+    await self.detect_and_publish_patterns(symbol, interval)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 356, in detect_and_publish_patterns
+    logger.info(f"🚀 Running {len(tasks)} pattern detection tasks for {symbol}:{interval}")
+Message: '🚀 Running 1 pattern detection tasks for BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,222 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for BTCUSDT:1h   
+2025-07-15 03:08:28,222 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for BTCUSDT:1h   
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 381, in detect_pattern_with_semaphore
+    logger.info(f"🔍 Looking for pattern: '{pattern_name}' -> normalized: '{normalized_pattern_name}'")
+Message: "🔍 Looking for pattern: 'Double Top' -> normalized: 'double_top'"
+Arguments: ()
+2025-07-15 03:08:28,227 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Double Top' -> normalized: 'double_top'
+2025-07-15 03:08:28,227 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Double Top' -> normalized: 'double_top'
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 392, in detect_pattern_with_semaphore
+    logger.info(f"🎯 Running detector for {normalized_pattern_name} on {symbol}:{interval}")
+Message: '🎯 Running detector for double_top on BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,229 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for double_top on BTCUSDT:1h      
+2025-07-15 03:08:28,229 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for double_top on BTCUSDT:1h      
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 540, in start  
+    logger.info(f"✅ Initial pattern detection completed for {symbol}:{interval}")
+Message: '✅ Initial pattern detection completed for BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,242 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for BTCUSDT:1h 
+2025-07-15 03:08:28,242 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for BTCUSDT:1h 
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 538, in start  
+    logger.info(f"🔍 Running initial pattern detection for {symbol}:{interval}")
+Message: '🔍 Running initial pattern detection for SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,258 - ClawBackend - INFO - [pattern_alert_worker.py:538] - 🔍 Running initial pattern detection for SOLUSDT:1m   
+2025-07-15 03:08:28,258 - ClawBackend - INFO - [pattern_alert_worker.py:538] - 🔍 Running initial pattern detection for SOLUSDT:1m   
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 539, in start  
+    await self.detect_and_publish_patterns(symbol, interval)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 339, in detect_and_publish_patterns
+    logger.info(f"🎯 Found {len(active_patterns)} active patterns for {symbol}:{interval}: {list(active_patterns.keys())}")
+Message: "🎯 Found 1 active patterns for SOLUSDT:1m: ['Rectangle']"
+Arguments: ()
+2025-07-15 03:08:28,264 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for SOLUSDT:1m: ['Rectangle']
+2025-07-15 03:08:28,264 - ClawBackend - INFO - [pattern_alert_worker.py:339] - 🎯 Found 1 active patterns for SOLUSDT:1m: ['Rectangle']
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 539, in start  
+    await self.detect_and_publish_patterns(symbol, interval)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 356, in detect_and_publish_patterns
+    logger.info(f"🚀 Running {len(tasks)} pattern detection tasks for {symbol}:{interval}")
+Message: '🚀 Running 1 pattern detection tasks for SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,278 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for SOLUSDT:1m   
+2025-07-15 03:08:28,278 - ClawBackend - INFO - [pattern_alert_worker.py:356] - 🚀 Running 1 pattern detection tasks for SOLUSDT:1m   
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f50d' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 381, in detect_pattern_with_semaphore
+    logger.info(f"🔍 Looking for pattern: '{pattern_name}' -> normalized: '{normalized_pattern_name}'")
+Message: "🔍 Looking for pattern: 'Rectangle' -> normalized: 'rectangle'"
+Arguments: ()
+2025-07-15 03:08:28,290 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Rectangle' -> normalized: 'rectangle'
+2025-07-15 03:08:28,290 - ClawBackend - INFO - [pattern_alert_worker.py:381] - 🔍 Looking for pattern: 'Rectangle' -> normalized: 'rectangle'
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 392, in detect_pattern_with_semaphore
+    logger.info(f"🎯 Running detector for {normalized_pattern_name} on {symbol}:{interval}")
+Message: '🎯 Running detector for rectangle on SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,293 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for rectangle on SOLUSDT:1m       
+2025-07-15 03:08:28,293 - ClawBackend - INFO - [pattern_alert_worker.py:392] - 🎯 Running detector for rectangle on SOLUSDT:1m       
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 540, in start  
+    logger.info(f"✅ Initial pattern detection completed for {symbol}:{interval}")
+Message: '✅ Initial pattern detection completed for SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,296 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for SOLUSDT:1m 
+2025-07-15 03:08:28,296 - ClawBackend - INFO - [pattern_alert_worker.py:540] - ✅ Initial pattern detection completed for SOLUSDT:1m 
+2025-07-15 03:08:28,308 - ClawBackend - INFO - [pattern_alert_worker.py:545] - Starting WebSocket listeners for all active pairs...  
+2025-07-15 03:08:28,308 - ClawBackend - INFO - [pattern_alert_worker.py:545] - Starting WebSocket listeners for all active pairs...  
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 549, in start  
+    logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+Message: '✅ WebSocket listener started for BTCUSDT:15m'
+Arguments: ()
+2025-07-15 03:08:28,309 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BTCUSDT:15m
+2025-07-15 03:08:28,309 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BTCUSDT:15m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 549, in start  
+    logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+Message: '✅ WebSocket listener started for SOLUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,311 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for SOLUSDT:5m
+2025-07-15 03:08:28,311 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for SOLUSDT:5m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 549, in start  
+    logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+Message: '✅ WebSocket listener started for BNBUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,313 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BNBUSDT:5m
+2025-07-15 03:08:28,313 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BNBUSDT:5m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 549, in start  
+    logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+Message: '✅ WebSocket listener started for BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,324 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BTCUSDT:1h
+2025-07-15 03:08:28,324 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for BTCUSDT:1h
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 549, in start  
+    logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+Message: '✅ WebSocket listener started for SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,326 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for SOLUSDT:1m
+2025-07-15 03:08:28,326 - ClawBackend - INFO - [pattern_alert_worker.py:549] - ✅ WebSocket listener started for SOLUSDT:1m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f389' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 555, in start  
+    logger.info("🎉 PatternAlertWorker started successfully!")
+Message: '🎉 PatternAlertWorker started successfully!'
+Arguments: ()
+2025-07-15 03:08:28,329 - ClawBackend - INFO - [pattern_alert_worker.py:555] - 🎉 PatternAlertWorker started successfully!
+2025-07-15 03:08:28,329 - ClawBackend - INFO - [pattern_alert_worker.py:555] - 🎉 PatternAlertWorker started successfully!
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 450, in start_listener
+    logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
+Message: '🎧 Starting WebSocket listener for BTCUSDT:15m'
+Arguments: ()
+2025-07-15 03:08:28,340 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BTCUSDT:15m        
+2025-07-15 03:08:28,340 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BTCUSDT:15m        
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 453, in start_listener
+    logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
+Message: '📡 WebSocket stream established for BTCUSDT:15m, waiting for messages...'
+Arguments: ()
+2025-07-15 03:08:28,343 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BTCUSDT:15m, waiting for messages...
+2025-07-15 03:08:28,343 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BTCUSDT:15m, waiting for messages...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 450, in start_listener
+    logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
+Message: '🎧 Starting WebSocket listener for SOLUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,346 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for SOLUSDT:5m
+2025-07-15 03:08:28,346 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for SOLUSDT:5m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 453, in start_listener
+    logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
+Message: '📡 WebSocket stream established for SOLUSDT:5m, waiting for messages...'
+Arguments: ()
+2025-07-15 03:08:28,358 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for SOLUSDT:5m, waiting for messages...
+2025-07-15 03:08:28,358 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for SOLUSDT:5m, waiting for messages...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 450, in start_listener
+    logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
+Message: '🎧 Starting WebSocket listener for BNBUSDT:5m'
+Arguments: ()
+2025-07-15 03:08:28,361 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BNBUSDT:5m
+2025-07-15 03:08:28,361 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BNBUSDT:5m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 453, in start_listener
+    logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
+Message: '📡 WebSocket stream established for BNBUSDT:5m, waiting for messages...'
+Arguments: ()
+2025-07-15 03:08:28,374 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BNBUSDT:5m, waiting for messages...
+2025-07-15 03:08:28,374 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BNBUSDT:5m, waiting for messages...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 450, in start_listener
+    logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
+Message: '🎧 Starting WebSocket listener for BTCUSDT:1h'
+Arguments: ()
+2025-07-15 03:08:28,377 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BTCUSDT:1h
+2025-07-15 03:08:28,377 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for BTCUSDT:1h
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 453, in start_listener
+    logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
+Message: '📡 WebSocket stream established for BTCUSDT:1h, waiting for messages...'
+Arguments: ()
+2025-07-15 03:08:28,386 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BTCUSDT:1h, waiting for messages...
+2025-07-15 03:08:28,386 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for BTCUSDT:1h, waiting for messages...
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3a7' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 450, in start_listener
+    logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
+Message: '🎧 Starting WebSocket listener for SOLUSDT:1m'
+Arguments: ()
+2025-07-15 03:08:28,392 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for SOLUSDT:1m
+2025-07-15 03:08:28,392 - ClawBackend - INFO - [pattern_alert_worker.py:450] - 🎧 Starting WebSocket listener for SOLUSDT:1m
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1153, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f4e1' in position 79: character maps to <undefined>
+Call stack:
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 581, in <module>
+    asyncio.run(worker.start())
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 706, in run_until_complete  
+    self.run_forever()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2034, in _run_once
+    handle._run()
+  File "C:\Users\Administrator\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "d:\ClawInc\Claw-Backend\src\infrastructure\notifications\alerts\pattern_alerts\pattern_alert_worker.py", line 453, in start_listener
+    logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
+Message: '📡 WebSocket stream established for SOLUSDT:1m, waiting for messages...'
+Arguments: ()
+2025-07-15 03:08:28,395 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for SOLUSDT:1m, waiting for messages...
+2025-07-15 03:08:28,395 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📡 WebSocket stream established for SOLUSDT:1m, waiting for messages...
+2025-07-15 03:08:28,407 - ClawBackend - INFO - [pattern_alert_worker.py:227] - Started Redis subscription listener for pattern alert updates
+2025-07-15 03:08:28,407 - ClawBackend - INFO - [pattern_alert_worker.py:227] - Started Redis subscription listener for pattern alert updates
+2025-07-15 03:08:28,407 - ClawBackend - INFO - [pattern_alert_worker.py:505] - Health check: 5 listeners alive, 0 done. Alive: ['BTCUSDT:15m', 'SOLUSDT:5m', 'BNBUSDT:5m', 'BTCUSDT:1h', 'SOLUSDT:1m']
+2025-07-15 03:08:28,407 - ClawBackend - INFO - [pattern_alert_worker.py:505] - Health check: 5 listeners alive, 0 done. Alive: ['BTCUSDT:15m', 'SOLUSDT:5m', 'BNBUSDT:5m', 'BTCUSDT:1h', 'SOLUSDT:1m']

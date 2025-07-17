@@ -28,7 +28,7 @@ class RedisCache:
                     f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
                     encoding="utf-8",
                     decode_responses=True,
-                    socket_connect_timeout=3
+                    socket_connect_timeout=10
                 )
                 if await self._redis.ping():
                     logger.info("✅ Successfully connected to Redis")
@@ -147,6 +147,48 @@ class RedisCache:
             logger.error(f"Error deleting messages from stream '{stream}': {e}")
             raise
 
+    async def publish(self, channel: str, message: str) -> int:
+        """
+        Publishes a message to a Redis channel.
+        
+        Args:
+            channel (str): The channel name to publish to
+            message (str): The message to publish
+            
+        Returns:
+            int: Number of subscribers that received the message
+        """
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        try:
+            result = await self._redis.publish(channel, message)
+            logger.debug(f"Published message to channel '{channel}', {result} subscribers received it")
+            return result
+        except Exception as e:
+            logger.error(f"Error publishing message to channel '{channel}': {e}")
+            raise
+
+    async def subscribe(self, *channels: str):
+        """
+        Subscribes to one or more Redis channels.
+        
+        Args:
+            *channels (str): Channel names to subscribe to
+            
+        Returns:
+            Redis PubSub object
+        """
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        try:
+            pubsub = self._redis.pubsub()
+            await pubsub.subscribe(*channels)
+            logger.debug(f"Subscribed to channels: {channels}")
+            return pubsub
+        except Exception as e:
+            logger.error(f"Error subscribing to channels {channels}: {e}")
+            raise
+
     async def xgroup_create(self, stream: str, group: str, mkstream: bool = False):
         """Creates a consumer group for a Redis stream."""
         if not self._initialized:
@@ -171,10 +213,21 @@ class RedisCache:
             raise RuntimeError("Redis is not initialized.")
         return await self._redis.xinfo_consumers(stream, group)
     
+    async def xinfo_groups(self, stream: str) -> list:
+        """Returns consumer group information for a stream."""
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        return await self._redis.xinfo_groups(stream)
+    
     async def lpush(self, key: str, value: str):
             if not self._initialized:
                 raise RuntimeError("Redis is not initialized.")
             await self._redis.lpush(key, value)
+
+    async def rpush(self, key: str, value: str):
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        await self._redis.rpush(key, value)
 
     async def ltrim(self, key: str, start: int, stop: int):
         if not self._initialized:

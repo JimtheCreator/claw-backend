@@ -1,7 +1,5 @@
 # src/presentation/api/routes/alerts_endpoints/pattern_alerts.py
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
-import requests
-
 from typing import List
 from pydantic import BaseModel
 import os
@@ -13,8 +11,10 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(cur
 sys.path.append(parent_dir)
 
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
 from stripe_payments.src.plan_limits import PLAN_LIMITS
+import json
 
 router = APIRouter(
     prefix="/pattern-alerts",
@@ -44,7 +44,6 @@ class PatternAlertResponse(BaseModel):
 
 @router.post("/create", response_model=PatternAlertResponse, status_code=201)
 async def create_pattern_alert(
-    request: Request,
     alert_data: PatternAlertCreate,
     x_user_id: str = Header(...),
     repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
@@ -67,22 +66,34 @@ async def create_pattern_alert(
 
         logger.info(f"Successfully created pattern alert with ID {created_alert.get('id')} for user {x_user_id}")
 
-        # --- DYNAMIC UPDATE ---
-        pattern_alert_manager = request.app.state.pattern_alert_manager
-        if pattern_alert_manager:
-            await pattern_alert_manager.add_alert_and_start_listener(created_alert)
-
+        # Publish alert update to Redis for real-time worker updates
+        try:
+            alert_update = {
+                "action": "create",
+                "alert_data": {
+                    "symbol": alert_data.symbol,
+                    "time_interval": alert_data.time_interval,
+                    "pattern_name": alert_data.pattern_name,
+                    "user_id": x_user_id,
+                    "alert_id": str(created_alert.get('id', ''))
+                }
+            }
+            await redis_cache.publish("pattern_alerts:updates", json.dumps(alert_update))
+            logger.info(f"Published alert creation update to Redis for {alert_data.symbol}:{alert_data.time_interval}")
+        except Exception as e:
+            logger.error(f"Failed to publish alert update to Redis: {e}")
+            # Don't fail the request if Redis publish fails
 
         # Manually construct the response to match the model
         return PatternAlertResponse(
-            id=str(created_alert.get('id')),
-            user_id=created_alert.get('user_id'),
-            symbol=created_alert.get('symbol'),
-            pattern_name=created_alert.get('pattern_name'),
-            time_interval=created_alert.get('time_interval'),
-            pattern_state=created_alert.get('pattern_state'),
-            status=created_alert.get('status'),
-            created_at=str(created_alert.get('created_at'))
+            id=str(created_alert.get('id', '')),
+            user_id=str(created_alert.get('user_id', '')),
+            symbol=str(created_alert.get('symbol', '')),
+            pattern_name=str(created_alert.get('pattern_name', '')),
+            time_interval=str(created_alert.get('time_interval', '')),
+            pattern_state=str(created_alert.get('pattern_state', '')),
+            status=str(created_alert.get('status', '')),
+            created_at=str(created_alert.get('created_at', ''))
         )
     except HTTPException as e:
         logger.error(f"HTTP Exception for user {x_user_id}: {e.detail}")
@@ -127,10 +138,23 @@ async def delete_pattern_alert(
 
         await repo.delete_pattern_alert(user_id=x_user_id, alert_id=alert_id)
         
-        # --- DYNAMIC UPDATE ---
-        pattern_alert_manager = request.app.state.pattern_alert_manager
-        if pattern_alert_manager:
-            await pattern_alert_manager.remove_alert_and_stop_listener(alert_to_delete)
+        # Publish alert deletion update to Redis for real-time worker updates
+        try:
+            alert_update = {
+                "action": "delete",
+                "alert_data": {
+                    "symbol": str(alert_to_delete.get('symbol', '')),
+                    "time_interval": str(alert_to_delete.get('time_interval', '')),
+                    "pattern_name": str(alert_to_delete.get('pattern_name', '')),
+                    "user_id": x_user_id,
+                    "alert_id": alert_id
+                }
+            }
+            await redis_cache.publish("pattern_alerts:updates", json.dumps(alert_update))
+            logger.info(f"Published alert deletion update to Redis for {alert_to_delete.get('symbol')}:{alert_to_delete.get('time_interval')}")
+        except Exception as e:
+            logger.error(f"Failed to publish alert update to Redis: {e}")
+            # Don't fail the request if Redis publish fails
 
         return  # Return with 204 No Content
     except HTTPException as e:

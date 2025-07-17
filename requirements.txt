@@ -33,5 +33,6 @@ pytest-twisted
 twisted
 plotly
 sse-starlette
-pandas
 kaleido
+concurrent-log-handler
+signal

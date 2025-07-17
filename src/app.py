@@ -14,7 +14,7 @@ from presentation.api.routes import analysis
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
 from infrastructure.database.redis.cache import redis_cache
-from core.services.crypto_list import initialize_binance_connection_pool
+from core.services.crypto_list import initialize_binance_connection_pool, close_binance_connection_pool
 from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
@@ -23,7 +23,6 @@ from presentation.api.routes.alerts_endpoints.price_alerts import router as pric
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from infrastructure.notifications.alerts.price_alerts.PriceAlertManager import AlertManager
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
-from infrastructure.notifications.alerts.pattern_alerts.PatternAlertManager import PatternAlertManager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,28 +55,23 @@ async def lifespan(app: FastAPI):
 
         logger.info("AlertManager started successfully.")
 
-        # NEW: Create and start the Pattern AlertManager
-        pattern_alert_manager = PatternAlertManager()
-        app.state.pattern_alert_manager = pattern_alert_manager
-        await pattern_alert_manager.start()
-        logger.info("PatternAlertManager started successfully.")
-
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
         return
 
     yield  # 🧘 Everything after this happens at shutdown
+    
 
     # Gracefully shut down managers
     if hasattr(app.state, 'price_alert_manager') and app.state.price_alert_manager:
         await app.state.price_alert_manager.stop()
         logger.info("PriceAlertManager stopped.")
-        
-    # NEW: Shutdown pattern manager
-    if hasattr(app.state, 'pattern_alert_manager') and app.state.pattern_alert_manager:
-        await app.state.pattern_alert_manager.stop()
-        logger.info("PatternAlertManager stopped.")
 
+    await close_binance_connection_pool()
+    logger.info("Binance connection pool closed.")
+    await redis_cache.close()
+    logger.info("Redis cache connection closed.")
+    # 🚪 Shutdown
     logger.info("Shutting down application...")
 
 app = FastAPI(

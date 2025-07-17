@@ -114,7 +114,7 @@ async def search_symbols(
 
     try:
         # We use the new repository method here
-        symbols = await supabase_repo.search_symbols_by_query(query=q)
+        symbols = await supabase_repo.search_cryptos(query=q, limit=2)
 
         if symbols is not None:
             return symbols

@@ -57,14 +57,21 @@ class NotificationService:
                 logger.info(f"Batch {i // BATCH_SIZE + 1}: {response.success_count} successes, {response.failure_count} failures for: {title}")
                 
                 if response.failure_count > 0:
-                    # Find failed tokens from this specific batch
-                    failed_in_batch = [
-                        batch_tokens[idx] 
-                        for idx, resp in enumerate(response.responses) 
-                        if not resp.success
-                    ]
-                    logger.error(f"Failed tokens in batch: {failed_in_batch}")
-                    all_failed_tokens.extend(failed_in_batch)
+                    # Find failed tokens and log detailed error info for each
+                    for idx, resp in enumerate(response.responses):
+                        if not resp.success:
+                            token = batch_tokens[idx]
+                            error_info = getattr(resp, 'exception', None)
+                            if error_info:
+                                logger.error(f"FCM failure for token: {token} | Error: {error_info} | Type: {type(error_info)}")
+                                # If it's a Firebase exception, try to log code and details
+                                code = getattr(error_info, 'code', None)
+                                details = getattr(error_info, 'details', None)
+                                if code or details:
+                                    logger.error(f"FCM error details for token: {token} | Code: {code} | Details: {details}")
+                            else:
+                                logger.error(f"FCM failure for token: {token} | No exception info available.")
+                            all_failed_tokens.append(token)
             except Exception as e:
                 logger.error(f"Error sending batch: {e}")
                 # Assume all tokens in this batch failed on exception

@@ -9,11 +9,11 @@ from datetime import datetime
 import pandas as pd
 from core.services.chart_engine import ChartEngine
 
-# --- User parameters ---
-symbol = "SOLUSDT"
-interval = "1m"
-timeframe = "1d"  # Fetch more data for better structural analysis
-categories_to_run = ["chart", "candlestick"] # Run all pattern types
+# --- User Parameters ---
+symbol = "BTCUSDT"
+interval = "5m"
+timeframe = "24h"  # Fetch more data for better structural analysis
+categories_to_run = ["candlestick"] # Run all pattern types
 MINIMUM_CONFIDENCE = 0.5 # A reasonable threshold
 
 class NpEncoder(json.JSONEncoder):
@@ -32,9 +32,9 @@ class NpEncoder(json.JSONEncoder):
 
 async def main():
     ohlcv_data = await get_ohlcv_from_db(symbol, interval, timeframe)
-    if not ohlcv_data or len(ohlcv_data['close']) < 50:
-        print("❌ Could not fetch sufficient OHLCV data.")
-        return
+    # if not ohlcv_data or len(['close']) < 50:
+    #     print("❌ Could not fetch sufficient OHLCV data.")
+    #     return
 
     print(f"✅ Fetched {len(ohlcv_data['close'])} candles for {symbol} on {interval} interval.")
     print("-" * 30)
@@ -52,21 +52,21 @@ async def main():
     analysis_engine = PatternAnalysisEngine(ohlcv=ohlcv_data)
     
     print(f"⚙️  Scanning entire chart for patterns with minimum confidence of {MINIMUM_CONFIDENCE}...")
-    final_patterns = await analysis_engine.scan_for_all_patterns(
+    analysis_data = await analysis_engine.scan_for_all_patterns(
         categories=categories_to_run,
         min_confidence=MINIMUM_CONFIDENCE
     )
     
-    print(f"\n🎉 Found {len(final_patterns)} significant, non-overlapping patterns:")
-    print(json.dumps(final_patterns, indent=2, cls=NpEncoder))
+    print(f"\n🎉 Found {len(analysis_data)} significant, non-overlapping patterns:")
+    print(json.dumps(analysis_data, indent=2, cls=NpEncoder))
 
     with open("final_pattern_results.json", "w") as f:
-        json.dump(final_patterns, f, indent=4, cls=NpEncoder)
+        json.dump(analysis_data, f, indent=4, cls=NpEncoder)
     
     print(f"\n💾 Results saved to final_pattern_results.json")
 
     # FIX: Correct parameter order - ohlcv_data first, then analysis_data
-    chart_gen = ChartEngine(ohlcv_data=ohlcv_data, analysis_data=None)
+    chart_gen = ChartEngine(ohlcv_data=ohlcv_data, analysis_data=analysis_data)
     image_bytes = chart_gen.create_chart(output_type="image")
     
     # Ensure only bytes are written to the PNG file

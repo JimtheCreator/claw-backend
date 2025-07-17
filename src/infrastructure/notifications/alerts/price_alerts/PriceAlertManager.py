@@ -8,8 +8,7 @@ from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRep
 from infrastructure.database.firebase.repository import FirebaseRepository
 from infrastructure.database.redis.cache import redis_cache # Import the singleton redis_cache
 from firebase_admin import messaging
-from infrastructure.notifications.notification_service import NotificationService
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class AlertManager:
@@ -225,22 +224,6 @@ class AlertManager:
         try:
             # Option 1: If using Supabase for FCM tokens (recommended)
             return await self.supabase_repo.get_fcm_tokens_for_users(user_ids)
-            
-            # Option 2: If using Firebase Realtime Database, batch the requests
-            # tasks = [
-            #     self._get_user_fcm_token_async(user_id) 
-            #     for user_id in user_ids
-            # ]
-            # results = await asyncio.gather(*tasks, return_exceptions=True)
-            # 
-            # fcm_tokens = {}
-            # for user_id, result in zip(user_ids, results):
-            #     if isinstance(result, str):  # Success case
-            #         fcm_tokens[user_id] = result
-            #     else:  # Exception case
-            #         logger.warning(f"Failed to get FCM token for user {user_id}: {result}")
-            # 
-            # return fcm_tokens
             
         except Exception as e:
             logger.error(f"Error batch fetching FCM tokens: {e}")

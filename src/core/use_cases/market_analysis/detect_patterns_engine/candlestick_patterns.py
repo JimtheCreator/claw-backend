@@ -70,8 +70,9 @@ async def _detect_engulfing(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "engulfed_range": float(abs(curr_close - prev_open))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -184,8 +185,9 @@ async def _detect_doji(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "lower_shadow_ratio": float(lower_shadow_ratio)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 1
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -200,6 +202,8 @@ async def _detect_doji(ohlcv: dict) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Doji pattern detection error: {str(e)}")
         return None
+
+
 
 @register_pattern("morning_star", "candlestick", types=["morning_star"])
 async def _detect_morning_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
@@ -263,8 +267,9 @@ async def _detect_morning_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "star_gap_up": float(closes[-2] - closes[-3])
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -342,8 +347,9 @@ async def _detect_evening_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "star_gap_down": float(closes[-3] - closes[-2])
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -425,8 +431,9 @@ async def _detect_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "upper_shadow_ratio": float(upper_shadow_ratio)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 1
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -514,8 +521,9 @@ async def _detect_shooting_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "upper_shadow_ratio": float(upper_shadow_ratio)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 1
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -604,8 +612,9 @@ async def _detect_three_line_strike(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "engulfed_range": float(abs(candle4_close - candle1_open))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 4
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 4, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -690,8 +699,9 @@ async def detect_three_outside_up(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "engulfed_range": float(abs(candle2_close - candle1_open))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -776,8 +786,9 @@ async def detect_three_outside_down(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "engulfed_range": float(abs(candle2_open - candle1_close))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -862,8 +873,9 @@ async def detect_three_inside_up(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "inside_range": float(abs(candle2_open - candle1_close))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -948,8 +960,9 @@ async def detect_three_inside_down(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "inside_range": float(abs(candle2_open - candle1_close))
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1023,8 +1036,9 @@ async def detect_dark_cloud_cover(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "penetration": float(penetration)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1098,8 +1112,9 @@ async def detect_piercing_pattern(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "penetration": float(penetration)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1170,8 +1185,9 @@ async def detect_kicker(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "gap": float(gap)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1249,8 +1265,9 @@ async def detect_three_white_soldiers(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "candle3_body": float(candle3_body)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1332,8 +1349,9 @@ async def detect_hanging_man(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "upper_shadow_ratio": float(upper_shadow_ratio)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 1
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1415,8 +1433,9 @@ async def detect_inverted_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "upper_shadow_ratio": float(upper_shadow_ratio)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 1
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1483,8 +1502,9 @@ async def detect_tweezers_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "top_diff": float(top_diff)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1551,8 +1571,9 @@ async def detect_tweezers_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "bottom_diff": float(bottom_diff)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 2
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 2, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -1635,8 +1656,9 @@ async def detect_abandoned_baby(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "gap2": float(gap2)
         }
         # Set start and end time if timestamps are available
-        start_index = len(opens) - 3
-        end_index = len(opens) - 1
+        all_indices = [len(opens) - 3, len(opens) - 1]
+        start_index = min(all_indices)
+        end_index = max(all_indices)
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {

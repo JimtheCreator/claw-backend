@@ -24,6 +24,8 @@ class SupabaseCryptoRepository(CryptoRepository):
             raise ValueError("Supabase URL and Key must be set in environment variables.")
         
         self.client: Client = create_client(supabase_url, supabase_key)
+        
+        unique_id = f"app_{uuid.uuid4()}"
     
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
@@ -33,11 +35,8 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.redis_client = redis_cache
         self.market_analysis_table = "market_analysis"  # Assuming this is the table for market analysis
         self.storage_bucket_name = "analysis-artifacts" # Define bucket name
-    
-    async def get_firebase_repo(self):
-        unique_id = f"app_{uuid.uuid4()}"
-        return FirebaseRepository(app_name=unique_id)
-    
+        self.firebase_repo = FirebaseRepository(app_name=unique_id) # Store the method reference for later use
+
     async def subscription_exists(self, user_id: str) -> bool:
         """Check if a subscription exists for the user in Supabase."""
         try:
@@ -73,8 +72,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         """Ensure a subscription exists in Supabase, fetching from Firebase if needed."""
         if not await self.subscription_exists(user_id):
             logger.info(f"No subscription found for user {user_id}, checking Firebase")
-            firebase_repo = await self.get_firebase_repo()
-            plan_type = await firebase_repo.get_user_subscription(user_id)
+            plan_type = await self.firebase_repo.get_user_subscription(user_id)
 
             await self.insert_subscription(user_id, plan_type, PLAN_LIMITS)
 
@@ -421,15 +419,20 @@ class SupabaseCryptoRepository(CryptoRepository):
         and returns their IDs. This is an atomic-like operation to prevent duplicates.
         """
         try:
-            # First, select the IDs of the alerts to be updated
+            # Try both normalized and original pattern names
+            pattern_names = [pattern_name, pattern_name.replace('_', ' ').title()]
+            logger.info(f"Trying to deactivate alerts for user_ids={user_ids}, symbol={symbol}, pattern_names={pattern_names}, time_interval={time_interval}")
+
             select_res = self.client.table(self.pattern_alerts_table)\
                 .select("id")\
                 .in_("user_id", user_ids)\
                 .eq("symbol", symbol)\
-                .eq("pattern_name", pattern_name)\
+                .in_("pattern_name", pattern_names)\
                 .eq("time_interval", time_interval)\
                 .eq("status", "active")\
                 .execute()
+
+            logger.info(f"Found {len(select_res.data)} matching alerts: {select_res.data}")
 
             if not select_res.data:
                 return []
@@ -468,7 +471,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Failed to create pattern match history: {e}")
 
-    # REMOVE the old get_fcm_tokens_for_users method and REPLACE it with this one.
+    
     async def get_fcm_tokens_for_users(self, user_ids: list[str]) -> dict:
         """
         Acts as a bridge to fetch FCM tokens from the Firebase repository.
@@ -484,14 +487,13 @@ class SupabaseCryptoRepository(CryptoRepository):
         
         try:
             # Instantiate the Firebase repository to access its methods
-            firebase_repo = await self.get_firebase_repo()
-            if not firebase_repo:
+            if not self.firebase_repo:
                 logger.error("Firebase repository could not be initialized.")
                 return {}
             
             # Delegate the call to the method that actually contains the logic
             logger.info(f"Bridging to Firebase to fetch FCM tokens for {len(user_ids)} users.")
-            return await firebase_repo.get_fcm_tokens_for_users(user_ids)
+            return await self.firebase_repo.get_fcm_tokens_for_users(user_ids)
 
         except Exception as e:
             logger.error(f"Error while bridging to Firebase for FCM token fetching: {str(e)}")

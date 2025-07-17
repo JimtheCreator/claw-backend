@@ -162,38 +162,18 @@ class ChartEngine:
         # Add null check for analysis
         if self.analysis is None:
             return
-        """Iterates through patterns and calls the correct drawing function, with significance filter."""
-        if 'patterns' not in self.analysis: return
-        for pattern in self.analysis['patterns']:
-            pattern_key = pattern.get('pattern_type', pattern.get('pattern'))
-            if pattern_key in self.pattern_drawing_map:
-                # TEMP: Disable significance filter for debugging overlays
-                # if self._should_draw_significant_pattern(pattern):
-                self.pattern_drawing_map[pattern_key](pattern)
-                # Removed contextual annotation label with 'major...'
-
-    def _draw_market_context(self):
-        """Draws supply/demand zones and support/resistance levels."""
-        # Add null check for analysis
-        if self.analysis is None:
-            return
-            
-        context = self.analysis.get('market_context', {})
-        for zone_type, zones in [('supply', 'supply_zones'), ('demand', 'demand_zones')]:
-            if zones in context:
-                for zone in context[zones]:
-                    color = self.config['colors'][f'{zone_type}_zone_fill']
-                    # Use price_range if available, else fallback to 'bottom'/'top'
-                    if 'price_range' in zone:
-                        y0, y1 = zone['price_range']
-                    else:
-                        y0, y1 = zone.get('bottom', 0), zone.get('top', 0)
-                    self.fig.add_hrect(
-                        y0=y0, y1=y1,
-                        fillcolor=color, layer="below", line_width=0,
-                        annotation_text=f"{zone_type.capitalize()} Zone (strength: {zone.get('strength', 0):.2f})",
-                        annotation_position="top right"
-                    )
+        # If analysis is a list of pattern dicts
+        if isinstance(self.analysis, list):
+            for pattern in self.analysis:
+                pattern_name = pattern.get('pattern_name') or pattern.get('pattern_type') or pattern.get('pattern')
+                if pattern_name in self.pattern_drawing_map:
+                    self.pattern_drawing_map[pattern_name](pattern)
+        # If analysis is a dict with a 'patterns' key (legacy support)
+        elif isinstance(self.analysis, dict) and 'patterns' in self.analysis:
+            for pattern in self.analysis['patterns']:
+                pattern_name = pattern.get('pattern_name') or pattern.get('pattern_type') or pattern.get('pattern')
+                if pattern_name in self.pattern_drawing_map:
+                    self.pattern_drawing_map[pattern_name](pattern)
 
     def _find_peak_valley_coords(self, key_levels, candle_indexes):
         coords = {}
@@ -558,8 +538,15 @@ class ChartEngine:
 
     def _draw_morning_star(self, pattern: Dict):
         """Highlights the 3 main candles of a Morning Star pattern with a gradient rectangle and adds the pattern name as text."""
-        candle_indexes = pattern['candle_indexes'][:3]
-        valid_indexes = [idx for idx in candle_indexes if idx in self.ohlcv_df.index]
+        candle_indexes = pattern.get('candle_indexes')
+        if candle_indexes is None:
+            start_idx = pattern.get('start_index') or pattern.get('start_idx')
+            end_idx = pattern.get('end_index') or pattern.get('end_idx')
+            if start_idx is not None and end_idx is not None:
+                candle_indexes = list(range(start_idx, end_idx + 1))
+            else:
+                return
+        valid_indexes = [idx for idx in candle_indexes[:3] if idx in self.ohlcv_df.index]
         if not valid_indexes:
             return
         times = [self.ohlcv_df.loc[idx, 'timestamp'] for idx in valid_indexes]
@@ -596,8 +583,15 @@ class ChartEngine:
 
     def _draw_three_outside_up(self, pattern: Dict):
         """Highlights the 3 main candles of a Three Outside Up pattern with a gradient rectangle and adds the pattern name as text."""
-        candle_indexes = pattern['candle_indexes'][:3]
-        valid_indexes = [idx for idx in candle_indexes if idx in self.ohlcv_df.index]
+        candle_indexes = pattern.get('candle_indexes')
+        if candle_indexes is None:
+            start_idx = pattern.get('start_index') or pattern.get('start_idx')
+            end_idx = pattern.get('end_index') or pattern.get('end_idx')
+            if start_idx is not None and end_idx is not None:
+                candle_indexes = list(range(start_idx, end_idx + 1))
+            else:
+                return
+        valid_indexes = [idx for idx in candle_indexes[:3] if idx in self.ohlcv_df.index]
         if not valid_indexes:
             return
         times = [self.ohlcv_df.loc[idx, 'timestamp'] for idx in valid_indexes]
@@ -634,8 +628,15 @@ class ChartEngine:
 
     def _draw_three_outside_down(self, pattern: Dict):
         """Highlights the 3 main candles of a Three Outside Down pattern with a gradient rectangle and adds the pattern name as text."""
-        candle_indexes = pattern['candle_indexes'][:3]
-        valid_indexes = [idx for idx in candle_indexes if idx in self.ohlcv_df.index]
+        candle_indexes = pattern.get('candle_indexes')
+        if candle_indexes is None:
+            start_idx = pattern.get('start_index') or pattern.get('start_idx')
+            end_idx = pattern.get('end_index') or pattern.get('end_idx')
+            if start_idx is not None and end_idx is not None:
+                candle_indexes = list(range(start_idx, end_idx + 1))
+            else:
+                return
+        valid_indexes = [idx for idx in candle_indexes[:3] if idx in self.ohlcv_df.index]
         if not valid_indexes:
             return
         times = [self.ohlcv_df.loc[idx, 'timestamp'] for idx in valid_indexes]
@@ -672,8 +673,15 @@ class ChartEngine:
 
     def _draw_three_inside_down(self, pattern: Dict):
         """Highlights the 3 main candles of a Three Inside Down pattern with a gradient rectangle and adds the pattern name as text."""
-        candle_indexes = pattern['candle_indexes'][:3]
-        valid_indexes = [idx for idx in candle_indexes if idx in self.ohlcv_df.index]
+        candle_indexes = pattern.get('candle_indexes')
+        if candle_indexes is None:
+            start_idx = pattern.get('start_index') or pattern.get('start_idx')
+            end_idx = pattern.get('end_index') or pattern.get('end_idx')
+            if start_idx is not None and end_idx is not None:
+                candle_indexes = list(range(start_idx, end_idx + 1))
+            else:
+                return
+        valid_indexes = [idx for idx in candle_indexes[:3] if idx in self.ohlcv_df.index]
         if not valid_indexes:
             return
         times = [self.ohlcv_df.loc[idx, 'timestamp'] for idx in valid_indexes]
@@ -710,8 +718,15 @@ class ChartEngine:
 
     def _draw_three_inside_up(self, pattern: Dict):
         """Highlights the 3 main candles of a Three Inside Up pattern with a gradient rectangle and adds the pattern name as text."""
-        candle_indexes = pattern['candle_indexes'][:3]
-        valid_indexes = [idx for idx in candle_indexes if idx in self.ohlcv_df.index]
+        candle_indexes = pattern.get('candle_indexes')
+        if candle_indexes is None:
+            start_idx = pattern.get('start_index') or pattern.get('start_idx')
+            end_idx = pattern.get('end_index') or pattern.get('end_idx')
+            if start_idx is not None and end_idx is not None:
+                candle_indexes = list(range(start_idx, end_idx + 1))
+            else:
+                return
+        valid_indexes = [idx for idx in candle_indexes[:3] if idx in self.ohlcv_df.index]
         if not valid_indexes:
             return
         times = [self.ohlcv_df.loc[idx, 'timestamp'] for idx in valid_indexes]
@@ -747,111 +762,110 @@ class ChartEngine:
         ), row=1, col=1)
 
     def _draw_cup_and_handle(self, pattern: Dict):
-        """Draws overlays for a Cup and Handle pattern (enhanced, with gradient fill and bold lines)."""
+        """Draws overlays for a Cup and Handle pattern using key_levels['points'] from the pattern output, with classic visuals and a single target."""
         key_levels = pattern.get('key_levels', {})
+        points = key_levels.get('points', {})
+        # Patch: support both start_idx/end_idx and start_index/end_index
         start_idx = pattern.get('start_idx')
+        if start_idx is None:
+            start_idx = pattern.get('start_index')
         end_idx = pattern.get('end_idx')
-        candle_indexes = pattern.get('candle_indexes', list(range(start_idx, end_idx + 1)))
-        if not key_levels or start_idx is None or end_idx is None:
+        if end_idx is None:
+            end_idx = pattern.get('end_index')
+        confidence = pattern.get('confidence', None)
+        if not points or start_idx is None or end_idx is None:
             return
         df = self.ohlcv_df
-        cup_rim = key_levels.get('cup_rim')
-        cup_depth = key_levels.get('cup_depth')
-        handle_start = key_levels.get('handle_start')
-        handle_end = key_levels.get('handle_end')
-        latest_close = key_levels.get('latest_close', cup_rim)
-        # Find indices for cup and handle
-        cup_start_idx = start_idx
-        cup_end_idx = None
-        if handle_start is not None:
-            handle_start_idx = min(range(start_idx, end_idx+1), key=lambda i: abs(df.loc[i, 'close'] - handle_start))
-            cup_end_idx = handle_start_idx
-        else:
-            cup_end_idx = end_idx
-        # Cup arc
-        cup_x = df.loc[cup_start_idx:cup_end_idx, 'timestamp']
-        cup_y = df.loc[cup_start_idx:cup_end_idx, 'close']
-        x_vals = range(len(cup_x))
-        if len(cup_x) > 2:
-            import numpy as np
-            coeffs = np.polyfit(x_vals, cup_y, 2)
-            fitted_y = np.polyval(coeffs, x_vals)
-            # Gradient fill under the cup arc
+        # Compute absolute indices for each key point
+        cup_start_idx = start_idx + points['cup_start']['index']
+        cup_bottom_idx = start_idx + points['cup_bottom']['index']
+        cup_end_idx = start_idx + points['cup_end']['index']
+        handle_start_idx = start_idx + points['handle_start']['index']
+        handle_end_idx = start_idx + points['handle_end']['index']
+        # Get timestamps and prices
+        cup_start_time = df.loc[cup_start_idx, 'timestamp']
+        cup_bottom_time = df.loc[cup_bottom_idx, 'timestamp']
+        cup_end_time = df.loc[cup_end_idx, 'timestamp']
+        handle_start_time = df.loc[handle_start_idx, 'timestamp']
+        handle_end_time = df.loc[handle_end_idx, 'timestamp']
+        cup_start_price = df.loc[cup_start_idx, 'close']
+        cup_bottom_price = df.loc[cup_bottom_idx, 'close']
+        cup_end_price = df.loc[cup_end_idx, 'close']
+        handle_start_price = df.loc[handle_start_idx, 'close']
+        handle_end_price = df.loc[handle_end_idx, 'close']
+        # --- Draw cup arc as a green-to-transparent gradient ---
+        import numpy as np
+        cup_indices = [cup_start_idx, cup_bottom_idx, cup_end_idx]
+        cup_times = [cup_start_time, cup_bottom_time, cup_end_time]
+        cup_prices = [cup_start_price, cup_bottom_price, cup_end_price]
+        x_vals = np.array([(t - cup_start_time).total_seconds() for t in cup_times])
+        y_vals = np.array(cup_prices)
+        if len(np.unique(x_vals)) >= 3:
+            coeffs = np.polyfit(x_vals, y_vals, 2)
+            interp_x = np.linspace(x_vals[0], x_vals[-1], 50)
+            interp_y = np.polyval(coeffs, interp_x)
+            interp_times = [cup_start_time + pd.Timedelta(seconds=float(s)) for s in interp_x]
+            # Draw more lines for a smoother gradient effect
+            for i, (alpha, width) in enumerate(zip(np.linspace(0.12, 1.0, 12), np.linspace(16, 2, 12))):
+                self.fig.add_trace(go.Scatter(
+                    x=interp_times,
+                    y=interp_y,
+                    mode='lines',
+                    line=dict(color=f'rgba(0,255,0,{alpha:.2f})', width=width),
+                    showlegend=False,
+                    hoverinfo='skip'
+                ), row=1, col=1)
+        # --- Draw handle as a downward-sloping regression line ---
+        handle_indices = list(range(handle_start_idx, handle_end_idx + 1))
+        if len(handle_indices) >= 2:
+            handle_times = df.loc[handle_indices, 'timestamp']
+            handle_prices = df.loc[handle_indices, 'close']
+            x = np.arange(len(handle_prices))
+            coeffs = np.polyfit(x, handle_prices, 1)
+            regression = np.polyval(coeffs, x)
             self.fig.add_trace(go.Scatter(
-                x=list(cup_x) + list(cup_x)[::-1],
-                y=list(fitted_y) + [cup_rim]*len(fitted_y),
-                fill='toself',
+                x=handle_times,
+                y=regression,
                 mode='lines',
-                line=dict(color='rgba(255,140,0,1)', width=5),
-                fillcolor='rgba(255,200,0,0.10)',
-                name='Cup',
-                showlegend=False
+                line=dict(color='rgba(0,120,255,1)', width=4, dash='dash'),
+                name='Handle (Downward)',
+                showlegend=False,
+                hoverinfo='text',
+                text=['Handle (Downward)']*len(handle_times)
             ), row=1, col=1)
-        # Draw cup depth line
-        if cup_rim is not None and cup_depth is not None:
-            min_idx = cup_y.idxmin() if hasattr(cup_y, 'idxmin') else cup_start_idx
-            min_time = df.loc[min_idx, 'timestamp']
-            self.fig.add_shape(type="line",
-                x0=min_time, y0=cup_rim, x1=min_time, y1=cup_depth,
-                line=dict(color='yellow', width=3, dash='dot'), row=1, col=1
-            )
-            # Annotate Cup Depth
+        # --- Annotate key points ---
+        for label, idx, t, y in [
+            ("Cup Start", cup_start_idx, cup_start_time, cup_start_price),
+            ("Cup Bottom", cup_bottom_idx, cup_bottom_time, cup_bottom_price),
+            ("Cup End", cup_end_idx, cup_end_time, cup_end_price),
+            ("Handle Start", handle_start_idx, handle_start_time, handle_start_price),
+            ("Handle End", handle_end_idx, handle_end_time, handle_end_price)
+        ]:
             self.fig.add_annotation(
-                x=min_time, y=(cup_rim + cup_depth) / 2,
-                text="Cup Depth", showarrow=False,
-                bgcolor='yellow', font=dict(color='black', size=12, family='Arial Black'),
-                yanchor="middle", xanchor="left"
-            )
-        # Handle: Draw as a bold line and fill under handle
-        if handle_start is not None and handle_end is not None:
-            handle_start_idx = min(range(start_idx, end_idx+1), key=lambda i: abs(df.loc[i, 'close'] - handle_start))
-            handle_end_idx = min(range(start_idx, end_idx+1), key=lambda i: abs(df.loc[i, 'close'] - handle_end))
-            handle_x = [df.loc[handle_start_idx, 'timestamp'], df.loc[handle_end_idx, 'timestamp']]
-            handle_y = [handle_start, handle_end]
-            # Bold handle line
-            self.fig.add_trace(go.Scatter(
-                x=handle_x, y=handle_y,
-                mode='lines',
-                line=dict(color='rgba(0,120,255,1)', width=6),
-                name='Handle',
-                showlegend=False
-            ), row=1, col=1)
-            # Semi-transparent fill under handle
-            self.fig.add_trace(go.Scatter(
-                x=handle_x + handle_x[::-1],
-                y=handle_y + [cup_rim, cup_rim],
-                fill='toself',
-                mode='lines',
-                line=dict(color='rgba(0,120,255,0)'),
-                fillcolor='rgba(0,120,255,0.08)',
-                showlegend=False
-            ), row=1, col=1)
-            # Annotate Handle
-            self.fig.add_annotation(
-                x=handle_x[-1], y=handle_y[-1],
-                text="Handle", showarrow=True, arrowhead=2,
-                bgcolor='rgba(0,120,255,0.8)', font=dict(color='white', size=12, family='Arial Black'),
+                x=t, y=y, text=label, showarrow=True, arrowhead=2,
+                bgcolor='rgba(0,0,0,0.7)', font=dict(color='white', size=10, family='Arial Black'),
                 yanchor="bottom", xanchor="left"
             )
-        # Target: Projected above rim by cup depth, with bold green line and annotation
-        if cup_rim is not None and cup_depth is not None:
-            target_price = cup_rim + (cup_rim - cup_depth)
-            target_time = df.loc[end_idx, 'timestamp']
-            self.fig.add_shape(type="line",
-                x0=target_time, y0=cup_rim, x1=target_time, y1=target_price,
-                line=dict(color='lime', width=4, dash='dot'), row=1, col=1
-            )
-            self.fig.add_annotation(
-                x=target_time, y=target_price,
-                text="Target", showarrow=False,
-                bgcolor='lime', font=dict(color='black', size=16, family='Arial Black'),
-                yanchor="bottom", xanchor="left"
-            )
+        # --- Draw single target from handle_end (breakout) ---
+        cup_height = max(cup_start_price, cup_end_price) - cup_bottom_price
+        target_price_breakout = handle_end_price + cup_height
+        self.fig.add_shape(type="line",
+            x0=handle_end_time, y0=handle_end_price,
+            x1=handle_end_time, y1=target_price_breakout,
+            line=dict(color='lime', width=4, dash='dot'), row=1, col=1
+        )
+        self.fig.add_annotation(
+            x=handle_end_time, y=target_price_breakout,
+            text=f"Target ({int(confidence*100)}%)" if confidence is not None else "Target",
+            showarrow=False,
+            bgcolor='lime', font=dict(color='black', size=14, family='Arial Black'),
+            yanchor="bottom", xanchor="left"
+        )
 
     def _draw_support_resistance(self):
         """Draws support and resistance levels as horizontal lines with labels."""
-        # Add null check for analysis
-        if self.analysis is None:
+        # Only proceed if self.analysis is a dict and has 'market_context'
+        if not isinstance(self.analysis, dict):
             return
         context = self.analysis.get('market_context', {})
         support_levels = context.get('support_levels', [])
@@ -895,8 +909,8 @@ class ChartEngine:
     def create_chart(self, output_type: str = 'image') -> bytes | str:
         """Generates the chart with all overlays."""
         self._create_figure()
-        self._draw_market_context()   # Draw overlays first
-        self._draw_support_resistance()  # Draw support/resistance lines
+        # self._draw_market_context()   # Draw overlays first (REMOVED)
+        # self._draw_support_resistance()  # Draw support/resistance lines
         self._draw_patterns()         # Draw pattern overlays next
 
         # Detailed debug logging for OHLCV DataFrame

@@ -471,31 +471,39 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
         highs = np.array(ohlcv['high'])
         timestamps = ohlcv.get('timestamp', None)
         pattern_type = "head_and_shoulders"
+        
         peaks = argrelextrema(highs, np.greater, order=2)[0]
         troughs = argrelextrema(lows, np.less, order=2)[0]
+        
         # Need at least 3 peaks and 2 troughs for regular H&S
         if len(peaks) < 3 or len(troughs) < 2:
             return None
+        
         # For regular H&S (bearish)
         if len(peaks) >= 3:
             pattern_type = "bearish_head_and_shoulders"
             last_peaks = peaks[-3:]
             peak_heights = highs[last_peaks]
+            
             if peak_heights[1] > peak_heights[0] and peak_heights[1] > peak_heights[2]:
                 shoulder_diff = abs(peak_heights[0] - peak_heights[2])
                 shoulder_avg = (peak_heights[0] + peak_heights[2]) / 2
+                
                 if shoulder_diff / shoulder_avg < 0.1:
                     neckline_points = []
                     for trough in troughs:
                         if last_peaks[0] < trough < last_peaks[1] or last_peaks[1] < trough < last_peaks[2]:
                             neckline_points.append(trough)
+                    
                     if len(neckline_points) >= 2:
                         neckline_slope = np.polyfit(neckline_points, lows[neckline_points], 1)[0]
                         confidence = 0.7 - min(0.3, abs(neckline_slope) * 20)
+                        
                         head_height = peak_heights[1]
                         shoulder_height = (peak_heights[0] + peak_heights[2]) / 2
                         if head_height / shoulder_height > 1.05:
                             confidence += 0.1
+                        
                         # Points dict
                         points = {
                             "left_shoulder": {
@@ -514,26 +522,37 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
                                 "timestamp": timestamps[last_peaks[2]] if timestamps is not None and last_peaks[2] < len(timestamps) else None
                             }
                         }
+                        
                         for i, nidx in enumerate(neckline_points):
                             points[f"neckline_{i}"] = {
                                 "index": int(nidx),
                                 "price": float(lows[nidx]),
                                 "timestamp": timestamps[nidx] if timestamps is not None and nidx < len(timestamps) else None
                             }
-                        start_index = int(last_peaks[0])
-                        end_index = int(last_peaks[2])
+                        
+                        # FIXED: Correctly set start/end index to min/max of all points indices
+                        all_point_indices = [int(v["index"]) for v in points.values()]
+                        start_index = min(all_point_indices)
+                        end_index = max(all_point_indices)
+                        
+                        # FIXED: Use correct indices for timestamps
                         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
                         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
+                        
+                        # FIXED: Calculate pattern metrics from actual pattern range, not just last values
+                        pattern_range = slice(start_index, end_index + 1)
+                        
                         key_levels = {
                             "points": points,
                             "latest_close": float(closes[-1]),
                             "avg_high_5": float(np.mean(highs[-5:])),
                             "avg_low_5": float(np.mean(lows[-5:])),
-                            "pattern_high": float(highs[-1]),
-                            "pattern_low": float(lows[-1]),
-                            "pattern_open": float(opens[-1]),
-                            "pattern_close": float(closes[-1])
+                            "pattern_high": float(np.max(highs[pattern_range])),
+                            "pattern_low": float(np.min(lows[pattern_range])),
+                            "pattern_open": float(opens[start_index]),
+                            "pattern_close": float(closes[end_index])
                         }
+                        
                         return {
                             "pattern_name": pattern_type,
                             "confidence": round(confidence, 2),
@@ -543,26 +562,32 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
                             "end_time": end_time,
                             "key_levels": key_levels
                         }
+        
         # For inverse H&S (bullish) - check troughs instead
         if len(troughs) >= 3:
-            pattern_type = "bullish_head_and_shoulders"
+            pattern_type = "inverse_head_and_shoulders"  # FIXED: was "bullish_head_and_shoulders"
             last_troughs = troughs[-3:]
             trough_depths = lows[last_troughs]
+            
             if trough_depths[1] < trough_depths[0] and trough_depths[1] < trough_depths[2]:
                 shoulder_diff = abs(trough_depths[0] - trough_depths[2])
                 shoulder_avg = (trough_depths[0] + trough_depths[2]) / 2
+                
                 if shoulder_diff / shoulder_avg < 0.1:
                     neckline_points = []
                     for peak in peaks:
                         if last_troughs[0] < peak < last_troughs[1] or last_troughs[1] < peak < last_troughs[2]:
                             neckline_points.append(peak)
+                    
                     if len(neckline_points) >= 2:
                         neckline_slope = np.polyfit(neckline_points, highs[neckline_points], 1)[0]
                         confidence = 0.7 - min(0.3, abs(neckline_slope) * 20)
+                        
                         head_depth = trough_depths[1]
                         shoulder_depth = (trough_depths[0] + trough_depths[2]) / 2
                         if head_depth / shoulder_depth < 0.95:
                             confidence += 0.1
+                        
                         points = {
                             "left_shoulder": {
                                 "index": int(last_troughs[0]),
@@ -580,26 +605,37 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
                                 "timestamp": timestamps[last_troughs[2]] if timestamps is not None and last_troughs[2] < len(timestamps) else None
                             }
                         }
+                        
                         for i, nidx in enumerate(neckline_points):
                             points[f"neckline_{i}"] = {
                                 "index": int(nidx),
                                 "price": float(highs[nidx]),
                                 "timestamp": timestamps[nidx] if timestamps is not None and nidx < len(timestamps) else None
                             }
-                        start_index = int(last_troughs[0])
-                        end_index = int(last_troughs[2])
+                        
+                        # FIXED: Correctly set start/end index to min/max of all points indices
+                        all_point_indices = [int(v["index"]) for v in points.values()]
+                        start_index = min(all_point_indices)
+                        end_index = max(all_point_indices)
+                        
+                        # FIXED: Use correct indices for timestamps
                         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
                         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
+                        
+                        # FIXED: Calculate pattern metrics from actual pattern range, not just last values
+                        pattern_range = slice(start_index, end_index + 1)
+                        
                         key_levels = {
                             "points": points,
                             "latest_close": float(closes[-1]),
                             "avg_high_5": float(np.mean(highs[-5:])),
                             "avg_low_5": float(np.mean(lows[-5:])),
-                            "pattern_high": float(highs[-1]),
-                            "pattern_low": float(lows[-1]),
-                            "pattern_open": float(opens[-1]),
-                            "pattern_close": float(closes[-1])
+                            "pattern_high": float(np.max(highs[pattern_range])),
+                            "pattern_low": float(np.min(lows[pattern_range])),
+                            "pattern_open": float(opens[start_index]),
+                            "pattern_close": float(closes[end_index])
                         }
+                        
                         return {
                             "pattern_name": pattern_type,
                             "confidence": round(confidence, 2),
@@ -609,7 +645,9 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
                             "end_time": end_time,
                             "key_levels": key_levels
                         }
+    
         return None
+    
     except Exception as e:
         logger.error(f"Head and shoulders detection error: {str(e)}")
         return None
@@ -1583,191 +1621,124 @@ async def detect_island_reversal(ohlcv: dict) -> Optional[Dict[str, Any]]:
 
 @register_pattern("cup_and_handle", "chart", types=["cup_and_handle"])
 async def detect_cup_and_handle(ohlcv: dict) -> Optional[Dict[str, Any]]:
-    try:
-        lows = np.array(ohlcv['low'])
-        opens = np.array(ohlcv['open'])
-        closes = np.array(ohlcv['close'])
-        highs = np.array(ohlcv['high'])
-        timestamps = ohlcv.get('timestamp', None)
-        pattern_type = "cup_and_handle"
-        min_points = 20
-        if len(closes) < min_points:
-            return None
-        def is_u_shaped(data, threshold=0.7):
-            x = np.arange(len(data))
-            coeffs = np.polyfit(x, data, 2)
-            if coeffs[0] <= 0:
-                return False
-            p = np.poly1d(coeffs)
-            fitted = p(x)
-            ss_tot = np.sum((data - np.mean(data))**2)
-            ss_res = np.sum((data - fitted)**2)
-            r_squared = 1 - (ss_res / ss_tot)
-            return r_squared > threshold
-        cup_size = int(len(closes) * 2/3)
-        cup_data = closes[:cup_size]
-        handle_data = closes[cup_size:]
-        if not is_u_shaped(cup_data):
-            return None
-        cup_depth = (max(cup_data) - min(cup_data)) / max(cup_data)
-        cup_symmetry = np.abs(np.argmax(cup_data) - np.argmin(cup_data)) / len(cup_data)
-        handle_drop = (handle_data[0] - min(handle_data)) / handle_data[0]
-        if handle_drop > 0.5 * cup_depth:
-            return None
-        if len(handle_data) > 0.5 * len(cup_data):
-            return None
-        confidence = 0.6
-        cup_r_squared = 0
-        x = np.arange(len(cup_data))
-        coeffs = np.polyfit(x, cup_data, 2)
-        if coeffs[0] > 0:
-            p = np.poly1d(coeffs)
-            fitted = p(x)
-            ss_tot = np.sum((cup_data - np.mean(cup_data))**2)
-            ss_res = np.sum((cup_data - fitted)**2)
-            cup_r_squared = 1 - (ss_res / ss_tot)
-            if cup_r_squared > 0.8:
-                confidence += 0.1
-        if 0.15 < cup_depth < 0.45:
-            confidence += 0.1
-        if abs(cup_symmetry - 0.5) < 0.15:
-            confidence += 0.1
-        if handle_drop < 0.3 * cup_depth and len(handle_data) < 0.3 * len(cup_data):
-            confidence += 0.1
-        # Points dict
-        cup_start = 0
-        cup_bottom = int(np.argmin(cup_data))
-        cup_end = cup_size - 1
-        handle_start = cup_size
-        handle_end = len(closes) - 1
-        points = {
-            "cup_start": {
-                "index": cup_start,
-                "price": float(closes[cup_start]),
-                "timestamp": timestamps[cup_start] if timestamps is not None and cup_start < len(timestamps) else None
-            },
-            "cup_bottom": {
-                "index": cup_bottom,
-                "price": float(closes[cup_bottom]),
-                "timestamp": timestamps[cup_bottom] if timestamps is not None and cup_bottom < len(timestamps) else None
-            },
-            "cup_end": {
-                "index": cup_end,
-                "price": float(closes[cup_end]),
-                "timestamp": timestamps[cup_end] if timestamps is not None and cup_end < len(timestamps) else None
-            },
-            "handle_start": {
-                "index": handle_start,
-                "price": float(closes[handle_start]),
-                "timestamp": timestamps[handle_start] if timestamps is not None and handle_start < len(timestamps) else None
-            },
-            "handle_end": {
-                "index": handle_end,
-                "price": float(closes[handle_end]),
-                "timestamp": timestamps[handle_end] if timestamps is not None and handle_end < len(timestamps) else None
-            }
-        }
-        start_index = cup_start
-        end_index = handle_end
-        start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
-        end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
-        key_levels = {
-            "points": points,
-            "latest_close": float(closes[-1]),
-            "avg_high_5": float(np.mean(highs[-5:])),
-            "avg_low_5": float(np.mean(lows[-5:])),
-            "pattern_high": float(highs[-1]),
-            "pattern_low": float(lows[-1]),
-            "pattern_open": float(opens[-1]),
-            "pattern_close": float(closes[-1])
-        }
-        return {
-            "pattern_name": pattern_type,
-            "confidence": round(confidence, 2),
-            "start_index": start_index,
-            "end_index": end_index,
-            "start_time": start_time,
-            "end_time": end_time,
-            "key_levels": key_levels
-        }
-    except Exception as e:
-        logger.error(f"Cup and handle detection error: {str(e)}")
-        return None
-
-@register_pattern("cup_with_handle", "chart", types=["cup_with_handle"])
-async def detect_cup_with_handle(ohlcv: dict) -> Optional[Dict[str, Any]]:
+    """
+    Detects the cup and handle pattern in the given OHLCV array.
+    All indices in the output (key_levels['points'], start_index, end_index, start_time, end_time)
+    are absolute with respect to the input OHLCV array, matching the convention of other chart patterns.
+    """
     try:
         closes = np.array(ohlcv['close'])
         highs = np.array(ohlcv['high'])
         lows = np.array(ohlcv['low'])
         timestamps = ohlcv.get('timestamp', None)
         n = len(closes)
-        if n < 10:
+        min_points = 20
+        if n < min_points:
             return None
-        mid = n // 2
-        left = closes[:mid]
-        right = closes[mid:]
-        if closes[0] < float(left.min()) or closes[-1] < float(right.min()):
+
+        # Define cup and handle sizes
+        cup_size = int(n * 2 / 3)
+        cup_data = closes[:cup_size]
+        handle_data = closes[cup_size:]
+
+        # Quadratic fitting for cup
+        x = np.arange(len(cup_data))
+        coeffs = np.polyfit(x, cup_data, 2)
+        if coeffs[0] <= 0:  # Not U-shaped
             return None
-        if abs(float(left.min()) - float(right.min())) > 0.03 * float(closes.mean()):
+        p = np.poly1d(coeffs)
+        fitted = p(x)
+        ss_tot = np.sum((cup_data - np.mean(cup_data)) ** 2)
+        ss_res = np.sum((cup_data - fitted) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        if r_squared < 0.7:
             return None
-        handle = right[-(n//5):]
-        if float(handle.min()) > float(right.min()) or float(handle.max()) < float(right.max()):
+
+        # Check minimums of left and right sides of the cup
+        mid = cup_size // 2
+        left_min = np.min(cup_data[:mid])
+        right_min = np.min(cup_data[mid:])
+        if abs(left_min - right_min) > 0.03 * np.mean(cup_data):
             return None
-        confidence = 0.68
-        # Points dict
+
+        # Calculate cup depth and symmetry
+        cup_depth = (max(cup_data) - min(cup_data)) / max(cup_data)
+        cup_symmetry = np.abs(np.argmax(cup_data) - np.argmin(cup_data)) / len(cup_data)
+
+        # Check handle
+        handle_drop = (handle_data[0] - min(handle_data)) / handle_data[0]
+        if handle_drop > 0.5 * cup_depth or len(handle_data) > 0.5 * len(cup_data):
+            return None
+
+        # Calculate confidence
+        confidence = 0.6
+        if r_squared > 0.8:
+            confidence += 0.1
+        if 0.15 < cup_depth < 0.45:
+            confidence += 0.1
+        if abs(cup_symmetry - 0.5) < 0.15:
+            confidence += 0.1
+        if handle_drop < 0.3 * cup_depth and len(handle_data) < 0.3 * len(cup_data):
+            confidence += 0.1
+
+        # Identify key points (all absolute indices)
         cup_start = 0
-        cup_bottom = int(np.argmin(left))
-        cup_end = mid - 1
-        handle_start = mid
+        cup_bottom = int(np.argmin(cup_data))  # This is already absolute since cup_data starts at 0
+        cup_end = cup_size - 1
+        handle_start = cup_size
         handle_end = n - 1
         points = {
             "cup_start": {
                 "index": cup_start,
                 "price": float(closes[cup_start]),
-                "timestamp": timestamps[cup_start] if timestamps is not None and cup_start < len(timestamps) else None
+                "timestamp": timestamps[cup_start] if timestamps and cup_start < len(timestamps) else None
             },
             "cup_bottom": {
                 "index": cup_bottom,
                 "price": float(closes[cup_bottom]),
-                "timestamp": timestamps[cup_bottom] if timestamps is not None and cup_bottom < len(timestamps) else None
+                "timestamp": timestamps[cup_bottom] if timestamps and cup_bottom < len(timestamps) else None
             },
             "cup_end": {
                 "index": cup_end,
                 "price": float(closes[cup_end]),
-                "timestamp": timestamps[cup_end] if timestamps is not None and cup_end < len(timestamps) else None
+                "timestamp": timestamps[cup_end] if timestamps and cup_end < len(timestamps) else None
             },
             "handle_start": {
                 "index": handle_start,
                 "price": float(closes[handle_start]),
-                "timestamp": timestamps[handle_start] if timestamps is not None and handle_start < len(timestamps) else None
+                "timestamp": timestamps[handle_start] if timestamps and handle_start < len(timestamps) else None
             },
             "handle_end": {
                 "index": handle_end,
                 "price": float(closes[handle_end]),
-                "timestamp": timestamps[handle_end] if timestamps is not None and handle_end < len(timestamps) else None
+                "timestamp": timestamps[handle_end] if timestamps and handle_end < len(timestamps) else None
             }
         }
-        start_index = cup_start
-        end_index = handle_end
-        start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
-        end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
+
+        # Key levels
+        key_levels = {
+            "points": points,
+            "latest_close": float(closes[-1]),
+            "avg_high_5": float(np.mean(highs[-5:])),
+            "avg_low_5": float(np.mean(lows[-5:])),
+            "pattern_high": float(max(highs)),
+            "pattern_low": float(min(lows)),
+            "support": float(min(lows)),
+            "resistance": float(max(highs)),
+            "pattern_height": float(max(highs) - min(lows))
+        }
+
         return {
-            "pattern_name": "cup_with_handle",
-            "confidence": confidence,
-            "start_index": start_index,
-            "end_index": end_index,
-            "start_time": start_time,
-            "end_time": end_time,
-            "key_levels": {
-                "points": points,
-                "support": min(lows),
-                "resistance": max(highs),
-                "pattern_height": max(highs) - min(lows)
-            }
+            "pattern_name": "cup_and_handle",
+            "confidence": round(confidence, 2),
+            "start_index": cup_start,
+            "end_index": handle_end,
+            "start_time": timestamps[cup_start] if timestamps and cup_start < len(timestamps) else None,
+            "end_time": timestamps[handle_end] if timestamps and handle_end < len(timestamps) else None,
+            "key_levels": key_levels
         }
     except Exception as e:
-        logger.error(f"Cup with handle detection error: {str(e)}")
+        logger.error(f"Cup and handle hybrid detection error: {str(e)}")
         return None
 
 @register_pattern("inverse_cup_and_handle", "chart", types=["inverse_cup_and_handle"])
@@ -1960,8 +1931,8 @@ async def detect_broadening_wedge(ohlcv: dict) -> Optional[Dict[str, Any]]:
                 "timestamp": timestamps[int(low_troughs[-1])] if timestamps is not None and int(low_troughs[-1]) < len(timestamps) else None
             }
         }
-        start_index = int(min(float(high_peaks[0]), float(low_troughs[0])))
-        end_index = int(max(float(high_peaks[-1]), float(low_troughs[-1])))
+        start_index = min([int(high_peaks[0]), int(low_troughs[0])])
+        end_index = max([int(high_peaks[-1]), int(low_troughs[-1])])
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -2297,8 +2268,8 @@ async def detect_diamond_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
                 "timestamp": timestamps[right_extreme] if timestamps is not None and right_extreme < len(timestamps) else None
             }
         }
-        start_index = left_extreme
-        end_index = right_extreme
+        start_index = min([left_extreme, right_extreme])
+        end_index = max([left_extreme, right_extreme])
         start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
         end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
         return {
@@ -2386,3 +2357,4 @@ async def detect_bump_and_run(ohlcv: dict) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Bump and run detection error: {str(e)}")
         return None
+

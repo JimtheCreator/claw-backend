@@ -2,18 +2,15 @@
 import numpy as np
 import pandas as pd
 from scipy.signal import argrelextrema
-from typing import Tuple, Dict, List, Optional, Any, Union, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from collections import deque
 from fastapi import HTTPException
-import math
-import asyncio
 from common.logger import logger
 from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 import traceback
-import json
 
 # === Market Context Definitions ===
 class MarketScenario(Enum):
@@ -601,8 +598,7 @@ class MarketAnalyzer:
                         # Proposed Fix (Full Pattern Check)
                         window_lows = window_data['low'].values
                         window_highs = window_data['high'].values
-
-                                           
+           
                         # Check interaction with Demand Zones
                         for dz in demand_zones:
                             # --- Start of Fixed Zone Interaction Code ---
@@ -1592,13 +1588,11 @@ class MarketAnalyzer:
 
         low_idx_relative = argrelextrema(lows, np.less, order=order)[0]
 
-
         # If not enough extrema found, supplement with lowest points
         if len(low_idx_relative) < 5:
             # Get indexes of the lowest points
             sorted_low_indices_relative = np.argsort(lows)[:min(len(lows), 5)]
             low_idx_relative = np.unique(np.concatenate((low_idx_relative, sorted_low_indices_relative))) # Combine and get unique
-
 
         # Weight by volume and recency
         weighted_levels = []
@@ -1637,7 +1631,6 @@ class MarketAnalyzer:
         current_price = df['close'].iloc[-1]
         current_atr = df['atr'].iloc[-1] if 'atr' in df.columns and not pd.isna(df['atr'].iloc[-1]) else df['close'].std() * 1 # Fallback ATR
         min_distance = max(current_price * 0.005, current_atr * 2)
-
 
         support_levels = [level for level in support_levels if current_price - level > min_distance]
 

@@ -36,6 +36,14 @@ async def initialize_binance_connection_pool():
     except Exception as e:
         logger.error(f"Failed to initialize Binance connection pool: {e}")
 
+async def close_binance_connection_pool():
+    """Close the connection pool at shutdown"""
+    try:
+        await binance_client.close_connection_pool()
+        logger.info("Binance connection pool closed")
+    except Exception as e:
+        logger.error(f"Failed to close Binance connection pool: {e}")
+
 
 async def search_cryptos(query: str, limit: int = 20) -> List[dict]:
     try:

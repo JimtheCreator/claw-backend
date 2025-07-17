@@ -633,6 +633,37 @@ class BinanceMarketData:
             # No need to explicitly close the websocket as it's handled by the context manager
             pass
 
+
+    async def stream_kline_events(self, symbol: str, interval: str = "1m") -> AsyncGenerator[dict, None]:
+        """
+        Streams all kline events (both open and closed) for a symbol and interval.
+
+        This provides every update from the WebSocket for real-time analysis,
+        unlike get_ohlcv_stream which only yields completed candles.
+
+        Args:
+            symbol (str): The trading pair symbol (e.g., BTCUSDT).
+            interval (str): Kline/candlestick interval (1m, 5m, 1h, etc.).
+
+        Yields:
+            dict: The raw JSON message from the Binance kline WebSocket stream.
+        """
+        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
+        stream_name = f"{symbol}@kline_{interval}"
+        socket_url = f"wss://stream.binance.com:9443/ws/{stream_name}"
+        
+        logger.info(f"Connecting to raw kline event stream: {socket_url}")
+
+        try:
+            async with websockets.connect(socket_url) as websocket:
+                async for msg_text in websocket:
+                    # Yield the raw message directly
+                    yield json.loads(msg_text)
+                    
+        except Exception as e:
+            logger.error(f"Error in kline event stream for {symbol}: {e}")
+            raise
+
     async def get_combined_stream(self, symbol: str, include_ticker: bool = True, include_ohlcv: bool = True, ohlcv_interval: str = "1m") -> AsyncGenerator[dict, None]:
         """Stream combined market data including ticker and OHLCV
         
