@@ -327,7 +327,6 @@ class NotificationWorker:
     async def _process_notification_event(self, event_data: dict):
         """Process individual notification event with enhanced error handling"""
         start_time = time.time()
-        logger.info(f"[EVENT] Processing notification event: {event_data}")
         try:
             # Robustly parse stringified JSON fields if needed
             event_data['key_levels'] = parse_possible_json(event_data.get('key_levels'))
@@ -384,11 +383,14 @@ class NotificationWorker:
                 logger.error(f"[ERROR] Missing required fields in event data: {event_data}")
                 raise ValueError(f"Missing required fields in event data: {event_data}")
             # Get subscribers with timeout
+            t0 = time.time()
             logger.info(f"[SUBSCRIBERS] Looking up subscribers for {symbol}:{interval} pattern '{pattern}'...")
             user_ids_to_notify = await asyncio.wait_for(
                 self._get_subscribed_users(symbol, interval, pattern),
                 timeout=10.0
             )
+            t1 = time.time()
+            logger.info(f"[PERF] Fetched subscribers for {symbol}:{interval} {pattern} in {t1-t0:.3f}s: {user_ids_to_notify}")
             logger.info(f"[SUBSCRIBERS] Found subscribers: {user_ids_to_notify}")
             if not user_ids_to_notify:
                 logger.warning(f"[SUBSCRIBERS] No subscribers for {pattern} on {symbol}:{interval}")
@@ -396,10 +398,13 @@ class NotificationWorker:
             logger.info(f"[NOTIFY] Processing {len(user_ids_to_notify)} users for pattern {pattern} on {symbol}")
             # Process notifications with timeout
             try:
+                t2 = time.time()
                 await asyncio.wait_for(
                     self._send_notifications(user_ids_to_notify, symbol, interval, pattern, pattern_type, status, price, confidence, timestamp, ohlcv_snapshot, details, event_data),
                     timeout=30.0
                 )
+                t3 = time.time()
+                logger.info(f"[PERF] _send_notifications for {symbol}:{interval} {pattern} took {t3-t2:.3f}s")
             except Exception as notify_exc:
                 logger.error(f"[NOTIFY] Exception during notification send: {notify_exc}", exc_info=True)
                 raise
@@ -439,6 +444,7 @@ class NotificationWorker:
 
     async def _send_notifications(self, user_ids: list, symbol: str, interval: str, pattern: str, pattern_type: str, status: str, price, confidence, timestamp, ohlcv_snapshot, details, original_event_data):
         logger.info(f"[NOTIFY] Preparing to send notifications to users: {user_ids}")
+        t0 = time.time()
         # Deactivate alerts and get tokens in parallel
         deactivate_task = self.repo.deactivate_pattern_alerts_by_criteria(
             user_ids=user_ids,
@@ -448,6 +454,8 @@ class NotificationWorker:
         )
         tokens_task = self.repo.get_fcm_tokens_for_users(user_ids)
         alert_ids, tokens_map = await asyncio.gather(deactivate_task, tokens_task)
+        t1 = time.time()
+        logger.info(f"[PERF] Deactivate alerts and fetch FCM tokens for {symbol}:{interval} {pattern} took {t1-t0:.3f}s")
         logger.info(f"[NOTIFY] Deactivated alert IDs: {alert_ids}")
         logger.info(f"[NOTIFY] FCM tokens map: {tokens_map}")
         tokens = [token for token in tokens_map.values() if token]
@@ -487,13 +495,11 @@ class NotificationWorker:
             # Add any other fields as needed
         }
         data_payload = stringify_data_dict(data_payload)
-        
         # Check payload size to prevent FCM "message too big" errors
         payload_size = len(str(data_payload))
         logger.info(f"[NOTIFY] FCM payload size: {payload_size} characters")
         if payload_size > 4000:  # FCM has a 4KB limit for data payload
             logger.warning(f"[NOTIFY] Large FCM payload detected ({payload_size} chars), may cause issues")
-        
         # Platform-specific configurations
         android_config = messaging.AndroidConfig(
             priority="high",
@@ -505,10 +511,13 @@ class NotificationWorker:
         )
         # Send notifications
         try:
+            t2 = time.time()
             logger.info(f"[NOTIFY] About to call send_batch_fcm_notifications with tokens: {tokens}, title: {title}, body: {body}, data_payload: {data_payload}")
             failed_tokens = await self.notification_service.send_batch_fcm_notifications(
                 tokens, title, body, data_payload, android_config, apns_config
             )
+            t3 = time.time()
+            logger.info(f"[PERF] send_batch_fcm_notifications for {symbol}:{interval} {pattern} took {t3-t2:.3f}s")
             logger.info(f"[NOTIFY] send_batch_fcm_notifications returned failed_tokens: {failed_tokens}")
             if failed_tokens:
                 logger.error(f"[NOTIFY] Some tokens failed to receive notification: {failed_tokens}")

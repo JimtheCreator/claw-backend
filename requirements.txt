@@ -36,3 +36,4 @@ sse-starlette
 kaleido
 concurrent-log-handler
 signal
+scikit-learn

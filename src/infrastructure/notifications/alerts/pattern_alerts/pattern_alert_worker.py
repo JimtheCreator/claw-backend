@@ -7,6 +7,7 @@ from infrastructure.data_sources.binance.client import BinanceMarketData
 from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
+import time as _time  # Local import for precise timing
 
 class CircuitBreaker:
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
@@ -405,16 +406,17 @@ class PatternAlertWorker:
     async def detect_and_publish_patterns(self, symbol: str, interval: str):
         """Detect patterns for all active patterns and publish events if found."""
         logger.info(f"🔍 Starting pattern detection for {symbol}:{interval}")
+        start_total = _time.perf_counter()
         rolling_window_key = f"rolling_window:{symbol}:{interval}"
+        t0 = _time.perf_counter()
         async for _ in self._redis_operation("lrange"):
             candles_json = await self.redis_cache.lrange(rolling_window_key, 0, self.config['rolling_window_size'] - 1)
-        
+        t1 = _time.perf_counter()
+        logger.info(f"[PERF] Redis lrange for {symbol}:{interval} took {t1-t0:.3f}s")
         if not candles_json:
             logger.warning(f"⚠️ No candles found in rolling window for {symbol}:{interval}")
             return
-        
         logger.info(f"📊 Found {len(candles_json)} candles in rolling window for {symbol}:{interval}")
-        
         candles = [json.loads(c) for c in candles_json]
         if candles:
             logger.info(f"[DEBUG] Last candle in rolling window for {symbol}:{interval}: {candles[-1]}")
@@ -426,22 +428,19 @@ class PatternAlertWorker:
             'volume': [c['volume'] for c in candles],
             'timestamp': [c['timestamp'] for c in candles],
         }
-        
         logger.info(f"📈 OHLCV data prepared for {symbol}:{interval} - Last close: {ohlcv_data['close'][-1] if ohlcv_data['close'] else 'N/A'}")
-        
         redis_key = f"pattern_listeners:{symbol}:{interval}"
+        t2 = _time.perf_counter()
         async for _ in self._redis_operation("hgetall_data"):
             active_patterns = await self.redis_cache.hgetall_data(redis_key)
-        
+        t3 = _time.perf_counter()
+        logger.info(f"[PERF] Redis hgetall_data for {symbol}:{interval} took {t3-t2:.3f}s")
         if not active_patterns:
             logger.warning(f"⚠️ No active patterns found for {symbol}:{interval}")
             return
-        
         logger.info(f"🎯 Found {len(active_patterns)} active patterns for {symbol}:{interval}: {list(active_patterns.keys())}")
-        
         semaphore = asyncio.Semaphore(self.config['max_concurrent_detections'])
         tasks = []
-        
         for pattern_name, user_ids_json in active_patterns.items():
             try:
                 user_ids = json.loads(user_ids_json)
@@ -452,26 +451,32 @@ class PatternAlertWorker:
                     logger.warning(f"⚠️ Pattern '{pattern_name}' has no active users, skipping")
             except json.JSONDecodeError as e:
                 logger.error(f"❌ Invalid JSON for pattern '{pattern_name}' users: {e}")
-        
         if tasks:
             logger.info(f"🚀 Running {len(tasks)} pattern detection tasks for {symbol}:{interval}")
+            t4 = _time.perf_counter()
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+            t5 = _time.perf_counter()
+            logger.info(f"[PERF] All pattern detection tasks for {symbol}:{interval} took {t5-t4:.3f}s")
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     logger.error(f"❌ Pattern detection error: {result}")
                 elif isinstance(result, dict) and result.get('detected', False):
                     logger.info(f"🎉 Pattern DETECTED: {result.get('pattern_name')} on {symbol}:{interval} with confidence {result.get('confidence')}")
+                    t6 = _time.perf_counter()
                     await self.publish_match_event(result)
+                    t7 = _time.perf_counter()
+                    logger.info(f"[PERF] Notification publish for {symbol}:{interval} {result.get('pattern_name')} took {t7-t6:.3f}s")
                 else:
                     logger.warning(f"❌ Pattern not found or unexpected result for task {i} on {symbol}:{interval}: {result}")
         else:
             logger.warning(f"⚠️ No detection tasks created for {symbol}:{interval}")
-        
+        end_total = _time.perf_counter()
+        logger.info(f"[PERF] Total notification processing for {symbol}:{interval} took {end_total-start_total:.3f}s")
         logger.info(f"✅ Pattern detection completed for {symbol}:{interval}")
 
     async def detect_pattern_with_semaphore(self, semaphore, symbol, interval, pattern_name, ohlcv_data, candles):
         async with semaphore:
+            t0 = _time.perf_counter()
             try:
                 normalized_pattern_name = pattern_name.lower().replace(' ', '_')
                 base_pattern = self.pattern_type_to_base.get(normalized_pattern_name)
@@ -487,10 +492,13 @@ class PatternAlertWorker:
                     return {"detected": False}
                 detector_func = detector_info["function"]
                 logger.info(f"🎯 Running detector for {base_pattern} (requested type: {normalized_pattern_name}) on {symbol}:{interval}")
+                t1 = _time.perf_counter()
                 result = await asyncio.wait_for(
                     detector_func(ohlcv_data),
                     timeout=self.config['pattern_detection_timeout']
                 )
+                t2 = _time.perf_counter()
+                logger.info(f"[PERF] Pattern detection for {symbol}:{interval} {pattern_name} took {t2-t1:.3f}s")
                 if result is None:
                     logger.info(f"❌ No {base_pattern} pattern detected for {symbol}:{interval}")
                     return {"detected": False}
@@ -508,6 +516,9 @@ class PatternAlertWorker:
             except Exception as e:
                 logger.error(f"❌ Pattern detection error for {pattern_name} on {symbol}:{interval}: {e}")
                 return {"detected": False}  # Error, return dict
+            finally:
+                t3 = _time.perf_counter()
+                logger.info(f"[PERF] detect_pattern_with_semaphore total for {symbol}:{interval} {pattern_name} took {t3-t0:.3f}s")
 
     async def publish_match_event(self, event_data):
         stream_name = self.config['stream_name']
