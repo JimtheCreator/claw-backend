@@ -92,14 +92,157 @@ class ChartEngine:
             )
         logger.info(f"[ChartEngine] Overlayed {len(trendlines)} trendlines.")
 
+    # def add_support_resistance(self):
+    #     """
+    #     Extracts S/R levels from the complex analysis payload and overlays them on the chart.
+    #     This version includes robust error handling for potentially incomplete or malformed data.
+    #     """
+    #     if not hasattr(self, 'fig') or self.fig is None:
+    #         self._create_figure()
+
+    #     # Safely get the last closing price, returning if the DataFrame is empty.
+    #     if self.ohlcv_df.empty:
+    #         logger.warning("[ChartEngine] OHLCV data is empty. Skipping S/R overlay.")
+    #         return
+    #     last_close = self.ohlcv_df['close'].iloc[-1]
+
+    #     def extract_all_sr_levels(analysis_data: Dict, last_close_price: float) -> tuple[list, list]:
+    #         """
+    #         Parses the detailed analysis dictionary to extract and consolidate all support and resistance price levels.
+    #         Includes error handling to prevent crashes from malformed data.
+    #         """
+    #         s_levels = set()
+    #         r_levels = set()
+
+    #         # Helper to safely classify a price as support or resistance
+    #         def classify_and_add(price, last_close):
+    #             # Ensure price is a valid number before comparing
+    #             if isinstance(price, (int, float)):
+    #                 if price < last_close:
+    #                     s_levels.add(price)
+    #                 else:
+    #                     r_levels.add(price)
+
+    #         # 1. Primary S/R Levels
+    #         for level_info in analysis_data.get("support_levels", []):
+    #             try:
+    #                 if (price := level_info.get('price')) is not None:
+    #                     s_levels.add(price)
+    #             except AttributeError:  # Catches if level_info is not a dictionary
+    #                 continue
+
+    #         for level_info in analysis_data.get("resistance_levels", []):
+    #             try:
+    #                 if (price := level_info.get('price')) is not None:
+    #                     r_levels.add(price)
+    #             except AttributeError:
+    #                 continue
+
+    #         # 2. Volume Profile Levels
+    #         if vp := analysis_data.get("volume_profile", {}):
+    #             if val_low := vp.get("value_area_low"): s_levels.add(val_low)
+    #             if val_high := vp.get("value_area_high"): r_levels.add(val_high)
+    #             classify_and_add(vp.get("poc"), last_close_price)
+
+    #         # 3. Psychological Levels
+    #         for level_info in analysis_data.get("psychological_levels", []):
+    #             try:
+    #                 classify_and_add(level_info.get('price'), last_close_price)
+    #             except AttributeError:
+    #                 continue
+            
+    #         # 4. Confluence Zones
+    #         for zone in analysis_data.get("confluence_zones", []):
+    #             try:
+    #                 level = zone.get('level')
+    #                 zone_type = zone.get('type', '')
+    #                 if level is not None:
+    #                     if 'Support' in zone_type: s_levels.add(level)
+    #                     elif 'Resistance' in zone_type: r_levels.add(level)
+    #             except AttributeError:
+    #                 continue
+
+    #         return sorted(list(s_levels)), sorted(list(r_levels))
+        
+    #     support_levels, resistance_levels = extract_all_sr_levels(self.analysis, last_close)
+
+    #     # The drawing logic remains the same...
+    #     for i, level in enumerate(support_levels):
+    #         self.fig.add_shape(
+    #             type="line",
+    #             x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+    #             y0=level, y1=level,
+    #             line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
+    #             xref="x1", yref="y1"
+    #         )
+    #         self.fig.add_annotation(
+    #             x=self.ohlcv_df['timestamp'].max(), y=level,
+    #             text=f"Support {i+1}", showarrow=False,
+    #             xanchor="right", yanchor="bottom",
+    #             font=dict(color=self.config['colors']['support_line'], size=10),
+    #             xref="x1", yref="y1"
+    #         )
+
+    #     for i, level in enumerate(resistance_levels):
+    #         self.fig.add_shape(
+    #             type="line",
+    #             x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+    #             y0=level, y1=level,
+    #             line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
+    #             xref="x1", yref="y1"
+    #         )
+    #         self.fig.add_annotation(
+    #             x=self.ohlcv_df['timestamp'].max(), y=level,
+    #             text=f"Resistance {i+1}", showarrow=False,
+    #             xanchor="right", yanchor="top",
+    #             font=dict(color=self.config['colors']['resistance_line'], size=10),
+    #             xref="x1", yref="y1"
+    #         )
+
+    #     if support_levels or resistance_levels:
+    #         logger.info(f"[ChartEngine] Overlayed {len(support_levels)} support and {len(resistance_levels)} resistance levels from detailed analysis.")
+
+
     def add_support_resistance(self):
-        """Overlay S/R as horizontal lines on the chart."""
+        """
+        Extracts and overlays only the PRIMARY support and resistance levels from the analysis data.
+        This version intentionally ignores secondary sources like volume profile, psychological levels, etc.
+        """
         if not hasattr(self, 'fig') or self.fig is None:
             self._create_figure()
 
-        support_levels = self.analysis.get("support_levels", [])
-        resistance_levels = self.analysis.get("resistance_levels", [])
+        def extract_primary_sr_levels(analysis_data: dict) -> tuple[list, list]:
+            """
+            Parses the analysis dictionary for only the primary 'support_levels' and 
+            'resistance_levels' keys, ensuring robust extraction.
+            """
+            s_levels = set()
+            r_levels = set()
 
+            # 1. Extract Primary Support Levels
+            for level_info in analysis_data.get("support_levels", []):
+                try:
+                    # Safely get the 'price' key from each dictionary in the list
+                    if (price := level_info.get('price')) is not None:
+                        s_levels.add(price)
+                except AttributeError:
+                    # This handles cases where an item in the list isn't a dictionary
+                    continue
+
+            # 2. Extract Primary Resistance Levels
+            for level_info in analysis_data.get("resistance_levels", []):
+                try:
+                    if (price := level_info.get('price')) is not None:
+                        r_levels.add(price)
+                except AttributeError:
+                    continue
+
+            return sorted(list(s_levels)), sorted(list(r_levels))
+
+        # Call the simplified helper function
+        support_levels, resistance_levels = extract_primary_sr_levels(self.analysis)
+
+        # The drawing logic below remains unchanged
         for i, level in enumerate(support_levels):
             self.fig.add_shape(
                 type="line",
@@ -115,6 +258,7 @@ class ChartEngine:
                 font=dict(color=self.config['colors']['support_line'], size=10),
                 xref="x1", yref="y1"
             )
+
         for i, level in enumerate(resistance_levels):
             self.fig.add_shape(
                 type="line",
@@ -130,8 +274,11 @@ class ChartEngine:
                 font=dict(color=self.config['colors']['resistance_line'], size=10),
                 xref="x1", yref="y1"
             )
+
         if support_levels or resistance_levels:
-            logger.info(f"[ChartEngine] Overlayed {len(support_levels)} support and {len(resistance_levels)} resistance levels.")
+            logger.info(f"[ChartEngine] Overlayed {len(support_levels)} primary support and {len(resistance_levels)} primary resistance levels.")
+
+
 
     def _get_default_config(self) -> Dict:
         """Provides default styling for a premium feel."""
@@ -982,7 +1129,6 @@ class ChartEngine:
                 font=dict(color=self.config['colors']['resistance_line'], size=10),
                 xref="x1", yref="y1"
             )
-
 
     def create_chart(self, output_type: str = 'image') -> bytes | str:
         """Generates the chart with all overlays."""

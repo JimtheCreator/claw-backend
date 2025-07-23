@@ -42,7 +42,6 @@ async def detect_sr_and_trendlines_combined(ohlcv: dict, interval: str) -> dict:
         logger.error(f"[UnifiedAPI] Error in combined S/R + trendline detection: {e}", exc_info=True)
         raise
 
-
 @router.post("/analysis/sr", summary="Get support/resistance levels as JSON")
 async def get_support_resistance(
     symbol: str = Body(...),
@@ -99,9 +98,9 @@ async def get_trendlines_chart(
         # Ensure only bytes are written to the PNG file
         if isinstance(image_bytes, str):
             image_bytes = image_bytes.encode('utf-8')  # fallback, but ideally should always be bytes
-        with open("trendlines_chart.png", "wb") as f:
+        with open("trendlines_chart_sample_one.png", "wb") as f:
             f.write(image_bytes)
-        logger.info(f"[API] Trendlines chart saved as trendlines_chart.png")
+        logger.info(f"[API] Trendlines chart saved as trendlines_chart_sample_one.png")
         return Response(content=image_bytes, media_type="image/png")
     except Exception as e:
         logger.error(f"[API] Trendlines error: {e}", exc_info=True)
