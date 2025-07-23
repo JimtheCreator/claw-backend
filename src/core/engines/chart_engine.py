@@ -2,6 +2,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from typing import Dict, List, Any, Optional
 import pandas as pd
+from datetime import datetime
 from common.logger import logger
 
 class ChartEngine:
@@ -11,8 +12,7 @@ class ChartEngine:
 
         Args:
             ohlcv_data (Dict[str, list]): OHLCV data.
-            analysis_data (Dict[str, Any]): Pattern analysis results.
-            overlays (Dict[str, Any], optional): Overlay data for trendlines, S/R, etc.
+            analysis_data (Dict[str, Any]): Analysis results including support/resistance data.
             config (Dict, optional): Configuration for chart aesthetics.
         """
         self.ohlcv = ohlcv_data
@@ -55,8 +55,473 @@ class ChartEngine:
             # ... other patterns will be mapped here
         }
 
+    def add_support_resistance_levels(self):
+        """Overlay new format support and resistance levels with enhanced visualization."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            # Support levels with detailed metadata
+            support_levels = self.analysis.get("support_levels", [])
+            for level_data in support_levels:
+                if not isinstance(level_data, dict):
+                    continue
+                    
+                price = level_data.get("price")
+                confidence = level_data.get("confidence_score", 0.5)
+                touches = level_data.get("touches", 1)
+                
+                if price is None:
+                    continue
+                
+                # Color intensity based on confidence
+                alpha = max(0.3, confidence)
+                line_width = 2 + int(confidence * 3)  # Thicker lines for higher confidence
+                
+                # Draw support line
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(), 
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=price, y1=price,
+                    line=dict(
+                        color=f"rgba(20, 184, 157, {alpha})", 
+                        width=line_width, 
+                        dash="solid"
+                    ),
+                    xref="x1", yref="y1"
+                )
+                
+                # Add annotation with confidence and touch count
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(), 
+                    y=price,
+                    text=f"Support (Conf: {confidence:.1%}, Touches: {touches})",
+                    showarrow=False,
+                    xanchor="right", yanchor="bottom",
+                    font=dict(color="#14B89D", size=10),
+                    bgcolor="rgba(20, 184, 157, 0.1)",
+                    xref="x1", yref="y1"
+                )
+
+            # Resistance levels with detailed metadata
+            resistance_levels = self.analysis.get("resistance_levels", [])
+            for level_data in resistance_levels:
+                if not isinstance(level_data, dict):
+                    continue
+                    
+                price = level_data.get("price")
+                confidence = level_data.get("confidence_score", 0.5)
+                touches = level_data.get("touches", 1)
+                
+                if price is None:
+                    continue
+                
+                # Color intensity based on confidence
+                alpha = max(0.3, confidence)
+                line_width = 2 + int(confidence * 3)
+                
+                # Draw resistance line
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(), 
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=price, y1=price,
+                    line=dict(
+                        color=f"rgba(242, 54, 69, {alpha})", 
+                        width=line_width, 
+                        dash="solid"
+                    ),
+                    xref="x1", yref="y1"
+                )
+                
+                # Add annotation with confidence and touch count
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(), 
+                    y=price,
+                    text=f"Resistance (Conf: {confidence:.1%}, Touches: {touches})",
+                    showarrow=False,
+                    xanchor="right", yanchor="top",
+                    font=dict(color="#F23645", size=10),
+                    bgcolor="rgba(242, 54, 69, 0.1)",
+                    xref="x1", yref="y1"
+                )
+
+            logger.info(f"[ChartEngine] Overlayed {len(support_levels)} support and {len(resistance_levels)} resistance levels.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding support/resistance levels: {str(e)}")
+            # Fallback to legacy method if available
+            self.add_support_resistance()
+
+    def add_supply_demand_zones(self):
+        """Add supply and demand zones as shaded rectangles."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            # Demand zones (support areas)
+            demand_zones = self.analysis.get("demand_zones", [])
+            for zone in demand_zones:
+                top = zone["top"]
+                bottom = zone["bottom"]
+                strength = zone["strength"]
+                is_fresh = zone.get("is_fresh", True)
+                
+                # Adjust opacity based on strength and freshness
+                alpha = 0.1 + (strength * 0.3)
+                if not is_fresh:
+                    alpha *= 0.5
+                
+                # Draw demand zone rectangle
+                self.fig.add_shape(
+                    type="rect",
+                    x0=self.ohlcv_df['timestamp'].min(),
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=bottom, y1=top,
+                    fillcolor=f"rgba(20, 184, 157, {alpha})",
+                    line=dict(color="rgba(20, 184, 157, 0.3)", width=1),
+                    xref="x1", yref="y1"
+                )
+                
+                # Add zone label
+                mid_price = (top + bottom) / 2
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=mid_price,
+                    text=f"DZ {zone['id'].split('_')[1][:3]} (S:{strength:.2f})",
+                    showarrow=False,
+                    xanchor="left", yanchor="middle",
+                    font=dict(color="#14B89D", size=9),
+                    bgcolor="rgba(20, 184, 157, 0.8)",
+                    xref="x1", yref="y1"
+                )
+
+            # Supply zones (resistance areas)
+            supply_zones = self.analysis.get("supply_zones", [])
+            for zone in supply_zones:
+                top = zone["top"]
+                bottom = zone["bottom"]
+                strength = zone["strength"]
+                is_fresh = zone.get("is_fresh", True)
+                
+                # Adjust opacity based on strength and freshness
+                alpha = 0.1 + (strength * 0.3)
+                if not is_fresh:
+                    alpha *= 0.5
+                
+                # Draw supply zone rectangle
+                self.fig.add_shape(
+                    type="rect",
+                    x0=self.ohlcv_df['timestamp'].min(),
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=bottom, y1=top,
+                    fillcolor=f"rgba(242, 54, 69, {alpha})",
+                    line=dict(color="rgba(242, 54, 69, 0.3)", width=1),
+                    xref="x1", yref="y1"
+                )
+                
+                # Add zone label
+                mid_price = (top + bottom) / 2
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=mid_price,
+                    text=f"SZ {zone['id'].split('_')[1][:3]} (S:{strength:.2f})",
+                    showarrow=False,
+                    xanchor="left", yanchor="middle",
+                    font=dict(color="#F23645", size=9),
+                    bgcolor="rgba(242, 54, 69, 0.8)",
+                    xref="x1", yref="y1"
+                )
+
+            logger.info(f"[ChartEngine] Overlayed {len(demand_zones)} demand zones and {len(supply_zones)} supply zones.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding supply/demand zones: {str(e)}")
+
+    def add_psychological_levels(self):
+        """Add psychological levels with different styling based on type."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            psychological_levels = self.analysis.get("psychological_levels", [])
+            
+            # Group levels by type
+            level_types = {}
+            for level in psychological_levels:
+                level_type = level["type"]
+                if level_type not in level_types:
+                    level_types[level_type] = []
+                level_types[level_type].append(level["price"])
+
+            # Style mapping for different psychological level types
+            type_styles = {
+                "major": {"color": "rgba(255, 215, 0, 0.8)", "width": 3, "dash": "dash"},
+                "minor": {"color": "rgba(255, 215, 0, 0.5)", "width": 2, "dash": "dot"},
+                "sub": {"color": "rgba(255, 215, 0, 0.3)", "width": 1, "dash": "dot"}
+            }
+
+            for level_type, prices in level_types.items():
+                style = type_styles.get(level_type, type_styles["minor"])
+                
+                # Remove duplicates and sort
+                unique_prices = sorted(set(prices))
+                
+                for price in unique_prices:
+                    self.fig.add_shape(
+                        type="line",
+                        x0=self.ohlcv_df['timestamp'].min(),
+                        x1=self.ohlcv_df['timestamp'].max(),
+                        y0=price, y1=price,
+                        line=dict(
+                            color=style["color"],
+                            width=style["width"],
+                            dash=style["dash"]
+                        ),
+                        xref="x1", yref="y1"
+                    )
+
+            # Add a single legend annotation for psychological levels
+            if psychological_levels:
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=self.ohlcv_df['high'].max(),
+                                         text="Psychological Levels",
+                     showarrow=False,
+                     xanchor="left", yanchor="top",
+                     font=dict(color="#FFD700", size=10),
+                     bgcolor="rgba(255, 215, 0, 0.2)",
+                     xref="x1", yref="y1"
+                 )
+
+            logger.info(f"[ChartEngine] Overlayed {len(psychological_levels)} psychological levels.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding psychological levels: {str(e)}")
+
+    def add_volume_profile(self):
+        """Add volume profile visualization."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            volume_profile = self.analysis.get("volume_profile", {})
+            if not volume_profile:
+                return
+
+            poc = volume_profile.get("poc")
+            value_area_high = volume_profile.get("value_area_high")
+            value_area_low = volume_profile.get("value_area_low")
+
+            # Draw Point of Control (POC)
+            if poc:
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(),
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=poc, y1=poc,
+                    line=dict(color="rgba(255, 165, 0, 0.9)", width=4, dash="solid"),
+                    xref="x1", yref="y1"
+                )
+                
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(),
+                    y=poc,
+                    text=f"POC: {poc:,.0f}",
+                    showarrow=False,
+                    xanchor="right", yanchor="middle",
+                    font=dict(color="#FFA500", size=11, family="Arial Black"),
+                    bgcolor="rgba(255, 165, 0, 0.2)",
+                    xref="x1", yref="y1"
+                )
+
+            # Draw Value Area
+            if value_area_high and value_area_low:
+                self.fig.add_shape(
+                    type="rect",
+                    x0=self.ohlcv_df['timestamp'].min(),
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=value_area_low, y1=value_area_high,
+                    fillcolor="rgba(135, 206, 250, 0.1)",
+                    line=dict(color="rgba(135, 206, 250, 0.4)", width=2, dash="dash"),
+                    xref="x1", yref="y1"
+                )
+                
+                # Value area labels
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=value_area_high,
+                    text=f"VAH: {value_area_high:,.0f}",
+                    showarrow=False,
+                    xanchor="left", yanchor="bottom",
+                    font=dict(color="#87CEEB", size=9),
+                    xref="x1", yref="y1"
+                )
+                
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=value_area_low,
+                    text=f"VAL: {value_area_low:,.0f}",
+                    showarrow=False,
+                    xanchor="left", yanchor="top",
+                    font=dict(color="#87CEEB", size=9),
+                    xref="x1", yref="y1"
+                )
+
+            logger.info("[ChartEngine] Added volume profile visualization.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding volume profile: {str(e)}")
+
+    def add_market_structure_info(self):
+        """Add market structure information as annotations."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            market_structure = self.analysis.get("market_structure", {})
+            if not market_structure:
+                return
+
+            trend = market_structure.get("trend")
+            vwap = market_structure.get("vwap")
+            break_of_structure = market_structure.get("break_of_structure")
+
+            info_text = []
+            if trend:
+                info_text.append(f"Trend: {trend}")
+            if vwap:
+                info_text.append(f"VWAP: {vwap:,.0f}")
+            if break_of_structure:
+                info_text.append(f"BOS: {break_of_structure}")
+
+            if info_text:
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(),
+                    y=self.ohlcv_df['high'].max(),
+                    text="<br>".join(info_text),
+                    showarrow=False,
+                    xanchor="right", yanchor="top",
+                    font=dict(color="#FFFFFF", size=11, family="Arial"),
+                    bgcolor="rgba(50, 50, 50, 0.8)",
+                    bordercolor="rgba(255, 255, 255, 0.3)",
+                    borderwidth=1,
+                    xref="x1", yref="y1"
+                )
+
+            # Draw VWAP line if available
+            if vwap:
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(),
+                    x1=self.ohlcv_df['timestamp'].max(),
+                    y0=vwap, y1=vwap,
+                                         line=dict(color="rgba(255, 255, 255, 0.6)", width=2, dash="dashdot"),
+                     xref="x1", yref="y1"
+                 )
+
+            logger.info("[ChartEngine] Added market structure information.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding market structure info: {str(e)}")
+
+    def add_confluence_zones(self):
+        """Add confluence zones highlighting areas with multiple confluences."""
+        if not hasattr(self, 'fig') or self.fig is None:
+            self._create_figure()
+
+        try:
+            confluence_zones = self.analysis.get("confluence_zones", [])
+            
+            for zone in confluence_zones:
+                zone_type = zone["type"]
+                score = zone["score"]
+                
+                # Different styling based on confluence type
+                if "Support" in zone_type:
+                    color = "rgba(20, 184, 157, 0.4)"
+                    border_color = "#14B89D"
+                elif "Resistance" in zone_type:
+                    color = "rgba(242, 54, 69, 0.4)"
+                    border_color = "#F23645"
+                elif "Demand" in zone_type:
+                    color = "rgba(0, 255, 127, 0.3)"
+                    border_color = "#00FF7F"
+                elif "Supply" in zone_type:
+                    color = "rgba(255, 69, 0, 0.3)"
+                    border_color = "#FF4500"
+                else:
+                    color = "rgba(255, 255, 255, 0.2)"
+                    border_color = "#FFFFFF"
+
+                if "range" in zone:  # Zone with range
+                    y0, y1 = zone["range"]
+                    self.fig.add_shape(
+                        type="rect",
+                        x0=self.ohlcv_df['timestamp'].min(),
+                        x1=self.ohlcv_df['timestamp'].max(),
+                        y0=y0, y1=y1,
+                        fillcolor=color,
+                        line=dict(color=border_color, width=2, dash="solid"),
+                        xref="x1", yref="y1"
+                    )
+                    mid_y = (y0 + y1) / 2
+                else:  # Single level
+                    level = zone["level"]
+                    mid_y = level
+                    # Draw a thicker line for single level confluences
+                    self.fig.add_shape(
+                        type="line",
+                        x0=self.ohlcv_df['timestamp'].min(),
+                        x1=self.ohlcv_df['timestamp'].max(),
+                        y0=level, y1=level,
+                        line=dict(color=border_color, width=4, dash="solid"),
+                        xref="x1", yref="y1"
+                    )
+
+                # Add confluence annotation
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].min(),
+                    y=mid_y,
+                    text=f"CONFLUENCE: {zone_type} (Score: {score:.2f})",
+                    showarrow=True,
+                    arrowhead=2,
+                                         arrowcolor=border_color,
+                     xanchor="left", yanchor="middle",
+                     font=dict(color=border_color, size=10, family="Arial Black"),
+                     bgcolor="rgba(0, 0, 0, 0.8)",
+                     bordercolor=border_color,
+                     borderwidth=1,
+                     xref="x1", yref="y1"
+                 )
+
+            logger.info(f"[ChartEngine] Added {len(confluence_zones)} confluence zones.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding confluence zones: {str(e)}")
+
+    def add_comprehensive_analysis_overlays(self):
+        """Convenience method to add all new S/R analysis overlays at once."""
+        try:
+            logger.info("[ChartEngine] Adding comprehensive analysis overlays...")
+            
+            # Add overlays in priority order (background to foreground)
+            self.add_psychological_levels()
+            self.add_volume_profile()
+            self.add_supply_demand_zones()
+            self.add_support_resistance_levels()
+            self.add_confluence_zones()
+            self.add_market_structure_info()
+            
+            logger.info("[ChartEngine] Successfully added all comprehensive analysis overlays.")
+            
+        except Exception as e:
+            logger.error(f"[ChartEngine] Error adding comprehensive analysis overlays: {str(e)}")
+            # Continue execution to allow fallback to legacy methods
+
     def add_trendlines(self):
-        """Overlay trendlines (support/resistance) as lines on the chart."""
+        """Overlay legacy trendlines (for backward compatibility)."""
         if not hasattr(self, 'fig') or self.fig is None:
             self._create_figure()
 
@@ -64,6 +529,7 @@ class ChartEngine:
         if not trendlines:
             logger.info("[ChartEngine] No trendlines to overlay.")
             return
+        
         for line in trendlines:
             # Make trendlines highly visible
             color = '#FFD600' if line['type'] == 'support' else '#FF00FF'  # bright yellow/magenta
@@ -92,46 +558,51 @@ class ChartEngine:
             )
         logger.info(f"[ChartEngine] Overlayed {len(trendlines)} trendlines.")
 
+    # Legacy method for backward compatibility
     def add_support_resistance(self):
-        """Overlay S/R as horizontal lines on the chart."""
-        if not hasattr(self, 'fig') or self.fig is None:
-            self._create_figure()
-
-        support_levels = self.analysis.get("support_levels", [])
-        resistance_levels = self.analysis.get("resistance_levels", [])
-
-        for i, level in enumerate(support_levels):
-            self.fig.add_shape(
-                type="line",
-                x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-                y0=level, y1=level,
-                line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
-                xref="x1", yref="y1"
-            )
-            self.fig.add_annotation(
-                x=self.ohlcv_df['timestamp'].max(), y=level,
-                text=f"Support {i+1}", showarrow=False,
-                xanchor="right", yanchor="bottom",
-                font=dict(color=self.config['colors']['support_line'], size=10),
-                xref="x1", yref="y1"
-            )
-        for i, level in enumerate(resistance_levels):
-            self.fig.add_shape(
-                type="line",
-                x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-                y0=level, y1=level,
-                line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
-                xref="x1", yref="y1"
-            )
-            self.fig.add_annotation(
-                x=self.ohlcv_df['timestamp'].max(), y=level,
-                text=f"Resistance {i+1}", showarrow=False,
-                xanchor="right", yanchor="top",
-                font=dict(color=self.config['colors']['resistance_line'], size=10),
-                xref="x1", yref="y1"
-            )
-        if support_levels or resistance_levels:
-            logger.info(f"[ChartEngine] Overlayed {len(support_levels)} support and {len(resistance_levels)} resistance levels.")
+        """Legacy method - redirects to new support resistance levels method."""
+        # Handle legacy simple support/resistance arrays
+        if "support_levels" in self.analysis and isinstance(self.analysis["support_levels"], list):
+            # Check if it's the old format (simple numbers) or new format (dicts)
+            if self.analysis["support_levels"] and isinstance(self.analysis["support_levels"][0], (int, float)):
+                # Old format - convert to new format for display
+                for i, level in enumerate(self.analysis["support_levels"]):
+                    self.fig.add_shape(
+                        type="line",
+                        x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+                        y0=level, y1=level,
+                        line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
+                        xref="x1", yref="y1"
+                    )
+                    self.fig.add_annotation(
+                        x=self.ohlcv_df['timestamp'].max(), y=level,
+                        text=f"Support {i+1}", showarrow=False,
+                        xanchor="right", yanchor="bottom",
+                        font=dict(color=self.config['colors']['support_line'], size=10),
+                        xref="x1", yref="y1"
+                    )
+                    
+        if "resistance_levels" in self.analysis and isinstance(self.analysis["resistance_levels"], list):
+            if self.analysis["resistance_levels"] and isinstance(self.analysis["resistance_levels"][0], (int, float)):
+                # Old format - convert to new format for display
+                for i, level in enumerate(self.analysis["resistance_levels"]):
+                    self.fig.add_shape(
+                        type="line",
+                        x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+                        y0=level, y1=level,
+                        line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
+                        xref="x1", yref="y1"
+                    )
+                    self.fig.add_annotation(
+                        x=self.ohlcv_df['timestamp'].max(), y=level,
+                        text=f"Resistance {i+1}", showarrow=False,
+                        xanchor="right", yanchor="top",
+                        font=dict(color=self.config['colors']['resistance_line'], size=10),
+                        xref="x1", yref="y1"
+                    )
+        
+        # Otherwise use the new method
+        self.add_support_resistance_levels()
 
     def _get_default_config(self) -> Dict:
         """Provides default styling for a premium feel."""
@@ -941,56 +1412,93 @@ class ChartEngine:
         )
 
     def _draw_support_resistance(self):
-        """Draws support and resistance levels as horizontal lines with labels."""
-        # Only proceed if self.analysis is a dict and has 'market_context'
+        """Legacy method - draws support and resistance levels as horizontal lines with labels."""
+        # Only proceed if self.analysis is a dict
         if not isinstance(self.analysis, dict):
             return
+            
+        # Try new format first
+        if 'support_levels' in self.analysis and self.analysis['support_levels']:
+            if isinstance(self.analysis['support_levels'][0], dict):
+                # New format - delegate to new method
+                self.add_support_resistance_levels()
+                return
+                
+        # Try legacy market_context format
         context = self.analysis.get('market_context', {})
         support_levels = context.get('support_levels', [])
         resistance_levels = context.get('resistance_levels', [])
+        
+        # Try direct format
+        if not support_levels:
+            support_levels = self.analysis.get('support_levels', [])
+        if not resistance_levels:
+            resistance_levels = self.analysis.get('resistance_levels', [])
+            
         logger.info(f"Support levels: {support_levels}")
         logger.info(f"Resistance levels: {resistance_levels}")
-        # Draw support lines
+        
+        # Draw support lines (legacy format - simple numbers)
         for i, level in enumerate(support_levels):
-            self.fig.add_shape(
-                type="line",
-                x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-                y0=level, y1=level,
-                line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
-                xref="x1", yref="y1"
-            )
-            self.fig.add_annotation(
-                x=self.ohlcv_df['timestamp'].max(), y=level,
-                text=f"Support {i+1}", showarrow=False,
-                xanchor="right", yanchor="bottom",
-                font=dict(color=self.config['colors']['support_line'], size=10),
-                xref="x1", yref="y1"
-            )
-        # Draw resistance lines
+            if isinstance(level, (int, float)):
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+                    y0=level, y1=level,
+                    line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
+                    xref="x1", yref="y1"
+                )
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(), y=level,
+                    text=f"Support {i+1}", showarrow=False,
+                    xanchor="right", yanchor="bottom",
+                    font=dict(color=self.config['colors']['support_line'], size=10),
+                    xref="x1", yref="y1"
+                )
+                
+        # Draw resistance lines (legacy format - simple numbers)
         for i, level in enumerate(resistance_levels):
-            self.fig.add_shape(
-                type="line",
-                x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-                y0=level, y1=level,
-                line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
-                xref="x1", yref="y1"
-            )
-            self.fig.add_annotation(
-                x=self.ohlcv_df['timestamp'].max(), y=level,
-                text=f"Resistance {i+1}", showarrow=False,
-                xanchor="right", yanchor="top",
-                font=dict(color=self.config['colors']['resistance_line'], size=10),
-                xref="x1", yref="y1"
-            )
+            if isinstance(level, (int, float)):
+                self.fig.add_shape(
+                    type="line",
+                    x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
+                    y0=level, y1=level,
+                    line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
+                    xref="x1", yref="y1"
+                )
+                self.fig.add_annotation(
+                    x=self.ohlcv_df['timestamp'].max(), y=level,
+                    text=f"Resistance {i+1}", showarrow=False,
+                    xanchor="right", yanchor="top",
+                    font=dict(color=self.config['colors']['resistance_line'], size=10),
+                    xref="x1", yref="y1"
+                )
 
 
     def create_chart(self, output_type: str = 'image') -> bytes | str:
-        """Generates the chart with all overlays."""
+        """Generates the chart with all overlays including the new S/R data structure."""
         self._create_figure()
-        # Add overlays if present
-        # Draw all analysis overlays
-        self.add_support_resistance()
+        
+        # Add all analysis overlays in order of visual priority (background to foreground)
+        
+        # Check if we have the new comprehensive S/R data format
+        has_new_format = (
+            isinstance(self.analysis.get("support_levels"), list) and
+            self.analysis.get("support_levels") and
+            isinstance(self.analysis["support_levels"][0], dict)
+        )
+        
+        if has_new_format:
+            # Use new comprehensive overlay method
+            self.add_comprehensive_analysis_overlays()
+        else:
+            # Fallback to legacy methods
+            self.add_support_resistance()
+        
+        # Always add legacy trendlines (for backward compatibility)
         self.add_trendlines()
+        
+        # Always draw patterns
         self._draw_patterns()
 
         # Detailed debug logging for OHLCV DataFrame
@@ -1003,7 +1511,8 @@ class ChartEngine:
         logger.info(f"Timestamp diffs: {self.ohlcv_df['timestamp'].diff().dropna().unique()}")
         logger.info(f"Timestamp duplicates: {self.ohlcv_df['timestamp'].duplicated().sum()}")
 
-        self._add_candlestick_trace() # Draw candlesticks on top
+        # 9. Add candlestick data (foreground - most important)
+        self._add_candlestick_trace()
         self._add_volume_trace()
 
         # Log the first and last few rows of the OHLCV DataFrame for debugging
