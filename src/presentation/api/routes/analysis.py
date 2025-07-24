@@ -98,9 +98,9 @@ async def get_trendlines_chart(
         # Ensure only bytes are written to the PNG file
         if isinstance(image_bytes, str):
             image_bytes = image_bytes.encode('utf-8')  # fallback, but ideally should always be bytes
-        with open("trendlines_chart_sample_one.png", "wb") as f:
+        with open("trendlines_chart_sample_zeroN.png", "wb") as f:
             f.write(image_bytes)
-        logger.info(f"[API] Trendlines chart saved as trendlines_chart_sample_one.png")
+        logger.info(f"[API] Trendlines chart saved as trendlines_chart_sample_zeroN.png")
         return Response(content=image_bytes, media_type="image/png")
     except Exception as e:
         logger.error(f"[API] Trendlines error: {e}", exc_info=True)
