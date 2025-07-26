@@ -4,29 +4,17 @@ from starlette.websockets import WebSocketState
 from pydantic import BaseModel
 from typing import List, Optional
 import asyncio
-from datetime import datetime, timedelta
-from supabase import create_client
-import os
+from datetime import datetime
 from common.logger import logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
-import websockets
-import uuid
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
-from typing import List, Optional
-import asyncio
-from datetime import datetime
-from supabase import create_client
-import os
 from common.logger import logger
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 import websockets
 import json
-import firebase_admin
-from firebase_admin import credentials, db
 
 router = APIRouter(tags=["Symbol Watchlists"])
 

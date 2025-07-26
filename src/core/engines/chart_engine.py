@@ -92,117 +92,7 @@ class ChartEngine:
             )
         logger.info(f"[ChartEngine] Overlayed {len(trendlines)} trendlines.")
 
-    # def add_support_resistance(self):
-    #     """
-    #     Extracts S/R levels from the complex analysis payload and overlays them on the chart.
-    #     This version includes robust error handling for potentially incomplete or malformed data.
-    #     """
-    #     if not hasattr(self, 'fig') or self.fig is None:
-    #         self._create_figure()
-
-    #     # Safely get the last closing price, returning if the DataFrame is empty.
-    #     if self.ohlcv_df.empty:
-    #         logger.warning("[ChartEngine] OHLCV data is empty. Skipping S/R overlay.")
-    #         return
-    #     last_close = self.ohlcv_df['close'].iloc[-1]
-
-    #     def extract_all_sr_levels(analysis_data: Dict, last_close_price: float) -> tuple[list, list]:
-    #         """
-    #         Parses the detailed analysis dictionary to extract and consolidate all support and resistance price levels.
-    #         Includes error handling to prevent crashes from malformed data.
-    #         """
-    #         s_levels = set()
-    #         r_levels = set()
-
-    #         # Helper to safely classify a price as support or resistance
-    #         def classify_and_add(price, last_close):
-    #             # Ensure price is a valid number before comparing
-    #             if isinstance(price, (int, float)):
-    #                 if price < last_close:
-    #                     s_levels.add(price)
-    #                 else:
-    #                     r_levels.add(price)
-
-    #         # 1. Primary S/R Levels
-    #         for level_info in analysis_data.get("support_levels", []):
-    #             try:
-    #                 if (price := level_info.get('price')) is not None:
-    #                     s_levels.add(price)
-    #             except AttributeError:  # Catches if level_info is not a dictionary
-    #                 continue
-
-    #         for level_info in analysis_data.get("resistance_levels", []):
-    #             try:
-    #                 if (price := level_info.get('price')) is not None:
-    #                     r_levels.add(price)
-    #             except AttributeError:
-    #                 continue
-
-    #         # 2. Volume Profile Levels
-    #         if vp := analysis_data.get("volume_profile", {}):
-    #             if val_low := vp.get("value_area_low"): s_levels.add(val_low)
-    #             if val_high := vp.get("value_area_high"): r_levels.add(val_high)
-    #             classify_and_add(vp.get("poc"), last_close_price)
-
-    #         # 3. Psychological Levels
-    #         for level_info in analysis_data.get("psychological_levels", []):
-    #             try:
-    #                 classify_and_add(level_info.get('price'), last_close_price)
-    #             except AttributeError:
-    #                 continue
-            
-    #         # 4. Confluence Zones
-    #         for zone in analysis_data.get("confluence_zones", []):
-    #             try:
-    #                 level = zone.get('level')
-    #                 zone_type = zone.get('type', '')
-    #                 if level is not None:
-    #                     if 'Support' in zone_type: s_levels.add(level)
-    #                     elif 'Resistance' in zone_type: r_levels.add(level)
-    #             except AttributeError:
-    #                 continue
-
-    #         return sorted(list(s_levels)), sorted(list(r_levels))
-        
-    #     support_levels, resistance_levels = extract_all_sr_levels(self.analysis, last_close)
-
-    #     # The drawing logic remains the same...
-    #     for i, level in enumerate(support_levels):
-    #         self.fig.add_shape(
-    #             type="line",
-    #             x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-    #             y0=level, y1=level,
-    #             line=dict(color=self.config['colors']['support_line'], width=2, dash="dot"),
-    #             xref="x1", yref="y1"
-    #         )
-    #         self.fig.add_annotation(
-    #             x=self.ohlcv_df['timestamp'].max(), y=level,
-    #             text=f"Support {i+1}", showarrow=False,
-    #             xanchor="right", yanchor="bottom",
-    #             font=dict(color=self.config['colors']['support_line'], size=10),
-    #             xref="x1", yref="y1"
-    #         )
-
-    #     for i, level in enumerate(resistance_levels):
-    #         self.fig.add_shape(
-    #             type="line",
-    #             x0=self.ohlcv_df['timestamp'].min(), x1=self.ohlcv_df['timestamp'].max(),
-    #             y0=level, y1=level,
-    #             line=dict(color=self.config['colors']['resistance_line'], width=2, dash="dot"),
-    #             xref="x1", yref="y1"
-    #         )
-    #         self.fig.add_annotation(
-    #             x=self.ohlcv_df['timestamp'].max(), y=level,
-    #             text=f"Resistance {i+1}", showarrow=False,
-    #             xanchor="right", yanchor="top",
-    #             font=dict(color=self.config['colors']['resistance_line'], size=10),
-    #             xref="x1", yref="y1"
-    #         )
-
-    #     if support_levels or resistance_levels:
-    #         logger.info(f"[ChartEngine] Overlayed {len(support_levels)} support and {len(resistance_levels)} resistance levels from detailed analysis.")
-
-
+    
     def add_support_resistance(self):
         """
         Extracts and overlays only the PRIMARY support and resistance levels from the analysis data.
@@ -314,8 +204,12 @@ class ChartEngine:
             template=self.config['template'],
             font=self.config['font'],
             xaxis_rangeslider_visible=False,
-            showlegend=False,  # Hide the legend
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            showlegend=False,
+            legend=dict(orientation="h", 
+            yanchor="bottom", y=1.02, xanchor="right", x=1),
+            # --- CHANGE: Make background transparent ---
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
         )
         # Explicitly set x-axis type to date for both subplots
         self.fig.update_xaxes(showgrid=False, type="date", row=1, col=1)
@@ -1138,23 +1032,8 @@ class ChartEngine:
         self.add_support_resistance()
         self.add_trendlines()
         self._draw_patterns()
-
-        # Detailed debug logging for OHLCV DataFrame
-        logger.info(f"OHLCV dtypes: {self.ohlcv_df.dtypes}")
-        logger.info(f"OHLCV nulls: {self.ohlcv_df.isnull().sum()}")
-        logger.info(f"OHLCV infs: {((self.ohlcv_df[['open','high','low','close','volume']] == float('inf')).sum())}")
-        logger.info(f"OHLCV -len- open: {len(self.ohlcv_df['open'])}, high: {len(self.ohlcv_df['high'])}, low: {len(self.ohlcv_df['low'])}, close: {len(self.ohlcv_df['close'])}, timestamp: {len(self.ohlcv_df['timestamp'])}")
-        logger.info(f"OHLCV sample: {self.ohlcv_df[['timestamp','open','high','low','close']].head(10)}")
-        # Log timestamp diffs and duplicates
-        logger.info(f"Timestamp diffs: {self.ohlcv_df['timestamp'].diff().dropna().unique()}")
-        logger.info(f"Timestamp duplicates: {self.ohlcv_df['timestamp'].duplicated().sum()}")
-
         self._add_candlestick_trace() # Draw candlesticks on top
         self._add_volume_trace()
-
-        # Log the first and last few rows of the OHLCV DataFrame for debugging
-        logger.info(f"OHLCV head: {self.ohlcv_df[['timestamp', 'open', 'high', 'low', 'close']].head()}")
-        logger.info(f"OHLCV tail: {self.ohlcv_df[['timestamp', 'open', 'high', 'low', 'close']].tail()}")
 
         if output_type == 'image':
             return self.fig.to_image(format="png", width=1600, height=900, scale=2)
