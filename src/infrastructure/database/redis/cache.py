@@ -55,6 +55,13 @@ class RedisCache:
             raise RuntimeError("Redis is not initialized.")
         await self._redis.hset(hash_key, field, value)
 
+    # --- ADDED METHOD ---
+    async def hlen(self, hash_key: str) -> int:
+        """Gets the number of fields in a Redis hash."""
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        return await self._redis.hlen(hash_key)
+
     async def hgetall_data(self, hash_key: str) -> dict:
         """Gets all fields and values from a Redis hash."""
         if not self._initialized:

@@ -9,44 +9,80 @@ from infrastructure.database.firebase.repository import FirebaseRepository
 from infrastructure.database.redis.cache import redis_cache # Import the singleton redis_cache
 from firebase_admin import messaging
 from typing import Dict, List
+from common.logger import configure_logging, logger
 
 
 class AlertManager:
     ALERT_HASH_PREFIX = "price_alerts"
+    CONTROL_CHANNEL = "price_alerts_control_channel"
 
     def __init__(self):
         self.binance_client = BinanceMarketData()
         self.supabase_repo = SupabaseCryptoRepository()
         self.firebase_repo = FirebaseRepository()
-        # The in-memory cache is now gone, replaced by Redis.
         self._listener_task: asyncio.Task = None
         self._is_running = False
+        self._control_listener_task: asyncio.Task = None
 
     def _get_hash_key(self, symbol: str) -> str:
         """Generates the Redis key for a symbol's alert hash."""
         return f"{self.ALERT_HASH_PREFIX}:{symbol}"
 
     async def start(self):
-        """Loads alerts into Redis (if needed) and starts the WebSocket listener."""
+        """Initializes Redis, loads alerts, and starts all listeners."""
         if self._is_running:
             logger.warning("AlertManager is already running.")
             return
 
-        logger.info("Starting AlertManager...")
+        logger.info("Starting AlertManager service...")
+        configure_logging() # Configure logging for the standalone service
+        await redis_cache.initialize()
         await self._load_alerts_into_redis()
         
         self._is_running = True
         self._listener_task = asyncio.create_task(self._listen_for_price_updates())
-        logger.info("AlertManager started successfully.")
+        self._control_listener_task = asyncio.create_task(self._listen_for_control_messages())
+        logger.info("AlertManager service started successfully. Listening for price updates and control messages.")
+
 
     async def stop(self):
-        """Stops the WebSocket listener task."""
+        """Stops all running tasks and closes connections."""
         self._is_running = False
         if self._listener_task and not self._listener_task.done():
             self._listener_task.cancel()
-            logger.info("AlertManager listener task cancelled.")
+            logger.info("Price update listener task cancelled.")
+        if self._control_listener_task and not self._control_listener_task.done():
+            self._control_listener_task.cancel()
+            logger.info("Control message listener task cancelled.")
+            
         await self.binance_client.disconnect()
-        logger.info("AlertManager stopped.")
+        await redis_cache.close()
+        logger.info("AlertManager service stopped.")
+
+    async def _listen_for_control_messages(self):
+        """Listens to the Redis Pub/Sub channel for add/remove alert commands."""
+        try:
+            pubsub = await redis_cache.subscribe(self.CONTROL_CHANNEL)
+            logger.info(f"Subscribed to Redis channel: {self.CONTROL_CHANNEL}")
+            while self._is_running:
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if message and 'data' in message:
+                        data = json.loads(message['data'])
+                        action = data.get('action')
+                        if action == 'add':
+                            await self.add_alert(data['alert'])
+                        elif action == 'remove':
+                            await self.remove_alert(data['alert_id'], data['symbol'])
+                except asyncio.TimeoutError:
+                    continue
+                except Exception as e:
+                    logger.error(f"Error processing control message: {e}")
+        except asyncio.CancelledError:
+            logger.info("Control message listener cancelled.")
+        except Exception as e:
+            logger.error(f"Failed to subscribe to Redis channel: {e}")
+
 
     async def _load_alerts_into_redis(self):
         """
@@ -54,8 +90,6 @@ class AlertManager:
         Includes a lock to ensure this only runs once across all server instances.
         """
         logger.info("Checking if alerts need to be loaded into Redis...")
-        # This atomic operation prevents a race condition on startup.
-        # Only the first server instance to start will load the data.
         was_set = await redis_cache.set_if_not_exists("alerts:loading_lock", "1", ttl=60)
 
         if was_set:
@@ -65,7 +99,6 @@ class AlertManager:
                 logger.info("No active alerts in database to load.")
                 return
             
-            # Group alerts by symbol to reduce Redis operations
             alerts_by_symbol = {}
             for alert in db_alerts:
                 symbol = alert['symbol']
@@ -73,7 +106,6 @@ class AlertManager:
                     alerts_by_symbol[symbol] = {}
                 alerts_by_symbol[symbol][alert['id']] = json.dumps(alert)
 
-            # Write to Redis
             for symbol, alerts in alerts_by_symbol.items():
                 hash_key = self._get_hash_key(symbol)
                 for alert_id, alert_data in alerts.items():
@@ -83,13 +115,11 @@ class AlertManager:
         else:
             logger.info("Alerts are already being loaded by another instance. Skipping.")
 
-
     async def _listen_for_price_updates(self):
         """The main loop that connects to Binance and processes real-time ticker data."""
         while self._is_running:
-            # Get symbols to monitor directly from Redis keys
             alert_keys = await redis_cache.get_keys_by_pattern(f"{self.ALERT_HASH_PREFIX}:*")
-            symbols = [key.split(":")[1] for key in alert_keys]
+            symbols = list(set([key.split(":")[1] for key in alert_keys]))
 
             if not symbols:
                 logger.info("No active alerts in Redis. Listener is pausing for 60 seconds.")
@@ -98,7 +128,7 @@ class AlertManager:
 
             logger.info(f"Connecting to combined WebSocket stream for symbols: {symbols}")
             try:
-                async for message in self.binance_client. get_combined_stream_for_tickers(symbols):
+                async for message in self.binance_client.get_combined_stream_for_tickers(symbols):
                     await self._process_message(message)
             except asyncio.CancelledError:
                 logger.info("Listener task was cancelled.")
@@ -108,7 +138,6 @@ class AlertManager:
                 await asyncio.sleep(10)
 
     async def _process_message(self, message: dict):
-        """Checks a single price update against relevant alerts in Redis."""
         if "ticker" not in message:
             return
 
@@ -116,7 +145,6 @@ class AlertManager:
         current_price = message['ticker']['price']
         hash_key = self._get_hash_key(symbol)
 
-        # Get all alerts for this symbol from Redis
         active_alerts = await redis_cache.hgetall_data(hash_key)
         if not active_alerts:
             return
@@ -134,7 +162,6 @@ class AlertManager:
                 triggered = True
 
             if triggered:
-                # ATOMIC OPERATION: Try to "claim" this alert by deleting it.
                 if await redis_cache.hdel_data(hash_key, alert_id) == 1:
                     logger.info(f"CLAIMED: Alert {alert_id} for user {alert['user_id']} on {symbol} at {current_price}")
                     triggered_alerts_data.append(alert)
@@ -144,58 +171,50 @@ class AlertManager:
         if triggered_alerts_data:
             await self._handle_triggered_alerts(triggered_alerts_data, current_price)
 
+
     async def add_alert(self, alert_data: dict):
-        """Adds a new alert to Redis."""
         required_fields = ['symbol', 'id']
         for field in required_fields:
             if field not in alert_data:
-                raise ValueError(f"Alert data missing required field: {field}")
+                logger.error(f"Add alert event is missing required field: {field}")
+                return
         
         symbol = alert_data['symbol']
         alert_id = alert_data['id']
         hash_key = self._get_hash_key(symbol)
         
-        # Check if this is the first alert for this symbol
-        is_new_symbol = not await redis_cache.get_keys_by_pattern(hash_key)
+        is_new_symbol = not await redis_cache.exists(hash_key)
 
-        await redis_cache.hset_data(hash_key, alert_id, json.dumps(alert_data))
-        logger.info(f"Added alert {alert_id} to Redis for symbol {symbol}.")
+        await redis_cache.hset_data(hash_key, str(alert_id), json.dumps(alert_data))
+        logger.info(f"Added alert {alert_id} to Redis for symbol {symbol} via control channel.")
 
-        # If a brand new symbol was added, restart the listener to subscribe to it.
         if is_new_symbol and self._listener_task:
-            logger.info(f"New symbol '{symbol}' detected. Restarting WebSocket listener.")
+            logger.info(f"New symbol '{symbol}' detected. Restarting WebSocket listener to subscribe.")
             self._listener_task.cancel()
 
     async def remove_alert(self, alert_id: str, symbol: str):
-        """Removes a cancelled alert from Redis."""
         hash_key = self._get_hash_key(symbol)
-        await redis_cache.hdel_data(hash_key, alert_id)
-        logger.info(f"Removed alert {alert_id} from Redis for symbol {symbol}.")
+        await redis_cache.hdel_data(hash_key, str(alert_id))
+        logger.info(f"Removed alert {alert_id} from Redis for symbol {symbol} via control channel.")
 
-        # If this was the last alert for a symbol, restart the listener to unsubscribe.
-        remaining_alerts = await redis_cache.hgetall_data(hash_key)
-        if not remaining_alerts and self._listener_task:
-            logger.info(f"Last alert for '{symbol}' removed. Restarting WebSocket listener.")
+        remaining_alerts_count = await redis_cache.hlen(hash_key)
+        if remaining_alerts_count == 0 and self._listener_task:
+            logger.info(f"Last alert for '{symbol}' removed. Restarting WebSocket listener to unsubscribe.")
             self._listener_task.cancel()
 
     async def _handle_triggered_alerts(self, alerts: List[dict], current_price: float):
-        """
-        Improved approach: Batch fetch user data, then send personalized notifications efficiently
-        """
         alert_ids_to_deactivate = [alert['id'] for alert in alerts]
+        user_ids = list(set([alert['user_id'] for alert in alerts])) # Use set to avoid duplicates
         
-        # Step 1: Batch fetch all FCM tokens at once (much more efficient)
-        user_ids = [alert['user_id'] for alert in alerts]
-        fcm_tokens_map = await self._batch_fetch_fcm_tokens(user_ids)
+        # Batch fetch FCM tokens
+        fcm_tokens_map = await self.supabase_repo.get_fcm_tokens_for_users(user_ids)
         
-        # Step 2: Prepare personalized notifications
         notification_requests = []
         for alert in alerts:
             user_id = alert['user_id']
             fcm_token = fcm_tokens_map.get(user_id)
             
             if fcm_token:
-                # Create personalized notification for this specific alert
                 notification_request = self._create_personalized_notification(
                     alert=alert,
                     current_price=current_price,
@@ -205,14 +224,13 @@ class AlertManager:
             else:
                 logger.warning(f"No FCM token found for user {user_id}")
         
-        # Step 3: Send notifications in optimized batches
         notification_task = self._send_notifications_optimized(notification_requests)
         
-        # Step 4: Execute database update and notifications concurrently
         await asyncio.gather(
             self.supabase_repo.deactivate_triggered_price_alerts(alert_ids_to_deactivate),
             notification_task
         )
+
 
     async def _batch_fetch_fcm_tokens(self, user_ids: List[str]) -> Dict[str, str]:
         """
@@ -230,14 +248,10 @@ class AlertManager:
             return {}
 
     def _create_personalized_notification(self, alert: dict, current_price: float, fcm_token: str) -> dict:
-        """
-        Create a personalized notification message for a specific alert
-        """
         symbol = alert['symbol']
         condition_type = alert['condition_type']
         target_price = float(alert['condition_value'])
         
-        # Personalized message mentioning user's specific target
         condition_text = "above" if condition_type == "price_above" else "below"
         title = f"🎯 {symbol} Alert Triggered!"
         body = (f"{symbol} is now ${current_price:,.4f} "
@@ -248,7 +262,7 @@ class AlertManager:
             'title': title,
             'body': body,
             'data': {
-                "alert_id": alert['id'],
+                "alert_id": str(alert['id']),
                 "symbol": symbol,
                 "current_price": str(current_price),
                 "target_price": str(target_price),
@@ -256,7 +270,7 @@ class AlertManager:
                 "click_action": "FLUTTER_NOTIFICATION_CLICK",
                 "notification_type": "price_alert"
             },
-            'user_id': alert['user_id']  # For logging purposes
+            'user_id': alert['user_id']
         }
 
     async def _send_notifications_optimized(self, notification_requests: List[dict]):
@@ -419,3 +433,18 @@ class AlertManager:
             logger.info(f"Cleaned up {len(invalid_tokens)} invalid FCM tokens")
         except Exception as e:
             logger.error(f"Error cleaning up invalid tokens: {e}")
+
+# --- Main execution block to run as a standalone service ---
+if __name__ == "__main__":
+    manager = AlertManager()
+    loop = asyncio.get_event_loop()
+
+    try:
+        loop.run_until_complete(manager.start())
+        loop.run_forever()
+    except KeyboardInterrupt:
+        logger.info("Shutdown signal received.")
+    finally:
+        loop.run_until_complete(manager.stop())
+        loop.close()
+        logger.info("AlertManager service has been shut down.")

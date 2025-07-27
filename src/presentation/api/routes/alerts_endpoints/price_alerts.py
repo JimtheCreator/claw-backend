@@ -1,21 +1,20 @@
-from fastapi import FastAPI, Depends, HTTPException
 from fastapi import APIRouter, HTTPException, Query, Depends
-
 import os
 import sys
+import json
+from common.logger import logger
+from pydantic import BaseModel
+from enum import Enum as PyEnum
+from typing import List
+
+# Ensure the correct paths are in sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
 sys.path.append(parent_dir)
 
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from infrastructure.database.firebase.repository import FirebaseRepository
-from common.logger import logger
-import uuid
-from pydantic import BaseModel
-from enum import Enum as PyEnum
-from typing import List
-from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.notifications.alerts.price_alerts.PriceAlertManager import AlertManager
+from infrastructure.database.redis.cache import redis_cache
 from stripe_payments.src.plan_limits import PLAN_LIMITS
 
 # Define valid condition types for alerts
@@ -30,64 +29,54 @@ class AlertCreate(BaseModel):
     condition_type: ConditionType
     condition_value: float
 
-router = APIRouter(tags=["alerts"])  # ✅ Correct
-
-
-# Global instance for singleton pattern
-_alert_manager_instance = None
-
+router = APIRouter(tags=["alerts"])
 
 # Dependency injection functions
 def get_firebase_repo():
-    unique_id = f"app_{uuid.uuid4()}"
-    return FirebaseRepository(app_name=unique_id)
+    # This can be simplified if you don't need a unique app_name for each request
+    return FirebaseRepository()
 
 def get_supabase_repo():
     return SupabaseCryptoRepository()
-
-def get_alert_manager():
-    """Dependency injection for AlertManager - returns singleton instance"""
-    global _alert_manager_instance
-    if _alert_manager_instance is None:
-        _alert_manager_instance = AlertManager()
-    return _alert_manager_instance
 
 @router.post("/alerts")
 async def create_alert(
     request: AlertCreate,
     user: FirebaseRepository = Depends(get_firebase_repo),
     repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
-    alert_manager: AlertManager = Depends(get_alert_manager)
 ):
     """
     Create a new price alert for a specific symbol and condition.
-    
-    - **symbol**: The trading symbol (e.g., "BTCUSDT").
-    - **condition_type**: The type of condition ("price_above" or "price_below").
-    - **condition_value**: The price threshold for the alert.
+    This endpoint is now non-blocking. It creates the alert in the database
+    and then publishes an event to Redis for the AlertManager service to pick up.
     """
     user_id = request.user_id
-    logger.info(f"Creating alert for user {user_id} on symbol {request.symbol} with condition {request.condition_type} at value {request.condition_value}")
+    logger.info(f"Received create alert request for user {user_id} on symbol {request.symbol}")
 
     try:
-        # Call the existing create_alert method from the repository
         if not await user.check_user_exists(user_id):
             raise HTTPException(status_code=404, detail="User not found")
-        # Check if the user has reached their alert limit
-        create_alert = await repo.create_price_alert(
+
+        # The repository still handles the business logic of checking limits and creating the alert in the database
+        created_alert = await repo.create_price_alert(
             user_id=user_id,
             symbol=request.symbol,
-            condition_type=request.condition_type.value,  # Use enum value
+            condition_type=request.condition_type.value,
             condition_value=request.condition_value,
             PLAN_LIMITS=PLAN_LIMITS
         )
 
-        logger.info(f"Alert created successfully for user {user_id} on symbol {request.symbol}")
+        logger.info(f"Alert created in DB for user {user_id} with ID {created_alert.get('id')}")
 
-        # Inform the AlertManager about the new alert - NOW USING INJECTED INSTANCE
-        await alert_manager.add_alert(alert_data=create_alert)
+        # Publish an event to the 'price_alerts' channel in Redis
+        # The standalone AlertManager service will be listening to this channel
+        await redis_cache.publish(
+            "price_alerts_control_channel", 
+            json.dumps({"action": "add", "alert": created_alert})
+        )
+        logger.info(f"Published 'add' event to Redis for alert ID {created_alert.get('id')}")
 
-        return {"message": "Alert created successfully"}
+        return {"message": "Alert creation request received and is being processed."}
     
     except HTTPException as e:
         # Re-raise HTTP exceptions (e.g., 403 for limit reached)
@@ -100,17 +89,27 @@ async def create_alert(
 async def cancel_alert(
     alert_id: str, 
     user_id: str = Query(...), 
-    symbol: str = Query(...),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
-    alert_manager: AlertManager = Depends(get_alert_manager)
+    symbol: str = Query(...), # Keep symbol for efficient removal in AlertManager
+    repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
 ):
+    """
+    Cancels a price alert. This is also non-blocking.
+    It updates the alert status in the database and publishes a removal
+    event to Redis.
+    """
     try:
+        # The repository handles the logic of marking the alert as 'cancelled' in the database
         await repo.cancel_price_alert(user_id, alert_id)
+        logger.info(f"Alert {alert_id} cancelled in DB for user {user_id}")
+        
+        # Publish a 'remove' event to the Redis channel
+        await redis_cache.publish(
+            "price_alerts_control_channel", 
+            json.dumps({"action": "remove", "alert_id": alert_id, "symbol": symbol})
+        )
+        logger.info(f"Published 'remove' event to Redis for alert ID {alert_id}")
 
-        # Inform the AlertManager to remove the alert from the cache - NOW USING INJECTED INSTANCE
-        await alert_manager.remove_alert(alert_id, symbol)
-
-        return {"message": "Alert cancelled successfully"}
+        return {"message": "Alert cancellation request received."}
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -119,6 +118,10 @@ async def cancel_alert(
     
 @router.get("/alerts/{user_id}", response_model=List[dict])
 async def get_active_alerts(user_id: str, repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+    """
+    Retrieves the user's active price alerts directly from the database.
+    This endpoint does not need to interact with the AlertManager.
+    """
     try:
         alerts = await repo.get_user_active_price_alerts(user_id)
         return alerts

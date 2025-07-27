@@ -47,25 +47,17 @@ async def lifespan(app: FastAPI):
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
-        # Create and start the Price AlertManager
-        price_alert_manager = AlertManager()
-        app.state.price_alert_manager = price_alert_manager
-        await price_alert_manager.start()
-        logger.info("PriceAlertManager started successfully.")
-
-        logger.info("AlertManager started successfully.")
+        # REMOVED: PriceAlertManager startup logic
 
     except Exception as e:
         logger.error(f"Failed to preload tickers: {e}")
-        return
+        # In a real-world scenario, you might want to handle this more gracefully
+        # For now, we'll let the application fail to start if critical services are unavailable
+        raise
 
     yield  # 🧘 Everything after this happens at shutdown
     
-
-    # Gracefully shut down managers
-    if hasattr(app.state, 'price_alert_manager') and app.state.price_alert_manager:
-        await app.state.price_alert_manager.stop()
-        logger.info("PriceAlertManager stopped.")
+    # REMOVED: Graceful shutdown for PriceAlertManager
 
     await close_binance_connection_pool()
     logger.info("Binance connection pool closed.")
