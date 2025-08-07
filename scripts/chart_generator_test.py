@@ -2,7 +2,7 @@
 import asyncio
 import json
 import numpy as np
-from core.services.pattern_analysis_engine import PatternAnalysisEngine
+from core.engines.pattern_analysis_engine import PatternAnalysisEngine
 from core.use_cases.market_analysis.data_access import get_ohlcv_from_db
 from core.use_cases.market_analysis.detect_patterns_engine.harmonic_patterns import find_significant_swings # Import for diagnostics
 from datetime import datetime

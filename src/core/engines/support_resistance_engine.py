@@ -160,34 +160,104 @@ class SupportResistanceEngine:
     def _calculate_volume_profile(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Implements volume-at-price analysis to find high-volume nodes."""
         logger.info("[S/R Engine] Calculating Volume Profile...")
-        price_range = df['high'].max() - df['low'].min()
+        
+        # Get overall price range
+        price_min = df['low'].min()
+        price_max = df['high'].max()
+        price_range = price_max - price_min
+        
+        # Handle edge case where price range is too small
+        if price_range <= 0 or np.isnan(price_range):
+            logger.warning("[S/R Engine] Price range is zero or invalid, returning empty volume profile")
+            return {
+                "poc": df['close'].iloc[-1],
+                "value_area_high": df['high'].max(),
+                "value_area_low": df['low'].min(),
+                "profile": {}
+            }
+        
         bins = self.config['volume_profile_bins']
         bin_size = price_range / bins
         
-        # Distribute volume across the price range for each candle
-        vol_per_price = df.apply(
-            lambda row: pd.Series(row['volume'] / ((row['high'] - row['low']) / bin_size + 1),
-                                  index=pd.cut([row['low'], row['high']], bins=bins, labels=False, include_lowest=True)),
-            axis=1
-        ).sum()
-
-        price_bins = pd.Series(np.linspace(df['low'].min(), df['high'].max(), bins + 1))
-        vol_per_price.index = price_bins.iloc[vol_per_price.index.astype(int)].values
+        # Create price bins
+        price_bins = np.linspace(price_min, price_max, bins + 1)
         
+        # Initialize volume profile
+        volume_profile = np.zeros(bins)
+        
+        # Distribute volume for each candle
+        for idx, row in df.iterrows():
+            candle_range = row['high'] - row['low']
+            candle_volume = row['volume']
+            
+            # Handle zero-range candles (doji)
+            if candle_range <= 0 or np.isnan(candle_range):
+                # Assign all volume to the bin containing the close price
+                bin_idx = np.searchsorted(price_bins[1:], row['close'])
+                bin_idx = min(bin_idx, bins - 1)  # Ensure we don't exceed array bounds
+                volume_profile[bin_idx] += candle_volume
+            else:
+                # Find which bins this candle spans
+                low_bin = np.searchsorted(price_bins[1:], row['low'])
+                high_bin = np.searchsorted(price_bins[1:], row['high'])
+                
+                # Ensure indices are within bounds
+                low_bin = max(0, min(low_bin, bins - 1))
+                high_bin = max(0, min(high_bin, bins - 1))
+                
+                # Distribute volume proportionally across bins
+                bins_spanned = max(1, high_bin - low_bin + 1)
+                volume_per_bin = candle_volume / bins_spanned
+                
+                for bin_idx in range(low_bin, high_bin + 1):
+                    if 0 <= bin_idx < bins:
+                        volume_profile[bin_idx] += volume_per_bin
+        
+        # Create price-volume mapping
+        bin_centers = (price_bins[:-1] + price_bins[1:]) / 2
+        vol_per_price = pd.Series(volume_profile, index=bin_centers)
+        
+        # Remove zero-volume bins
+        vol_per_price = vol_per_price[vol_per_price > 0]
+        
+        if vol_per_price.empty:
+            logger.warning("[S/R Engine] No volume data found, returning empty volume profile")
+            return {
+                "poc": df['close'].iloc[-1],
+                "value_area_high": df['high'].max(),
+                "value_area_low": df['low'].min(),
+                "profile": {}
+            }
+        
+        # Find Point of Control (highest volume price)
         poc_price = vol_per_price.idxmax()
-        total_volume = df['volume'].sum()
+        total_volume = vol_per_price.sum()
         
-        # Calculate Value Area
-        sorted_vol = vol_per_price.sort_values(ascending=False)
-        cumulative_vol = sorted_vol.cumsum()
-        value_area_mask = cumulative_vol <= total_volume * self.config['value_area_pct']
-        value_area_nodes = sorted_vol[value_area_mask]
+        # Calculate Value Area (70% of volume by default)
+        try:
+            sorted_vol = vol_per_price.sort_values(ascending=False)
+            cumulative_vol = sorted_vol.cumsum()
+            value_area_threshold = total_volume * self.config['value_area_pct']
+            value_area_mask = cumulative_vol <= value_area_threshold
+            value_area_nodes = sorted_vol[value_area_mask]
+            
+            if not value_area_nodes.empty:
+                value_area_high = value_area_nodes.index.max()
+                value_area_low = value_area_nodes.index.min()
+            else:
+                # Fallback to POC if value area calculation fails
+                value_area_high = poc_price
+                value_area_low = poc_price
+        except Exception as e:
+            logger.warning(f"[S/R Engine] Value area calculation failed: {e}, using POC as fallback")
+            value_area_high = poc_price
+            value_area_low = poc_price
         
         return {
             "poc": poc_price,
-            "value_area_high": value_area_nodes.index.max(),
-            "value_area_low": value_area_nodes.index.min(),
-            "profile": {p: v for p, v in vol_per_price.items()}
+            "value_area_high": value_area_high,
+            "value_area_low": value_area_low,
+            "profile": {float(p): float(v) for p, v in vol_per_price.items()}
         }
 
     def _identify_market_structure(self, df: pd.DataFrame) -> Dict[str, Any]:

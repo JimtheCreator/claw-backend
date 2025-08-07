@@ -13,7 +13,6 @@ import time
 from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
 
-
 class InfluxDBMarketDataRepository(MarketDataRepository):
     def __init__(self):
         # Improved connection configuration with timeout settings
@@ -25,6 +24,9 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         )
         self.bucket = os.getenv("INFLUXDB_BUCKET")
         self._verify_connection()
+        
+        # --- FIX: Add this line to initialize the query_api ---
+        self.query_api = self.client.query_api()
         
         # Cache to store minimum timestamps per symbol+interval
         self._min_timestamps_cache: Dict[Tuple[str, str], datetime] = {}
@@ -70,6 +72,39 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             logger.error(f"Failed to parse InfluxDB record: {str(e)}")
             return None
 
+    async def get_all_symbols_for_interval(self, interval: str) -> list:
+        """
+        Get all unique symbols that have data for the specified interval.
+        
+        Args:
+            interval: The time interval (e.g., '1m', '5m', '1h')
+            
+        Returns:
+            List of unique symbol strings
+        """
+        query = f'''
+        import "influxdata/influxdb/schema"
+        
+        schema.tagValues(
+            bucket: "{self.bucket}",
+            tag: "symbol",
+            predicate: (r) => r._measurement == "market_data" and r.interval == "{interval}"
+        )
+        '''
+        
+        try:
+            # --- FIX: Use self.query_api and remove 'await' ---
+            result = self.query_api.query(query=query)
+            symbols = []
+            for table in result:
+                for record in table.records:
+                    symbols.append(record.get_value())
+            
+            return sorted(list(set(symbols)))  # Remove duplicates and sort
+        except Exception as e:
+            logger.error(f"Error getting symbols for interval {interval}: {e}")
+            return []
+
     async def get_min_timestamp(self, symbol: str, interval: str) -> Optional[datetime]:
         """Get the earliest available timestamp for a symbol+interval combination"""
         # Check cache first
@@ -103,6 +138,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             logger.error(f"Error getting min timestamp: {str(e)}")
             return None
 
+
     async def get_last_update_timestamp(self, symbol: str, interval: str) -> Optional[datetime]:
         """Get the latest timestamp for a symbol and interval."""
         query = f'''
@@ -121,6 +157,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         except Exception as e:
             logger.error(f"Failed to get last update timestamp: {e}")
         return None
+
 
     async def get_historical_data(
         self, 
@@ -192,6 +229,35 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             return parsed_records
         except Exception as e:
             logger.error(f"InfluxDB query error: {str(e)}")
+            return []
+        
+    # src/infrastructure/database/influxdb/market_data_repository.py (add this method)
+
+    async def get_all_timestamps_for_symbol(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: datetime,
+        end_time: datetime
+    ) -> list[datetime]:
+        """Fetches all existing timestamps for a symbol and interval in a given range."""
+        query = f'''
+        from(bucket: "{self.bucket}")
+        |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
+        |> filter(fn: (r) => r._measurement == "market_data")
+        |> filter(fn: (r) => r.symbol == "{symbol}")
+        |> filter(fn: (r) => r.interval == "{interval}")
+        |> filter(fn: (r) => r._field == "close") // Filter by any single field to get unique timestamps
+        |> keep(columns: ["_time"]) // Only keep the time column
+        |> group() // Ungroup to get a single list
+        '''
+        try:
+            result = self.client.query_api().query(query)
+            timestamps = [record.get_time() for table in result for record in table.records]
+            logger.info(f"Retrieved {len(timestamps)} existing timestamps for {symbol} ({interval}).")
+            return timestamps
+        except Exception as e:
+            logger.error(f"InfluxDB timestamp query error: {str(e)}")
             return []
     
     def _flux_field_filter(fields: list[str]) -> str:

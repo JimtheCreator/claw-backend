@@ -1,5 +1,5 @@
 # src/core/use_cases/market_analysis/data_access.py
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 from fastapi import BackgroundTasks
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from core.use_cases.market.market_data import fetch_crypto_data_paginated  # Import the existing function
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
@@ -47,8 +47,7 @@ async def get_ohlcv_from_db(
             start_time=start_time,
             end_time=end_time,
             page=1,
-            page_size=1000,  # Default page size for technical analysis
-            background_tasks=background_tasks
+            page_size=1000
         )
 
         # logger.info(f"Formatted OHLCV data: {_format_ohlcv_response(data)}")

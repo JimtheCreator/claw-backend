@@ -1,5 +1,5 @@
 # src/core/use_cases/market_analysis/data_access.py
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 from fastapi import BackgroundTasks
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from backend_function_tests.market_analysis.getting_test_market_data import fetch_crypto_data_paginated  # Import the existing function
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError

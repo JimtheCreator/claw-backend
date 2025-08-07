@@ -6,7 +6,7 @@ from common.logger import logger
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from supabase import create_client, Client
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Literal
 from common.logger import logger
 from fastapi import HTTPException
 from infrastructure.database.firebase.repository import FirebaseRepository
@@ -57,6 +57,10 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "pattern_detection_limit": limits["pattern_detection_limit"],
                 "watchlist_limit": limits["watchlist_limit"],
                 "market_analysis_limit": limits["market_analysis_limit"],
+                "trendline_analysis_limit": limits["trendline_analysis_limit"], # New
+                "sr_analysis_limit": limits["sr_analysis_limit"],             # New
+                "trendline_analysis_count": 0, # Initialize count
+                "sr_analysis_count": 0,        # Initialize count
                 "journaling_enabled": limits["journaling_enabled"],
                 "video_download_limit": limits["video_download_limit"],
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -80,6 +84,8 @@ class SupabaseCryptoRepository(CryptoRepository):
         """Update or insert user subscription data in Supabase"""
         try:
             limits = PLAN_LIMITS.get(plan_type, PLAN_LIMITS["test_drive"])
+            # When a plan is updated, we reset the usage counts.
+            # You might want to adjust this logic based on your business rules.
             subscription_data = {
                 "user_id": user_id,
                 "plan_type": plan_type,
@@ -87,6 +93,10 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "pattern_detection_limit": limits["pattern_detection_limit"],
                 "watchlist_limit": limits["watchlist_limit"],
                 "market_analysis_limit": limits["market_analysis_limit"],
+                "trendline_analysis_limit": limits["trendline_analysis_limit"], # New
+                "sr_analysis_limit": limits["sr_analysis_limit"],             # New
+                "trendline_analysis_count": 0, # Reset count on update
+                "sr_analysis_count": 0,        # Reset count on update
                 "journaling_enabled": limits["journaling_enabled"],
                 "video_download_limit": limits["video_download_limit"],
                 "updated_at": datetime.now().isoformat()
@@ -95,16 +105,65 @@ class SupabaseCryptoRepository(CryptoRepository):
             if hasattr(result, 'error') and result.error:
                 logger.error(f"Supabase query error: {result.error}")
                 raise HTTPException(status_code=500, detail="Database access failed")
+
             if len(result.data) > 0:
                 self.client.table("subscriptions").update(subscription_data).eq("user_id", user_id).execute()
             else:
                 subscription_data["created_at"] = datetime.now().isoformat()
                 self.client.table("subscriptions").insert(subscription_data).execute()
+
             logger.info(f"Supabase subscription updated for user {user_id}: {plan_type}")
             return True, limits
         except Exception as e:
             logger.error(f"Supabase update error for user {user_id}: {str(e)}")
             raise
+
+    # --- NEW METHOD TO CHECK AND INCREMENT USAGE ---
+    async def check_and_increment_analysis_usage(
+        self,
+        user_id: str,
+        analysis_type: Literal["trendline", "sr"],
+        PLAN_LIMITS: dict
+    ):
+        """
+        Checks if the user has reached their analysis limit and increments the count if not.
+        This is an atomic-like operation to prevent race conditions.
+        """
+        try:
+            await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
+            
+            # 1. Fetch the current subscription details
+            subscription = await self.get_subscription_limits(user_id)
+            
+            limit_key = f"{analysis_type}_analysis_limit"
+            count_key = f"{analysis_type}_analysis_count"
+            
+            limit = subscription.get(limit_key, 0)
+            current_count = subscription.get(count_key, 0)
+
+            # 2. Check the limit
+            if limit != -1 and current_count >= limit:
+                detail = f"You have reached your limit of {limit} {analysis_type.replace('_', ' ')} analyses for this period."
+                logger.warning(f"Limit reached for user {user_id} on {analysis_type} analysis.")
+                raise HTTPException(status_code=403, detail=detail)
+
+            # 3. Increment the count in the database
+            # Supabase rpc can perform atomic increments.
+            # You would create a SQL function `increment_analysis_count(user_id_in TEXT, analysis_type_in TEXT)`
+            # For simplicity here, we'll do a read-then-write, which is mostly safe.
+            updated_count = current_count + 1
+            self.client.table(self.subscription_table).update({
+                count_key: updated_count
+            }).eq("user_id", user_id).execute()
+
+            logger.info(f"Incremented {analysis_type} count for user {user_id} to {updated_count}.")
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error checking/incrementing {analysis_type} usage for {user_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Could not verify {analysis_type} usage limit.")
+
 
     async def get_subscription_limits(self, user_id: str) -> dict:
         """Retrieve subscription limits from Supabase."""

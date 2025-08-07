@@ -12,7 +12,7 @@ class TrendlineEngine:
     def __init__(self, interval: str = "1h", min_window: Optional[int] = None, max_window: Optional[int] = None):
         self.interval = interval
         interval_defaults = {
-            "1m": (30, 300), "5m": (50, 300), "15m": (80, 400), "30m": (100, 400),
+            "1m": (120, 300), "5m": (72, 300), "15m": (96, 400), "30m": (96, 400),
             "1h": (120, 600), "2h": (180, 800), "4h": (200, 900), "6h": (250, 1000),
             "1d": (300, 1200), "3d": (400, 1400), "1w": (500, 1500), "1M": (600, 1800)
         }
@@ -109,7 +109,7 @@ class TrendlineEngine:
         return is_valid, angle, reason
 
     def _fit_trendlines(self, df: pd.DataFrame, swings: List[Dict[str, Any]], 
-                       line_type: str, avg_atr: float) -> List[Dict[str, Any]]:
+                    line_type: str, avg_atr: float) -> List[Dict[str, Any]]:
         lines = []
         n = len(swings)
         if n < 2:
@@ -119,7 +119,7 @@ class TrendlineEngine:
         avg_volume = df['volume'].mean()
         current_idx = len(df) - 1
         
-        # FIXED: Calculate scaling factor once for the entire dataset
+        # Calculate scaling factor once for the entire dataset
         total_time_span = len(df) - 1
         scaling_factor = self._calculate_price_time_scaling(df, total_time_span)
         
@@ -140,7 +140,7 @@ class TrendlineEngine:
                 b = price1 - m * idx1
                 time_span = idx2 - idx1
                 
-                # CRITICAL FIX: Enhanced angle validation
+                # Enhanced angle validation
                 is_valid_angle, angle, angle_reason = self._validate_trendline_angle(
                     m, scaling_factor, time_span, line_type
                 )
@@ -154,7 +154,7 @@ class TrendlineEngine:
                 std_tolerance = price_std * 0.05
                 tolerance = max(atr_tolerance, std_tolerance)
 
-                # === Penetration Check ===
+                # Penetration Check
                 penetrated = False
                 for k in range(idx1, idx2 + 1):
                     expected = m * k + b
@@ -165,21 +165,32 @@ class TrendlineEngine:
                 if penetrated:
                     continue
 
-                # === Enhanced Touch Counting with Volume Weighting ===
-                touches, touch_indices, deviations, touch_volumes = 0, [], [], []
-                touch_points_x, touch_points_y = [], []
-                
-                for k in range(idx1, idx2 + 1):
+                # === Touch Counting at Swing Points ===
+                # Filter relevant swings between idx1 and idx2 (inclusive)
+                if line_type == "support":
+                    relevant_swings = [s for s in swings if idx1 <= s['idx'] <= idx2]
+                else:  # resistance
+                    relevant_swings = [s for s in swings if idx1 <= s['idx'] <= idx2]
+
+                touches = 0
+                touch_indices = []
+                deviations = []
+                touch_volumes = []
+                touch_points_x = []
+                touch_points_y = []
+
+                for swing in relevant_swings:
+                    k = swing['idx']
                     expected = m * k + b
-                    actual = df['low'].iloc[k] if line_type == "support" else df['high'].iloc[k]
+                    actual = swing['price']
                     if abs(actual - expected) < tolerance:
                         touches += 1
                         touch_indices.append(k)
                         deviations.append(abs(actual - expected))
-                        touch_volumes.append(df['volume'].iloc[k])
+                        touch_volumes.append(swing['volume'])
                         touch_points_x.append(k)
                         touch_points_y.append(actual)
-                
+
                 if touches < min_touches:
                     continue
 
@@ -188,36 +199,36 @@ class TrendlineEngine:
                 if r_squared < self.min_r_squared:
                     continue
 
-                # === Extended Touches with Recency Weighting ===
+                # === Extended Touches at Swing Points ===
+                if line_type == "support":
+                    extended_swings = [s for s in swings if s['idx'] > idx2]
+                else:
+                    extended_swings = [s for s in swings if s['idx'] > idx2]
+
                 extended_touches = 0
                 extended_weighted_touches = 0
-                
-                for k in range(idx2 + 1, len(df)):
+
+                for swing in extended_swings:
+                    k = swing['idx']
                     expected = m * k + b
-                    actual = df['low'].iloc[k] if line_type == "support" else df['high'].iloc[k]
+                    actual = swing['price']
                     if abs(actual - expected) < tolerance:
                         extended_touches += 1
-                        # Apply recency weighting
                         recency_weight = self.recency_decay ** (current_idx - k)
                         extended_weighted_touches += recency_weight
 
-                # === Enhanced Scoring System with Angle Bonus ===
+                # Enhanced Scoring System with Angle Bonus
                 length = idx2 - idx1
                 avg_deviation = np.mean(deviations) if deviations else 0
                 
-                # Volume weighting for touches
                 volume_weight = np.mean(touch_volumes) / avg_volume if avg_volume > 0 else 1.0
                 volume_score = min(volume_weight * 5, 10)  # Cap at 10 points
                 
-                # Recency bonus for recent formation
                 recency_bonus = self.recency_decay ** (current_idx - idx2) * 10
-                
-                # R-squared bonus
                 r_squared_bonus = (r_squared - self.min_r_squared) * 20
                 
-                # FIXED: Angle scoring - prefer moderate angles
                 abs_angle = abs(angle)
-                if abs_angle <= 30:  # Sweet spot for stable trendlines
+                if abs_angle <= 30:
                     angle_bonus = 5
                 elif abs_angle <= 45:
                     angle_bonus = 2
@@ -240,10 +251,10 @@ class TrendlineEngine:
                     "start_price": price1, "end_price": price2, "slope": m, "intercept": b,
                     "touches": touches, "extended_touches": extended_touches, "score": score,
                     "avg_deviation": avg_deviation, "tolerance_value": tolerance,
-                    "r_squared": r_squared, "angle_degrees": angle,  # Now properly calculated
+                    "r_squared": r_squared, "angle_degrees": angle,
                     "volume_weight": volume_weight, "recency_bonus": recency_bonus,
                     "extended_weighted_touches": extended_weighted_touches,
-                    "time_span": time_span, "scaling_factor": scaling_factor,  # Added for debugging
+                    "time_span": time_span, "scaling_factor": scaling_factor,
                     "breakout_detected": False, "breakout_confidence": 0.0
                 })
         
@@ -252,9 +263,9 @@ class TrendlineEngine:
         # Enhanced decluttering with angle consideration
         unique_lines = []
         max_lines = 3
-        slope_similarity_threshold = 0.15  # Slightly more lenient
+        slope_similarity_threshold = 0.15
         price_similarity_threshold = avg_atr * 2
-        angle_similarity_threshold = 10  # degrees
+        angle_similarity_threshold = 10
 
         for line in lines:
             if len(unique_lines) >= max_lines:
@@ -270,13 +281,12 @@ class TrendlineEngine:
                 price_at_ref_current = line['start_price']
                 price_diff = abs(price_at_ref_unique - price_at_ref_current)
 
-                # IMPROVED: Consider both slope and angle similarity
                 if (slope_diff < slope_similarity_threshold and 
                     price_diff < price_similarity_threshold and
                     angle_diff < angle_similarity_threshold):
                     is_similar = True
                     logger.debug(f"Discarding similar {line_type} line. "
-                               f"Angle diff: {angle_diff:.1f}°, Score: {line['score']:.2f} vs {unique_line['score']:.2f}")
+                            f"Angle diff: {angle_diff:.1f}°, Score: {line['score']:.2f} vs {unique_line['score']:.2f}")
                     break
             
             if not is_similar:

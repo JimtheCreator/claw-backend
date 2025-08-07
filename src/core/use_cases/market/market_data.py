@@ -5,44 +5,18 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Set, Tuple
-from fastapi import BackgroundTasks
+from typing import Optional, List, Dict, Tuple
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
 import asyncio
 from typing import List, Dict, Any
+# Make sure to add these imports at the top of the file
+import json
+from src.core.services.tasks import fetch_and_save_full_history_task, save_market_data_task
+from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
-INTERVAL_MINUTES = {
-    "1m": 1,
-    "5m": 5,
-    "15m": 15,
-    "30m": 30,
-    "1h": 60,
-    "2h": 120,
-    "4h": 240,
-    "6h": 240,
-    "1d": 1440,
-    "3d": 1440,
-    "1w": 10080, 
-    "1M": 43200
-}
-
-INTERVAL_RANGES = {
-    "1m": timedelta(days=90),    # 3 months
-    "5m": timedelta(days=180),   # 6 months
-    "15m": timedelta(days=365),  # 1 year
-    "30m": timedelta(days=730),  # 2 years
-    "1h": timedelta(days=730),   # 2 years
-    "2h": timedelta(days=730),   # 2 years
-    "4h": timedelta(days=1825),  # 5 years
-    "6h": timedelta(days=1825),  # 5 years
-    "1d": timedelta(days=1825),
-    "3d": timedelta(days=1825),
-    "1w": timedelta(days=1825),
-    "1M": timedelta(days=1825)
-}
 
 # Batch sizes for different intervals
 BATCH_SIZES = {
@@ -58,8 +32,6 @@ BATCH_SIZES = {
 # where task_status is True if a task is currently running
 ACTIVE_BACKGROUND_TASKS: Dict[Tuple[str, str], bool] = {}
 
-def calculate_start_time(interval: str) -> datetime:
-    return datetime.now(timezone.utc) - INTERVAL_RANGES.get(interval, timedelta(days=90))
 
 async def batch_save_market_data(repo: InfluxDBMarketDataRepository, data_entities: List[MarketDataEntity], symbol: str, interval: str):
     """
@@ -158,13 +130,14 @@ async def fetch_crypto_data_paginated(
     end_time: Optional[datetime] = None,
     page: int = 1,
     page_size: int = 1000,
-    background_tasks: Optional[BackgroundTasks] = None
+    # The 'background_tasks' parameter is now removed from the function signature
 ):
     """
     Fetch cryptocurrency data with pagination support.
     
     This will first try to fetch from the local InfluxDB storage with pagination.
-    If data is not available or is stale, it will fetch from Binance and save in background.
+    If data is not available or is stale, it will fetch from Binance and dispatch
+    Celery tasks to save the data in the background.
     """
     try:
         if interval not in INTERVAL_MINUTES:
@@ -179,89 +152,30 @@ async def fetch_crypto_data_paginated(
         # Set default end_time if not provided
         if not end_time:
             end_time = datetime.now(timezone.utc)
-        
-        task_key = (symbol, interval)
-        is_background_active = ACTIVE_BACKGROUND_TASKS.get(task_key, False)
-        
-        if is_background_active:
-            logger.info(f"Background task active for {symbol} ({interval}), checking if we can fetch from InfluxDB")
-            
-            last_timestamp = await repo.get_last_update_timestamp(symbol, interval)
-            
-            if last_timestamp and (datetime.now(timezone.utc) - last_timestamp).total_seconds() < 3600:
-                logger.info(f"Using InfluxDB data despite active background task for {symbol} ({interval})")
-                historical = await repo.get_historical_data(
-                    symbol, interval, start_time, end_time, page, page_size
-                )
-                return historical
-            else:
-                logger.info(f"No recent data, fetching from Binance for {symbol} ({interval})")
-                binance = BinanceMarketData()
-                await binance.ensure_connected()
-                
-                binance_limit = min(1000, page_size)
-                interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-                skip_ms = interval_ms * (page - 1) * page_size
-                
-                binance_start_ms = int(start_time.timestamp() * 1000) + skip_ms
-                binance_end_ms = int(end_time.timestamp() * 1000)
-                
-                if binance_start_ms >= binance_end_ms:
-                    logger.warning(f"Pagination exceeded available data range for {symbol} ({interval})")
-                    return []
-                
-                klines = await binance.get_klines(
-                    symbol=symbol,
-                    interval=interval,
-                    limit=binance_limit,
-                    start_time=binance_start_ms,
-                    end_time=binance_end_ms
-                )
-                
-                await binance.disconnect()
-                
-                data_entities = []
-                for k in klines:
-                    if len(k) >= 6 and all(k[1:6]):
-                        entity = MarketDataEntity(
-                            symbol=symbol,
-                            interval=interval,
-                            timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                            open=float(k[1]),
-                            high=float(k[2]),
-                            low=float(k[3]),
-                            close=float(k[4]),
-                            volume=float(k[5])
-                        )
-                        data_entities.append(entity)
-                
-                logger.info(f"Fetched {len(data_entities)} records from Binance for {symbol} ({interval})")
-                return data_entities
-        
+    
         historical = await repo.get_historical_data(
             symbol, interval, start_time, end_time, page, page_size
         )
         
         if historical:
-            if not is_background_active and page == 1:
+            # Check for stale data on the first page request
+            if page == 1:
                 try:
                     last_candle_time = historical[-1].timestamp
                     stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=INTERVAL_MINUTES[interval])
                     
                     if last_candle_time < stale_threshold:
-                        logger.info(f"Stale data detected for {symbol} ({interval}), fetching all missing data.")
+                        logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing candles.")
                         
                         binance = BinanceMarketData()
                         await binance.ensure_connected()
                         
                         missing_data = []
-                        # Correctly calculate the start time for the next candle using the interval
                         interval_duration = timedelta(minutes=INTERVAL_MINUTES[interval])
                         current_start_time = last_candle_time + interval_duration
                         current_start_ms = int(current_start_time.timestamp() * 1000)
                         end_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
 
-                        # Loop to fetch all missing data until the present
                         while current_start_ms < end_time_ms:
                             klines = await binance.get_klines(
                                 symbol=symbol,
@@ -272,37 +186,32 @@ async def fetch_crypto_data_paginated(
                             )
 
                             if not klines:
-                                # No more data from Binance, we are up-to-date
                                 break
 
-                            batch_entities = []
-                            for k in klines:
-                                if len(k) >= 6 and all(k[1:6]):
-                                    entity = MarketDataEntity(
-                                        symbol=symbol,
-                                        interval=interval,
-                                        timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                                        open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                                        close=float(k[4]), volume=float(k[5])
-                                    )
-                                    batch_entities.append(entity)
+                            batch_entities = [
+                                MarketDataEntity(
+                                    symbol=symbol, interval=interval,
+                                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                                    open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                                    close=float(k[4]), volume=float(k[5])
+                                ) for k in klines if len(k) >= 6 and all(k[1:6])
+                            ]
                             
                             if not batch_entities:
-                                break # No valid entities processed, exit loop
+                                break
 
                             missing_data.extend(batch_entities)
-                            
-                            # Update start time for the next iteration to avoid re-fetching
                             current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1
-                            await asyncio.sleep(0.5) # Avoid hitting API rate limits
+                            await asyncio.sleep(0.5)
 
                         await binance.disconnect()
                         
-                        if missing_data and background_tasks:
-                            background_tasks.add_task(
-                                batch_save_market_data, repo, missing_data, symbol, interval
-                            )
-                            logger.info(f"Added background task to save {len(missing_data)} missing candles.")
+                        if missing_data:
+                            # MODIFICATION: Dispatch a Celery task to save the missing data
+                            # Celery works best with JSON-serializable data.
+                            missing_data_json = [entity.json() for entity in missing_data]
+                            save_market_data_task.delay(missing_data_json)
+                            logger.info(f"Dispatched Celery task to save {len(missing_data)} missing candles.")
                         
                         historical.extend(missing_data)
                 except Exception as e:
@@ -310,46 +219,35 @@ async def fetch_crypto_data_paginated(
             
             return historical
         
-        # No data in InfluxDB, fetch from Binance (This part is fine)
+        # No data in InfluxDB, fetch from Binance
         try:
             logger.info(f"No data found in InfluxDB for {symbol} ({interval}), fetching from Binance")
             binance = BinanceMarketData()
             await binance.ensure_connected()
             
-            binance_limit = min(1000, page_size)
-            interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-            skip_ms = interval_ms * (page - 1) * page_size
-            
-            binance_start_ms = int(start_time.timestamp() * 1000) + skip_ms
-            binance_end_ms = int(end_time.timestamp() * 1000)
-            
-            if binance_start_ms >= binance_end_ms:
-                logger.warning(f"Pagination exceeded available data range for {symbol} ({interval})")
-                return []
-            
+            # Fetch the first page of data directly from Binance
+            binance_start_ms = int(start_time.timestamp() * 1000)
             klines = await binance.get_klines(
-                symbol=symbol, interval=interval, limit=binance_limit,
-                start_time=binance_start_ms, end_time=binance_end_ms
+                symbol=symbol, interval=interval, limit=page_size,
+                start_time=binance_start_ms
             )
             
             await binance.disconnect()
             
-            data_entities = []
-            for k in klines:
-                if len(k) >= 6 and all(k[1:6]):
-                    entity = MarketDataEntity(
-                        symbol=symbol, interval=interval, timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                        open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                        close=float(k[4]), volume=float(k[5])
-                    )
-                    data_entities.append(entity)
+            data_entities = [
+                MarketDataEntity(
+                    symbol=symbol, interval=interval,
+                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                    open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                    close=float(k[4]), volume=float(k[5])
+                ) for k in klines if len(k) >= 6 and all(k[1:6])
+            ]
             
-            if data_entities and background_tasks and page == 1:
-                logger.info(f"Initiating background task to get and save full historical data")
-                background_tasks.add_task(
-                    fetch_and_save_full_history, 
-                    symbol, interval, calculate_start_time(interval)
-                )
+            # **THIS IS THE KEY CHANGE**
+            if data_entities and page == 1:
+                logger.info(f"Dispatching Celery task to fetch full history for {symbol} ({interval})")
+                # Call the Celery task using .delay() instead of BackgroundTasks
+                fetch_and_save_full_history_task.delay(symbol, interval)
             
             logger.info(f"Returning {len(data_entities)} records from Binance for page {page}")
             return data_entities

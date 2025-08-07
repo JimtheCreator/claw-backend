@@ -9,7 +9,6 @@ sys.path.append(parent_dir)
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
 from core.use_cases.market.market_data import fetch_crypto_data_paginated
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
 import json
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from core.services.crypto_list import search_cryptos, downsample_sparkline
@@ -77,7 +76,7 @@ async def get_market_data(
                 )
             
         # Add validation for time range
-        if start_datetime and end_datetime and start_datetime >= end_datetime:
+        if start_datetime and end_datetime and start_datetime > end_datetime:
             raise HTTPException(
                 status_code=400,
                 detail="start_time must be before end_time"
@@ -94,8 +93,7 @@ async def get_market_data(
             start_time=start_datetime,
             end_time=end_datetime,
             page=page,
-            page_size=page_size,
-            background_tasks=background_tasks
+            page_size=page_size
         )
 
         if isinstance(result, dict) and "error" in result:

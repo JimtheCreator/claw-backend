@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Set, Tuple
 from fastapi import BackgroundTasks
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_data_repository import InfluxDBMarketDataRepository
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
 import asyncio

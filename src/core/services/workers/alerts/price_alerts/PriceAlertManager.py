@@ -1,7 +1,6 @@
 # core/use_cases/alerts/price_alerts/PriceAlertManager.py 
 import asyncio
 import json
-from common.logger import logger
 from typing import Dict, List
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
@@ -10,7 +9,6 @@ from infrastructure.database.redis.cache import redis_cache # Import the singlet
 from firebase_admin import messaging
 from typing import Dict, List
 from common.logger import configure_logging, logger
-
 
 class AlertManager:
     ALERT_HASH_PREFIX = "price_alerts"

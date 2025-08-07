@@ -190,7 +190,8 @@ class ChartEngine:
                 "pattern_line_double_bottom": "rgba(20, 184, 157, 0.7)",
                 "target_line": "rgba(255, 0, 255, 0.7)",
                 "annotation_bg": "rgba(242, 54, 69, 0.8)",
-                "annotation_font": "#FFFFFF"
+                "annotation_font": "#FFFFFF",
+                "grid": "#1c1c1c"  # Added grid color to match Kotlin frontend
             }
         }
 
@@ -205,20 +206,34 @@ class ChartEngine:
             font=self.config['font'],
             xaxis_rangeslider_visible=False,
             showlegend=False,
-            legend=dict(orientation="h", 
+            legend=dict(orientation="h",
             yanchor="bottom", y=1.02, xanchor="right", x=1),
-            # --- CHANGE: Make background transparent ---
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)'
+            # --- CHANGE: Set an explicit dark, opaque background ---
+            # This will be used instead of the transparent one.
+            paper_bgcolor='#111111',
+            plot_bgcolor='#111111'
         )
-        # Explicitly set x-axis type to date for both subplots
-        self.fig.update_xaxes(showgrid=False, type="date", row=1, col=1)
-        self.fig.update_xaxes(showgrid=False, type="date", row=2, col=1)
-        # Move the price y-axis to the right and set autorange for tight fit
+        # Explicitly set x-axis type to date for both subplots with grid
+        grid_color = self.config['colors'].get('grid', '#1c1c1c')
+
+        # --- CHANGE: Add padding to the x-axis ---
+        # Calculate x-axis range with padding to prevent candles from touching the edges
+        min_time = self.ohlcv_df['timestamp'].min()
+        max_time = self.ohlcv_df['timestamp'].max()
+        duration = max_time - min_time
+        # Add 5% padding on each side
+        padding = duration * 0.05
+        x_range = [min_time - padding, max_time + padding]
+
+        self.fig.update_xaxes(showgrid=True, gridcolor=grid_color, type="date", row=1, col=1, range=x_range)
+        self.fig.update_xaxes(type="date", row=2, col=1)  # Shared x-axis, gridlines and range apply from row=1
+        
+        # Set y-axis for price with grid
         min_price = float(self.ohlcv_df['low'].min())
         max_price = float(self.ohlcv_df['high'].max())
         price_padding = (max_price - min_price) * 0.03 if max_price > min_price else 1
-        self.fig.update_yaxes(showgrid=False, side="right", row=1, col=1, autorange=True, range=[min_price - price_padding, max_price + price_padding])
+        self.fig.update_yaxes(showgrid=True, gridcolor=grid_color, side="right", row=1, col=1, autorange=True, range=[min_price - price_padding, max_price + price_padding])
+        # Set y-axis for volume without grid
         self.fig.update_yaxes(showgrid=False, row=2, col=1)
 
     def _add_candlestick_trace(self):
