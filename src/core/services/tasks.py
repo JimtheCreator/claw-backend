@@ -9,6 +9,139 @@ from infrastructure.database.influxdb.market_db import InfluxDBMarketDataReposit
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
+import os
+
+# --- Imports needed for the Telegram task (add these) ---
+import redis
+from telegram import Bot, Update
+from .workers.celery_worker import celery_app
+from common.logger import logger
+from telegram.ext import Application
+# --- Imports for existing data tasks ---
+from infrastructure.data_sources.binance.client import BinanceMarketData
+from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
+from core.domain.entities.MarketDataEntity import MarketDataEntity
+from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
+
+# --- Initializations for Telegram task (move from server.py) ---
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = os.getenv('REDIS_PORT', '6379')
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+
+# These can be module-level singletons for the worker
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
+redis_client = redis.from_url(REDIS_URL)
+
+
+
+
+# --- Initializations for Telegram task (move from server.py) ---
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+REDIS_HOST = os.getenv('REDIS_HOST')
+REDIS_PORT = os.getenv('REDIS_PORT')
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+
+# These can be module-level singletons for the worker
+redis_client = redis.from_url(REDIS_URL)
+
+# ===================================================================
+# === TELEGRAM TASK LOGIC WITH PROPER CONNECTION MANAGEMENT =======
+# ===================================================================
+
+async def _process_update_with_bot(update_data):
+    """Process individual update with proper bot instance management."""
+    # Create Application instance for proper connection management
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    try:
+        # Initialize the application (this sets up the HTTP client properly)
+        await application.initialize()
+        await application.start()
+        
+        bot = application.bot
+        update = Update.de_json(update_data, bot)
+        
+        if update.message:
+            user_id = update.effective_user.id
+            logger.info(f"Processing message from user {user_id}: '{update.message.text}'")
+            
+            # Rate limiting
+            rate_key = f"rate_limit:{user_id}"
+            if redis_client.exists(rate_key):
+                logger.warning(f"Rate limited user {user_id}")
+                return "rate_limited"
+            redis_client.setex(rate_key, 2, "1")
+            
+            # Handle the message
+            response = await handle_user_message(update, bot)
+            return response
+        
+        return "processed_non_message_update"
+        
+    except Exception as e:
+        logger.error(f"Error in _process_update_with_bot: {e}")
+        return "error"
+    finally:
+        # Properly cleanup the application and its connections
+        try:
+            await application.stop()
+            await application.shutdown()
+        except Exception as cleanup_error:
+            logger.error(f"Error during cleanup: {cleanup_error}")
+
+async def handle_user_message(update: Update, bot: Bot):
+    """Handles user messages and sends replies."""
+    chat_id = update.effective_chat.id
+    text = update.message.text
+    
+    try:
+        if text.startswith('/start'):
+            response_text = "🎉 Welcome to Watchers! Bot is working perfectly!"
+        elif text.startswith('/help'):
+            response_text = "Available commands:\n/start - Start the bot\n/help - Show this help"
+        elif text.startswith('/download'):
+            response_text = "📥 Download feature coming soon!"
+        elif text.startswith('/plans'):
+            response_text = "📋 Plans feature coming soon!"
+        else:
+            response_text = f"You said: {text}"
+        
+        await bot.send_message(chat_id=chat_id, text=response_text)
+        logger.info(f"✅ Successfully sent message to chat_id {chat_id}")
+        return "message_sent"
+        
+    except Exception as e:
+        logger.error(f"❌ FAILED to send message to chat_id {chat_id}. Error: {e}")
+        return "error_sending_message"
+
+@celery_app.task(name='telegram_bot.process_update')
+def process_telegram_update(update_data):
+    """Celery task to process Telegram updates asynchronously with proper connection management."""
+    try:
+        if not TELEGRAM_BOT_TOKEN:
+            logger.error("❌ Worker Error: TELEGRAM_BOT_TOKEN is not available.")
+            return "error_token_missing"
+
+        # Create a new event loop for this task if needed
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Run the async function
+        result = loop.run_until_complete(_process_update_with_bot(update_data))
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in Celery task process_telegram_update: {e}")
+        raise
+
+
 # --- Task for saving data ---
 @celery_app.task(name="src.core.services.tasks.save_market_data_task")
 def save_market_data_task(data_list_json):

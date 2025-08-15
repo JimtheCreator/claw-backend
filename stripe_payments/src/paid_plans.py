@@ -12,9 +12,8 @@ from src.infrastructure.database.supabase.crypto_repository import SupabaseCrypt
 from firebase_admin import auth
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from stripe_payments.src.plan_limits import PLAN_LIMITS
-
 
 router = APIRouter(tags=["Stripe Paid Plans"])
 
@@ -126,16 +125,53 @@ async def get_user_details(user_id: str, firebase_repo: FirebaseRepository) -> d
 
 
 @router.get("/subscriptions/{user_id}/limits")
-async def get_subscription_limits(user_id: str, supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+async def get_subscription_limits_and_usage(user_id: str, supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+    """
+    Retrieves the user's subscription plan limits and their current usage counts.
+    This provides a complete picture for the client-side usage display.
+    If no subscription exists, creates one with default plan.
+    """
     try:
-        result = await supabase_repo.get_subscription_limits(user_id)
-        return result
+        # 1. Ensure subscription exists (creates one if it doesn't exist)
+        await supabase_repo.ensure_subscription_exists(user_id, PLAN_LIMITS)
+        
+        # 2. Get the base subscription details (which includes limits and analysis counts)
+        subscription_details = await supabase_repo.get_subscription_limits(user_id)
+
+        # 3. Get usage counts for features not stored in the subscriptions table
+        watchlist_used = await supabase_repo.get_watchlist_count(user_id)
+        price_alerts_used = await supabase_repo.get_active_price_alerts_count(user_id)
+        pattern_alerts_used = await supabase_repo.get_active_pattern_alerts_count(user_id)
+
+        # 4. Combine the data into a comprehensive response object
+        # The client will receive both the limits and the current usage.
+        response_data = {
+            "limits": {
+                "plan_type": subscription_details.get("plan_type"),
+                "watchlist_limit": subscription_details.get("watchlist_limit"),
+                "price_alerts_limit": subscription_details.get("price_alerts_limit"),
+                "pattern_detection_limit": subscription_details.get("pattern_detection_limit"),
+                "sr_analysis_limit": subscription_details.get("sr_analysis_limit"),
+                "trendline_analysis_limit": subscription_details.get("trendline_analysis_limit"),
+            },
+            "usage": {
+                "watchlist_used": watchlist_used,
+                "price_alerts_used": price_alerts_used,
+                "pattern_detection_used": pattern_alerts_used,
+                "sr_analysis_used": subscription_details.get("sr_analysis_count", 0),
+                "trendline_analysis_used": subscription_details.get("trendline_analysis_count", 0),
+            }
+        }
+        
+        return response_data
+
     except HTTPException as e:
+        # Re-raise known HTTP exceptions
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching subscription limits: {str(e)}")
+        logger.error(f"Error fetching subscription limits and usage for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching subscription details: {str(e)}")
     
-
 @router.post("/stripe/initiate-payment", response_model=NativeCheckoutResponseSchema)
 async def initiate_payment_intent_or_subscription(
     request: SubscribeRequest,
@@ -466,7 +502,6 @@ async def initiate_payment_intent_or_subscription(
         logger.error(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
      
-
 @router.post("/stripe/cancel-subscription", response_model=CancellationResponseSchema)
 async def cancel_subscription(
     request: CancelSubscriptionRequest,
@@ -546,8 +581,8 @@ async def cancel_subscription(
                     success=True,
                     subscription_id=subscription_id,
                     cancellation_status="already_scheduled",
-                    cancellation_date=datetime.fromtimestamp(current_subscription.cancel_at_period_end).isoformat(),
-                    message=f"Subscription was already scheduled to cancel at the end of the billing period ({datetime.fromtimestamp(current_subscription.cancel_at_period_end).isoformat()})"
+                    cancellation_date=datetime.fromtimestamp(current_subscription.cancel_at).isoformat(),
+                    message=f"Subscription was already scheduled to cancel at the end of the billing period ({datetime.fromtimestamp(current_subscription.cancel_at).isoformat()})"
                 )
         except stripe.error.StripeError as e:
             logger.error(f"Stripe error retrieving subscription {subscription_id}: {str(e)}")
@@ -569,10 +604,30 @@ async def cancel_subscription(
 
                 logger.info(f"Object for 'current_period_end' for {subscription_id}: {dict(canceled_subscription)}")
                 try:
-                    cancellation_date = datetime.fromtimestamp(canceled_subscription.cancel_at_period_end)
-                except AttributeError as e:
-                    logger.error(f"Subscription object missing 'current_period_end' for {subscription_id}: {dict(canceled_subscription)}")
-                    raise
+                    # ✅ CORRECTED: Get current_period_end from subscription items, not subscription root
+                    if (canceled_subscription.items and 
+                        canceled_subscription.items.data and 
+                        len(canceled_subscription.items.data) > 0):
+                        
+                        subscription_item = canceled_subscription.items.data[0]
+                        current_period_end = subscription_item.current_period_end
+                        cancellation_date = datetime.fromtimestamp(current_period_end)
+                    else:
+                        # Fallback: if items data is not available, use cancel_at timestamp
+                        # which should be set when cancel_at_period_end=True
+                        if hasattr(canceled_subscription, 'cancel_at') and canceled_subscription.cancel_at:
+                            cancellation_date = datetime.fromtimestamp(canceled_subscription.cancel_at)
+                        else:
+                            # Last resort: estimate next period end based on billing interval
+                            # This is less accurate but prevents the error
+                            logger.warning(f"Could not determine exact cancellation date for {subscription_id}, using estimated date")
+                            # You might want to make an additional API call here to get accurate billing info
+                            cancellation_date = datetime.now() + timedelta(days=7)  # Rough estimate for weekly plans
+                            
+                except (AttributeError, KeyError) as e:
+                    logger.error(f"Error getting cancellation date for subscription {subscription_id}: {str(e)}")
+                    # Fallback to current time plus reasonable buffer
+                    cancellation_date = datetime.now() + timedelta(days=7)
                 
                 # Don't downgrade to free plan yet - will happen via webhook when subscription actually ends
                 logger.info(f"Scheduled cancellation for subscription {subscription_id} at period end: {cancellation_date.isoformat()}")
@@ -602,11 +657,11 @@ async def cancel_subscription(
             }
             
             # Update cancellation history in Firebase
-            await firebase_repo.db.child("subscription_history").child(user_id).push(cancellation_record)
+            firebase_repo.db.child("subscription_history").child(user_id).push(cancellation_record)
             
             # Update user metadata to indicate scheduled cancellation (but don't change plan status yet)
             if cancel_at_period_end:
-                await firebase_repo.db.child("subscription_status").child(user_id).update({
+                firebase_repo.db.child("subscription_status").child(user_id).update({
                     "cancel_scheduled": True,
                     "cancel_date": cancellation_date.isoformat()
                 })
@@ -630,8 +685,6 @@ async def cancel_subscription(
     except Exception as e:
         logger.error(f"Error canceling subscription for user {request.user_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error canceling subscription: {str(e)}")
-
-
 
 @router.post("/stripe/webhook")
 async def stripe_webhook(

@@ -37,3 +37,5 @@ kaleido
 concurrent-log-handler
 signal
 scikit-learn
+python-telegram-bot
+asyncpg
