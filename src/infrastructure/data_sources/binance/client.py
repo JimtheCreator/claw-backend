@@ -9,37 +9,152 @@ import websockets
 import asyncio
 import json
 from datetime import datetime, timezone
+from collections import deque
+import time
 
 
 logger = logging.getLogger(__name__)
 load_dotenv()
 
 
+class GlobalRateLimiter:
+    """Global rate limiter to prevent API bans across all instances"""
+    _instance = None
+    _lock = asyncio.Lock()
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if not self._initialized:
+            self.max_requests_per_minute = 1000  # Conservative limit (Binance allows 1200)
+            self.max_requests_per_second = 15    # Conservative limit (Binance allows 20)
+            self.minute_window = deque()
+            self.second_window = deque()
+            self.request_lock = asyncio.Lock()
+            self._initialized = True
+            logger.info("Global rate limiter initialized")
+    
+    async def acquire(self, weight: int = 1):
+        """Acquire permission to make API request with given weight"""
+        async with self.request_lock:
+            now = time.time()
+            
+            # Clean old requests from windows
+            self._clean_windows(now)
+            
+            # Check if we can make this request
+            current_minute_weight = sum(req[1] for req in self.minute_window)
+            current_second_weight = sum(req[1] for req in self.second_window)
+            
+            # Wait if limits would be exceeded
+            if current_minute_weight + weight > self.max_requests_per_minute:
+                wait_time = 60 - (now - self.minute_window[0][0])
+                logger.warning(f"Rate limit: waiting {wait_time:.2f}s for minute window")
+                await asyncio.sleep(wait_time)
+                return await self.acquire(weight)
+            
+            if current_second_weight + weight > self.max_requests_per_second:
+                wait_time = 1 - (now - self.second_window[0][0])
+                logger.warning(f"Rate limit: waiting {wait_time:.2f}s for second window")
+                await asyncio.sleep(wait_time)
+                return await self.acquire(weight)
+            
+            # Record the request
+            self.minute_window.append((now, weight))
+            self.second_window.append((now, weight))
+    
+    def _clean_windows(self, now: float):
+        """Remove old requests from tracking windows"""
+        # Clean minute window
+        while self.minute_window and now - self.minute_window[0][0] >= 60:
+            self.minute_window.popleft()
+        
+        # Clean second window
+        while self.second_window and now - self.second_window[0][0] >= 1:
+            self.second_window.popleft()
+
+
+class CircuitBreaker:
+    """Circuit breaker to handle API failures gracefully"""
+    def __init__(self, failure_threshold: int = 5, timeout: int = 300):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = 'CLOSED'  # CLOSED, OPEN, HALF_OPEN
+        self.lock = asyncio.Lock()
+    
+    async def call(self, func, *args, **kwargs):
+        """Execute function through circuit breaker"""
+        async with self.lock:
+            if self.state == 'OPEN':
+                if time.time() - self.last_failure_time > self.timeout:
+                    self.state = 'HALF_OPEN'
+                    logger.info("Circuit breaker moving to HALF_OPEN state")
+                else:
+                    raise Exception("Circuit breaker is OPEN - API temporarily unavailable")
+        
+        try:
+            result = await func(*args, **kwargs)
+            async with self.lock:
+                if self.state == 'HALF_OPEN':
+                    self.state = 'CLOSED'
+                    self.failure_count = 0
+                    logger.info("Circuit breaker closed - API recovered")
+            return result
+        except Exception as e:
+            async with self.lock:
+                self.failure_count += 1
+                self.last_failure_time = time.time()
+                
+                if self.failure_count >= self.failure_threshold:
+                    self.state = 'OPEN'
+                    logger.error(f"Circuit breaker opened after {self.failure_count} failures")
+            
+            raise e
+
+
 class BinanceMarketData:
+    # API endpoint weights (conservative estimates)
+    ENDPOINT_WEIGHTS = {
+        'get_klines': 1,
+        'get_ticker': 1,
+        'get_exchange_info': 10,
+        'get_all_tickers': 40,
+    }
+    
     def __init__(self):
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_API_SECRET")
         self.client = None
-        self.socket_manager = None
         self.websocket = None
         self._connection_lock = asyncio.Lock()
-        self._last_call_time = 0
-        self._throttle_delay = 300  # milliseconds
-        # Add a connection timeout to prevent hanging
-        self._connection_timeout = 10  # seconds
-        # Add a connection pool to reuse connections
+        
+        # Reduced connection timeout and pool size
+        self._connection_timeout = 30  # Increased timeout for stability
         self._connection_pool = {}
-        self._pool_size = 10
+        self._pool_size = 2  # Reduced from 10 to 2
         self._pool_lock = asyncio.Lock()
         self._init_task = None
+        
+        # Rate limiting and circuit breaker
+        self.global_limiter = GlobalRateLimiter()
+        self.circuit_breaker = CircuitBreaker()
+        
+        # WebSocket management
+        self._websocket_connections = {}
+        self._max_websocket_connections = 5  # Limit WebSocket connections
+        self._websocket_lock = asyncio.Lock()
 
     async def connect(self):
         """Initialize connection to Binance API with proper locking"""
-        # Use a lock to prevent multiple simultaneous connection attempts
         async with self._connection_lock:
             if self.client is None:
                 try:
-                    # Use a timeout to prevent hanging
                     self.client = await asyncio.wait_for(
                         AsyncClient.create(
                             self.api_key, 
@@ -47,7 +162,7 @@ class BinanceMarketData:
                         ),
                         timeout=self._connection_timeout
                     )
-                    logger.debug("Connected to Binance API")
+                    logger.info("Connected to Binance API")
                 except asyncio.TimeoutError:
                     logger.error("Timeout connecting to Binance API")
                     raise
@@ -56,88 +171,111 @@ class BinanceMarketData:
                     raise
 
     async def init_connection_pool(self):
-        """Initialize a pool of connections for parallel requests"""
+        """Initialize a small pool of connections"""
         if self._init_task is None:
             self._init_task = asyncio.create_task(self._initialize_pool())
         return await self._init_task
             
     async def _initialize_pool(self):
-        """Create a pool of connections"""
+        """Create a small pool of connections"""
         async with self._pool_lock:
             if not self._connection_pool:
                 logger.info(f"Initializing connection pool with {self._pool_size} connections")
-                tasks = []
                 for i in range(self._pool_size):
-                    tasks.append(self._create_connection(i))
-                await asyncio.gather(*tasks)
-                logger.info(f"Connection pool initialized with {len(self._connection_pool)} connections")
+                    try:
+                        client = await asyncio.wait_for(
+                            AsyncClient.create(
+                                self.api_key, 
+                                self.api_secret
+                            ),
+                            timeout=self._connection_timeout
+                        )
+                        self._connection_pool[i] = client
+                        # Add delay between connection creations
+                        if i < self._pool_size - 1:
+                            await asyncio.sleep(1)
+                    except Exception as e:
+                        logger.error(f"Failed to create connection {i}: {str(e)}")
+                        self._connection_pool[i] = None
                 
-    async def _create_connection(self, index):
-        """Create a single connection for the pool"""
-        try:
-            client = await asyncio.wait_for(
-                AsyncClient.create(
-                    self.api_key, 
-                    self.api_secret
-                ),
-                timeout=self._connection_timeout
-            )
-            self._connection_pool[index] = client
-            return client
-        except Exception as e:
-            logger.error(f"Failed to create connection {index}: {str(e)}")
-            return None
-            
+                active_connections = sum(1 for c in self._connection_pool.values() if c is not None)
+                logger.info(f"Connection pool initialized with {active_connections} active connections")
+                
     async def get_pooled_client(self):
         """Get a client from the pool"""
-        # Make sure the pool is initialized
         if not self._connection_pool:
             await self.init_connection_pool()
             
-        # Find an available client
         async with self._pool_lock:
             for index, client in self._connection_pool.items():
                 if client:
                     return client
                     
-        # If no clients available, create a new one
+        # Fallback to main client
         if not self.client:
             await self.connect()
         return self.client
 
     async def disconnect(self):
-        """Close connection gracefully with proper locking"""
+        """Close all connections gracefully"""
         async with self._connection_lock:
             if self.client:
                 try:
                     await self.client.close_connection()
                     self.client = None
-                    logger.debug("Disconnected from Binance API")
+                    logger.info("Disconnected main client from Binance API")
                 except Exception as e:
-                    logger.error(f"Error disconnecting from Binance API: {e}")
+                    logger.error(f"Error disconnecting main client: {e}")
                     
         # Close pool connections
         async with self._pool_lock:
             close_tasks = []
             for index, client in list(self._connection_pool.items()):
                 if client:
-                    try:
-                        close_tasks.append(client.close_connection())
-                        self._connection_pool[index] = None
-                    except Exception as e:
-                        logger.error(f"Error closing pooled connection {index}: {e}")
+                    close_tasks.append(self._close_client_safely(client, index))
             
             if close_tasks:
                 await asyncio.gather(*close_tasks, return_exceptions=True)
-                logger.debug("Closed all pooled connections")
+                self._connection_pool.clear()
+                logger.info("Closed all pooled connections")
+        
+        # Close WebSocket connections
+        await self._close_all_websockets()
+
+    async def _close_client_safely(self, client, index):
+        """Safely close a client connection"""
+        try:
+            await client.close_connection()
+            logger.debug(f"Closed pooled connection {index}")
+        except Exception as e:
+            logger.error(f"Error closing pooled connection {index}: {e}")
+
+    async def _close_all_websockets(self):
+        """Close all WebSocket connections"""
+        async with self._websocket_lock:
+            close_tasks = []
+            for key, ws in list(self._websocket_connections.items()):
+                if ws and not ws.closed:
+                    close_tasks.append(self._close_websocket_safely(key, ws))
+            
+            if close_tasks:
+                await asyncio.gather(*close_tasks, return_exceptions=True)
+                self._websocket_connections.clear()
+
+    async def _close_websocket_safely(self, key, websocket):
+        """Safely close a WebSocket connection"""
+        try:
+            await websocket.close()
+            logger.debug(f"Closed WebSocket connection: {key}")
+        except Exception as e:
+            logger.error(f"Error closing WebSocket {key}: {e}")
 
     async def ensure_connected(self):
         """Ensure client is connected before making API calls"""
         if self.client is None:
             await self.connect()
         return self.client is not None
-    
-    # Modified to use connection pooling and with timeout
+
     async def get_klines(
         self,
         symbol: str,
@@ -145,10 +283,10 @@ class BinanceMarketData:
         limit: int = 500,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        max_retries: int = 3 # Add max_retries parameter
+        max_retries: int = 2  # Reduced from 3 to 2
     ) -> list:
-        """Fetch OHLCV data (Open, High, Low, Close, Volume)"""
-        # Validate interval first
+        """Fetch OHLCV data with proper rate limiting and error handling"""
+        # Validate interval
         valid_intervals = [
             "1m", "3m", "5m", "15m", "30m",
             "1h", "2h", "4h", "6h", "8h", "12h",
@@ -159,137 +297,188 @@ class BinanceMarketData:
             logger.error(f"Invalid interval requested: {interval}")
             raise ValueError(f"Invalid interval: {interval}. Valid intervals: {valid_intervals}")
 
-        # --- Start of new retry logic ---
+        # Validate symbol format
+        if not symbol.isalnum():
+            raise ValueError("Invalid symbol format")
+
+        # Limit the limit parameter to prevent excessive data requests
+        limit = min(limit, 1000)  # Binance max is 1000
+
+        async def _fetch_klines():
+            # Acquire rate limit permission
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_klines'])
+            
+            client = await self.get_pooled_client()
+            
+            return await asyncio.wait_for(
+                client.get_klines(
+                    symbol=symbol,
+                    interval=interval,
+                    limit=limit,
+                    startTime=start_time,
+                    endTime=end_time
+                ),
+                timeout=self._connection_timeout
+            )
+
+        # Retry logic with exponential backoff
         for attempt in range(max_retries):
             try:
-                await self._throttle()
-
-                # Get a client from the pool if available
-                client = await self.get_pooled_client()
-
-                # Validate symbol format
-                if not symbol.isalnum():
-                    raise ValueError("Invalid symbol")
-
-                # Add debug logging for raw response
                 logger.debug(f"Attempt {attempt + 1}/{max_retries}: Fetching {limit} {interval} klines for {symbol}")
+                
+                klines = await self.circuit_breaker.call(_fetch_klines)
 
-                # Use a timeout for the API call
-                klines = await asyncio.wait_for(
-                    client.get_klines(
-                        symbol=symbol,
-                        interval=interval,
-                        limit=limit,
-                        startTime=start_time,
-                        endTime=end_time
-                    ),
-                    timeout=self._connection_timeout
-                )
-
-                # Validate response structure
+                # Validate response
                 if not isinstance(klines, list) or len(klines) == 0:
                     logger.warning(f"No klines data returned for {symbol}/{interval} on attempt {attempt + 1}")
-                    # If it's not the last attempt, wait and retry
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(2 ** attempt) # Exponential backoff
+                        await asyncio.sleep(2 ** attempt)
                         continue
-                    return [] # Return empty list after last attempt
+                    return []
 
                 # Validate structure
                 if len(klines[0]) < 6:
                     logger.error(f"Malformed kline data for {symbol}/{interval}")
                     return []
 
-                # Filter out all-zero or malformed candles
+                # Filter out invalid candles
                 valid_klines = [
                     k for k in klines
                     if len(k) >= 6 and all(float(val) > 0 for val in k[1:6])
                 ]
 
                 if not valid_klines:
-                    logger.warning(f"Filtered out all klines for {symbol}/{interval} due to zero values")
+                    logger.warning(f"Filtered out all klines for {symbol}/{interval} due to invalid values")
                     return []
 
-                return valid_klines # Success, return the data
+                return valid_klines
 
-
-            except asyncio.TimeoutError:
-                logger.error(f"Timeout fetching klines for {symbol} on attempt {attempt + 1}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt) # Exponential backoff
-                    continue
-            except BinanceAPIException as e:
-                logger.error(f"Binance API Error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt) # Exponential backoff
-                    continue
             except Exception as e:
-                logger.error(f"Unexpected error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
+                logger.error(f"Error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(2 ** attempt) # Exponential backoff
+                    # Exponential backoff with jitter
+                    wait_time = (2 ** attempt) + (time.time() % 1)  # Add jitter
+                    await asyncio.sleep(wait_time)
                     continue
-        # --- End of new retry logic ---
         
-        return [] # Return empty list if all retries fail
-        
+        return []
 
     async def get_exchange_info(self):
-        """Get exchange information including symbol details"""
-        try:
-            await self._throttle()
-            
-            # Get a client from the pool if available
+        """Get exchange information with rate limiting"""
+        async def _fetch_exchange_info():
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_exchange_info'])
             client = await self.get_pooled_client()
-            
-            # Use a timeout for the API call
-            exchange_info = await asyncio.wait_for(
+            return await asyncio.wait_for(
                 client.get_exchange_info(),
                 timeout=self._connection_timeout
             )
-            return exchange_info
-        except asyncio.TimeoutError:
-            logger.error("Timeout fetching exchange info")
-            return {"symbols": []}
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching exchange info: {e}")
-            return {"symbols": []}
+
+        try:
+            return await self.circuit_breaker.call(_fetch_exchange_info)
         except Exception as e:
             logger.error(f"Error fetching exchange info: {e}")
             return {"symbols": []}
 
-    async def search_symbols(self, query: str, limit: int = 20):
-        """Search for symbols matching the query"""
-        try:
-            await self._throttle()
-            
-            # Get a client from the pool if available
+    async def get_ticker(self, symbol: str) -> Dict[str, Any]:
+        """Get ticker data for a specific symbol with rate limiting"""
+        async def _fetch_ticker():
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_ticker'])
             client = await self.get_pooled_client()
+            return await asyncio.wait_for(
+                client.get_ticker(symbol=symbol),
+                timeout=self._connection_timeout
+            )
+
+        try:
+            return await self.circuit_breaker.call(_fetch_ticker)
+        except Exception as e:
+            logger.error(f"Error fetching ticker for {symbol}: {e}")
+            return {
+                "lastPrice": "0", 
+                "priceChangePercent": "0",
+                "quoteVolume": "0"
+            }
+
+    async def get_tickers_batch(
+        self, 
+        symbols: List[str], 
+        batch_size: int = 3,  # Reduced batch size
+        batch_delay: float = 2.0  # Delay between batches
+    ) -> Dict[str, Dict[str, Any]]:
+        """Get ticker data for multiple symbols with controlled batching"""
+        if not symbols:
+            return {}
+        
+        # Limit total symbols to prevent abuse
+        symbols = symbols[:50]  # Max 50 symbols
+        
+        results = {}
+        
+        try:
+            for i in range(0, len(symbols), batch_size):
+                batch = symbols[i:i + batch_size]
+                logger.debug(f"Processing ticker batch {i//batch_size + 1}: {batch}")
+                
+                # Process batch with controlled concurrency
+                batch_tasks = [self.get_ticker(symbol) for symbol in batch]
+                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+                
+                # Process results
+                for j, result in enumerate(batch_results):
+                    symbol = batch[j]
+                    if isinstance(result, Exception):
+                        logger.error(f"Error fetching ticker for {symbol}: {result}")
+                        results[symbol] = {
+                            "lastPrice": "0", 
+                            "priceChangePercent": "0",
+                            "quoteVolume": "0"
+                        }
+                    else:
+                        results[symbol] = result
+                
+                # Wait between batches (except for the last batch)
+                if i + batch_size < len(symbols):
+                    await asyncio.sleep(batch_delay)
+                    
+        except Exception as e:
+            logger.error(f"Error in batch ticker fetch: {e}")
             
-            # Get all tickers first
-            all_tickers = await asyncio.wait_for(
+        return results
+
+    async def search_symbols(self, query: str, limit: int = 20):
+        """Search for symbols with rate limiting"""
+        async def _search_symbols():
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
+            client = await self.get_pooled_client()
+            return await asyncio.wait_for(
                 client.get_ticker(),
                 timeout=self._connection_timeout
             )
+
+        try:
+            all_tickers = await self.circuit_breaker.call(_search_symbols)
             
-            # Filter by the query string
             query = query.upper()
+            limit = min(limit, 100)  # Limit results
             
-            # First find exact symbol matches
+            # Find exact matches first
             exact_matches = [t for t in all_tickers if t.get('symbol') == query]
             
-            # Then find symbols containing the query
-            contains_matches = [t for t in all_tickers if query in t.get('symbol') and t not in exact_matches]
+            # Then find partial matches
+            contains_matches = [
+                t for t in all_tickers 
+                if query in t.get('symbol', '') and t not in exact_matches
+            ]
             
-            # Sort by volume (high to low)
+            # Sort by volume
             contains_matches.sort(
                 key=lambda x: float(x.get('quoteVolume', 0)), 
                 reverse=True
             )
             
-            # Combine exact matches (higher priority) with other matches
             filtered_tickers = exact_matches + contains_matches
             
-            # Get exchange info to determine base and quote assets
+            # Get exchange info with rate limiting
             exchange_info = await self.get_exchange_info()
             symbol_info = {}
             
@@ -301,7 +490,7 @@ class BinanceMarketData:
                         'asset': symbol_data.get('baseAsset')
                     }
             
-            # Enhance ticker data with symbol info
+            # Enhance results
             enhanced_results = []
             for ticker in filtered_tickers[:limit]:
                 symbol = ticker.get('symbol')
@@ -309,461 +498,170 @@ class BinanceMarketData:
                     ticker.update(symbol_info[symbol])
                 enhanced_results.append(ticker)
             
-            return enhanced_results[:limit]
-        except asyncio.TimeoutError:
-            logger.error("Timeout searching symbols")
-            return []
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error searching symbols: {e}")
-            return []
+            return enhanced_results
+            
         except Exception as e:
             logger.error(f"Error searching symbols: {e}")
             return []
 
-    async def get_ticker_data(self):
-        """Get all ticker data"""
-        try:
-            await self._throttle()
-            
-            # Get a client from the pool if available
-            client = await self.get_pooled_client()
-            
-            # Use a timeout for the API call
-            ticker_data = await asyncio.wait_for(
-                client.get_ticker(),
-                timeout=self._connection_timeout
+    async def get_websocket_connection(self, stream_key: str, socket_url: str):
+        """Get or create a WebSocket connection with connection limits"""
+        async with self._websocket_lock:
+            # Check connection limit
+            active_connections = sum(
+                1 for ws in self._websocket_connections.values() 
+                if ws and not ws.closed
             )
-            return ticker_data
-        except asyncio.TimeoutError:
-            logger.error("Timeout fetching ticker data")
-            return []
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching ticker data: {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Error fetching ticker data: {e}")
-            return []
-
-    # Modified to use connection pool and timeout
-    async def get_ticker(self, symbol: str) -> Dict[str, Any]:
-        """Get ticker data for a specific symbol"""
-        try:
-            await self._throttle()  
             
-            # Get a client from the pool if available
-            client = await self.get_pooled_client()
+            if active_connections >= self._max_websocket_connections:
+                # Close oldest connection
+                oldest_key = next(iter(self._websocket_connections))
+                oldest_ws = self._websocket_connections.pop(oldest_key)
+                if oldest_ws and not oldest_ws.closed:
+                    await oldest_ws.close()
+                    logger.info(f"Closed oldest WebSocket connection: {oldest_key}")
             
-            # Use a timeout for the API call
-            ticker = await asyncio.wait_for(
-                client.get_ticker(symbol=symbol),
-                timeout=self._connection_timeout
-            )
-            return ticker
-        except asyncio.TimeoutError:
-            logger.error(f"Timeout fetching ticker for {symbol}")
-            return {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            }
-        except BinanceAPIException as e:
-            logger.error(f"Binance API Error fetching ticker for {symbol}: {e}")
-            return {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            }
-        except Exception as e:
-            logger.error(f"Error fetching ticker for {symbol}: {e}")
-            return {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            }
+            # Create new connection
+            try:
+                websocket = await websockets.connect(
+                    socket_url,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    close_timeout=10
+                )
+                self._websocket_connections[stream_key] = websocket
+                logger.info(f"Created WebSocket connection: {stream_key}")
+                return websocket
+            except Exception as e:
+                logger.error(f"Failed to create WebSocket connection {stream_key}: {e}")
+                raise
 
-    async def get_tickers_watchlist(self, symbols: list[str]) -> list[dict]:
-        """
-        Fetch ticker data for a list of symbols from Binance by retrieving all tickers and filtering.
-
-        Args:
-            symbols (list[str]): List of trading symbols (e.g., ["BTCUSDT", "ETHUSDT"]).
-
-        Returns:
-            list[dict]: List of ticker dictionaries for the specified symbols.
-        """
-        if not symbols:
-            return []
-
-        # Ensure the client is connected
-        await self.ensure_connected()
-
-        try:
-            # Fetch all tickers (no parameters retrieves all available tickers)
-            all_tickers = await self.client.get_ticker()
-
-            # Validate the response is a list
-            if not isinstance(all_tickers, list):
-                logger.error("Unexpected response format from get_ticker: %s", all_tickers)
-                return []
-
-            # Filter tickers to include only those in the provided symbols list
-            tickers = [ticker for ticker in all_tickers if ticker.get('symbol') in symbols]
-            return tickers
-
-        except BinanceAPIException as e:
-            logger.error("Binance API Error fetching tickers: %s", e)
-            return []
-        except Exception as e:
-            logger.error("Error fetching tickers: %s", e)
-            return []
-            
-    # Method to get multiple tickers in parallel
-    async def get_tickers_batch(self, symbols: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Get ticker data for multiple symbols in parallel"""
-        if not symbols:
-            return {}
-            
-        try:
-            # Initialize connection pool if not already done
-            if not self._connection_pool:
-                await self.init_connection_pool()
-                
-            # Create tasks for each symbol
-            tasks = []
-            for symbol in symbols:
-                tasks.append(self.get_ticker(symbol))
-                
-            # Run all tasks in parallel
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Process results
-            tickers = {}
-            for i, result in enumerate(results):
-                symbol = symbols[i]
-                if isinstance(result, Exception):
-                    logger.error(f"Error fetching ticker for {symbol}: {result}")
-                    tickers[symbol] = {
-                        "lastPrice": "0", 
-                        "priceChangePercent": "0",
-                        "quoteVolume": "0"
-                    }
-                else:
-                    tickers[symbol] = result
-                    
-            return tickers
-        except Exception as e:
-            logger.error(f"Error in batch ticker fetch: {e}")
-            return {symbol: {
-                "lastPrice": "0", 
-                "priceChangePercent": "0",
-                "quoteVolume": "0"
-            } for symbol in symbols}
+    async def get_realtime_metrics(self, symbol: str) -> AsyncGenerator[dict, None]:
+        """WebSocket-based real-time updates with connection management"""
+        symbol = symbol.upper()
+        stream_key = f"{symbol}_ticker"
+        socket_url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
         
-    async def get_combined_stream_for_tickers(self, symbols: List[str]) -> AsyncGenerator[dict, None]:
+        try:
+            websocket = await self.get_websocket_connection(stream_key, socket_url)
+            
+            async for msg_text in websocket:
+                msg = json.loads(msg_text)
+                yield {
+                    "price": float(msg['c']),
+                    "change": float(msg['P']),
+                    "volume": float(msg['v']),
+                    "timestamp": msg['E']
+                }
+        except Exception as e:
+            logger.error(f"Error in realtime metrics for {symbol}: {e}")
+            # Clean up failed connection
+            async with self._websocket_lock:
+                if stream_key in self._websocket_connections:
+                    del self._websocket_connections[stream_key]
+        finally:
+            # Connection cleanup is handled by the context manager
+            pass
+
+    async def get_combined_stream_for_tickers(
+        self, 
+        symbols: List[str], 
+        max_symbols: int = 10  # Limit symbols per stream
+    ) -> AsyncGenerator[dict, None]:
+        """Stream combined ticker data with symbol limits"""
         if not symbols:
             return
+            
+        # Limit symbols to prevent overload
+        symbols = symbols[:max_symbols]
         lower_symbols = [s.lower() for s in symbols]
         streams = [f"{symbol}@ticker" for symbol in lower_symbols]
         streams_path = "/".join(streams)
+        
+        stream_key = f"combined_ticker_{len(symbols)}"
         socket_url = f"wss://stream.binance.com:9443/stream?streams={streams_path}"
         
-        logger.info(f"Connecting to combined ticker stream: {socket_url}")
+        logger.info(f"Connecting to combined ticker stream for {len(symbols)} symbols")
         
         try:
-            # Disable client-side pings to prevent timeout errors
-            async with websockets.connect(socket_url) as websocket:
-                async for msg_text in websocket:
-                    msg = json.loads(msg_text)
-                    data = msg.get('data', {})
-                    stream_name = msg.get('stream', '')
-                    if '@ticker' in stream_name:
-                        symbol = stream_name.split('@')[0].upper()
-                        yield {
-                            "symbol": symbol,
-                            "ticker": {
-                                "price": float(data.get('c', 0)),
-                                "change": float(data.get('P', 0)),
-                                "volume": float(data.get('v', 0)),
-                            }
+            websocket = await self.get_websocket_connection(stream_key, socket_url)
+            
+            async for msg_text in websocket:
+                msg = json.loads(msg_text)
+                data = msg.get('data', {})
+                stream_name = msg.get('stream', '')
+                
+                if '@ticker' in stream_name:
+                    symbol = stream_name.split('@')[0].upper()
+                    yield {
+                        "symbol": symbol,
+                        "ticker": {
+                            "price": float(data.get('c', 0)),
+                            "change": float(data.get('P', 0)),
+                            "volume": float(data.get('v', 0)),
                         }
+                    }
         except Exception as e:
             logger.error(f"Error in combined ticker stream: {e}")
-            raise
-
-    async def _throttle(self):
-        now = asyncio.get_event_loop().time() * 1000  # in ms
-        delta = now - self._last_call_time
-        if delta < self._throttle_delay:
-            await asyncio.sleep((self._throttle_delay - delta) / 1000)
-        self._last_call_time = asyncio.get_event_loop().time() * 1000
-
-    async def get_realtime_metrics(self, symbol: str) -> AsyncGenerator[dict, None]:
-        """WebSocket-based real-time updates with proper typing"""
-        # Make sure we're connected
-        if not self.client:
-            await self.connect()
-            
-        # Create a BinanceSocketManager instead of using get_websocket()
-        # Create a websocket connection directly
-        # The Binance API Python library might be using a different approach
-        # Let's use the websocket client directly
-        base_url = "wss://stream.binance.com:9443/ws/"
-        socket_url = f"{base_url}{symbol.lower()}@ticker"
-        
-        try:
-            async with websockets.connect(socket_url) as websocket:
-                # Process incoming messages
-                async for msg_text in websocket:
-                    # Parse the JSON message
-                    import json
-                    msg = json.loads(msg_text)
-                    
-                    # Process the ticker data
-                    yield {
-                        "price": float(msg['c']),  # Close price
-                        "change": float(msg['p']),  # Price change percent
-                        "volume": float(msg['v']),  # Volume
-                        "timestamp": msg['E']  # Event time
-                    }
-        except Exception as e:
-            logger.error(f"Error in websocket stream for {symbol}: {e}")
-        finally:
-            # No need to explicitly close the websocket here as the 'async with' context manager handles it
-            pass
-
-    async def start_websocket(self, symbol: str):
-        """Initialize WebSocket connection for trade data"""
-        # Make sure we're connected
-        if not self.client:
-            await self.connect()
-        
-        # Use websockets library directly
-        import websockets
-        
-        # Connect to Binance WebSocket
-        base_url = "wss://stream.binance.com:9443/ws/"
-        socket_url = f"{base_url}{symbol.lower()}@trade"
-        
-        # Store the websocket connection
-        self.websocket = await websockets.connect(socket_url)
-        return self.websocket
-
-    async def close_websocket(self):
-        """Close WebSocket connection gracefully"""
-        if self.websocket:
-            try:
-                await self.websocket.close()
-                self.websocket = None
-                logger.debug(f"Closed WebSocket connection")
-            except Exception as e:
-                logger.error(f"Error closing WebSocket: {e}")
-                
-    async def receive_websocket_message(self):
-        """Receive a message from the WebSocket connection"""
-        if self.websocket:
-            try:
-                # Receive the message from the websocket
-                message = await self.websocket.recv()
-                
-                # Parse the JSON message
-                import json
-                return json.loads(message)
-            except Exception as e:
-                logger.error(f"Error receiving WebSocket message: {e}")
-                return None
-            
-
-    async def get_realtime_metrics_to_websocket(self, symbol: str) -> AsyncGenerator[dict, None]:
-        """WebSocket-based real-time updates with proper symbol formatting"""
-        symbol = symbol.upper()  # Binance requires uppercase symbols
-        base_url = "wss://stream.binance.com:9443/ws/"
-        socket_url = f"{base_url}{symbol.lower()}@ticker"
-        
-        try:
-            async with websockets.connect(socket_url) as websocket:
-                async for msg_text in websocket:
-                    msg = json.loads(msg_text)
-                    yield {
-                        "price": float(msg['c']),
-                        "change": float(msg['P']),  # Price change percent
-                        "volume": float(msg['v']),  # Quote volume
-                        "timestamp": msg['E']
-                    }
-        except Exception as e:
-            logger.error(f"Binance WS error: {str(e)}")
-            raise
+            async with self._websocket_lock:
+                if stream_key in self._websocket_connections:
+                    del self._websocket_connections[stream_key]
 
     async def get_ohlcv_stream(self, symbol: str, interval: str = "1m") -> AsyncGenerator[dict, None]:
-        """Stream OHLCV data for a specific symbol and interval
-        
-        Args:
-            symbol (str): The trading pair symbol (e.g., BTCUSDT)
-            interval (str): Kline/candlestick interval (1m, 5m, 15m, 1h, etc.)
-            
-        Yields:
-            dict: OHLCV data structure with open, high, low, close, volume
-        """
-        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
+        """Stream OHLCV data with connection management"""
+        symbol = symbol.lower()
+        stream_key = f"{symbol}_kline_{interval}"
         stream_name = f"{symbol}@kline_{interval}"
         socket_url = f"wss://stream.binance.com:9443/ws/{stream_name}"
         
         try:
-            async with websockets.connect(socket_url) as websocket:
-                async for msg_text in websocket:
-                    msg = json.loads(msg_text)
-                    kline = msg.get('k', {})
-                    
-                    # Only yield completed candles if requested
-                    if kline.get('x', False):  # x = is this kline closed?
-                        yield {
-                            "open_time": kline.get('t'),            # Open time
-                            "close_time": kline.get('T'),           # Close time
-                            "open": float(kline.get('o', 0)),       # Open price
-                            "high": float(kline.get('h', 0)),       # High price
-                            "low": float(kline.get('l', 0)),        # Low price
-                            "close": float(kline.get('c', 0)),      # Close price
-                            "volume": float(kline.get('v', 0)),     # Base asset volume
-                            "quote_volume": float(kline.get('q', 0)), # Quote asset volume
-                            "trades": kline.get('n', 0),            # Number of trades
-                            "timestamp": msg.get('E')               # Event time
-                        }
+            websocket = await self.get_websocket_connection(stream_key, socket_url)
+            
+            async for msg_text in websocket:
+                msg = json.loads(msg_text)
+                kline = msg.get('k', {})
+                
+                # Only yield completed candles
+                if kline.get('x', False):
+                    yield {
+                        "open_time": kline.get('t'),
+                        "close_time": kline.get('T'),
+                        "open": float(kline.get('o', 0)),
+                        "high": float(kline.get('h', 0)),
+                        "low": float(kline.get('l', 0)),
+                        "close": float(kline.get('c', 0)),
+                        "volume": float(kline.get('v', 0)),
+                        "quote_volume": float(kline.get('q', 0)),
+                        "trades": kline.get('n', 0),
+                        "timestamp": msg.get('E')
+                    }
         except Exception as e:
             logger.error(f"Error in OHLCV stream for {symbol}: {e}")
-        finally:
-            # No need to explicitly close the websocket as it's handled by the context manager
-            pass
+            async with self._websocket_lock:
+                if stream_key in self._websocket_connections:
+                    del self._websocket_connections[stream_key]
 
-
-    async def stream_kline_events(self, symbol: str, interval: str = "1m") -> AsyncGenerator[dict, None]:
-        """
-        Streams all kline events (both open and closed) for a symbol and interval.
-
-        This provides every update from the WebSocket for real-time analysis,
-        unlike get_ohlcv_stream which only yields completed candles.
-
-        Args:
-            symbol (str): The trading pair symbol (e.g., BTCUSDT).
-            interval (str): Kline/candlestick interval (1m, 5m, 1h, etc.).
-
-        Yields:
-            dict: The raw JSON message from the Binance kline WebSocket stream.
-        """
-        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
-        stream_name = f"{symbol}@kline_{interval}"
-        socket_url = f"wss://stream.binance.com:9443/ws/{stream_name}"
+    # Legacy method compatibility (with safety improvements)
+    async def get_tickers_watchlist(self, symbols: list[str]) -> list[dict]:
+        """Fetch ticker data for watchlist symbols using batch method"""
+        if not symbols:
+            return []
         
-        logger.info(f"Connecting to raw kline event stream: {socket_url}")
-
-        try:
-            async with websockets.connect(socket_url) as websocket:
-                async for msg_text in websocket:
-                    # Yield the raw message directly
-                    yield json.loads(msg_text)
-                    
-        except Exception as e:
-            logger.error(f"Error in kline event stream for {symbol}: {e}")
-            raise
-
-    async def get_combined_stream(self, symbol: str, include_ticker: bool = True, include_ohlcv: bool = True, ohlcv_interval: str = "1m") -> AsyncGenerator[dict, None]:
-        """Stream combined market data including ticker and OHLCV
+        # Use the improved batch method
+        ticker_dict = await self.get_tickers_batch(symbols, batch_size=5, batch_delay=1.5)
         
-        Args:
-            symbol (str): The trading pair symbol (e.g., BTCUSDT)
-            include_ticker (bool): Whether to include ticker data
-            include_ohlcv (bool): Whether to include OHLCV data
-            ohlcv_interval (str): OHLCV candle interval
-            
-        Yields:
-            dict: Combined data structure with ticker and/or OHLCV data
-        """
-        symbol = symbol.lower()  # Binance websocket requires lowercase symbols
-        
-        # Build the streams list
-        streams = []
-        if include_ticker:
-            streams.append(f"{symbol}@ticker")
-        if include_ohlcv:
-            streams.append(f"{symbol}@kline_{ohlcv_interval}")
-        
-        if not streams:
-            logger.error("No streams selected for combined stream")
-            return
-        
-        # Create the combined stream URL
-        streams_path = "/".join(streams)
-        socket_url = f"wss://stream.binance.com:9443/stream?streams={streams_path}"
-        
-        try:
-            async with websockets.connect(socket_url) as websocket:
-                async for msg_text in websocket:
-                    msg = json.loads(msg_text)
-                    
-                    # Process the combined stream data
-                    stream_name = msg.get('stream', '')
-                    data = msg.get('data', {})
-                    
-                    response = {
-                        "symbol": symbol.upper(),
-                        "timestamp": datetime.now(timezone.utc).timestamp() * 1000
-                    }
-                    
-                    # Add ticker data if present
-                    if '@ticker' in stream_name:
-                        response["ticker"] = {
-                            "price": float(data.get('c', 0)),  # Close price
-                            "change": float(data.get('P', 0)),  # Price change percent
-                            "volume": float(data.get('v', 0)),  # Volume
-                            "quote_volume": float(data.get('q', 0)),  # Quote volume
-                            "high": float(data.get('h', 0)),  # High price
-                            "low": float(data.get('l', 0)),  # Low price
-                            "event_time": data.get('E')  # Event time
-                        }
-                    
-                    # Add OHLCV data if present
-                    if '@kline' in stream_name:
-                        kline = data.get('k', {})
-                        response["ohlcv"] = {
-                            "interval": kline.get('i'),          # Interval
-                            "open_time": kline.get('t'),         # Open time
-                            "close_time": kline.get('T'),        # Close time
-                            "open": float(kline.get('o', 0)),    # Open price
-                            "high": float(kline.get('h', 0)),    # High price
-                            "low": float(kline.get('l', 0)),     # Low price
-                            "close": float(kline.get('c', 0)),   # Close price
-                            "volume": float(kline.get('v', 0)),  # Base asset volume
-                            "quote_volume": float(kline.get('q', 0)),  # Quote asset volume
-                            "trades": kline.get('n', 0),         # Number of trades
-                            "is_closed": kline.get('x', False)   # Is this kline closed?
-                        }
-                    
-                    yield response
-        except Exception as e:
-            logger.error(f"Error in combined stream for {symbol}: {e}")
-        finally:
-            # No need to explicitly close the websocket as it's handled by the context manager
-            pass
+        # Convert to list format for compatibility
+        return [
+            {"symbol": symbol, **data} 
+            for symbol, data in ticker_dict.items()
+        ]
 
     async def ensure_connected_minimal(self):
-        """Ensure client is connected with minimal resource usage (no pool initialization)"""
-        if self.client is None:
-            # Use a lock to prevent multiple simultaneous connection attempts
-            async with self._connection_lock:
-                if self.client is None:
-                    try:
-                        # Create just a single client without initializing the pool
-                        self.client = await asyncio.wait_for(
-                            AsyncClient.create(
-                                self.api_key, 
-                                self.api_secret
-                            ),
-                            timeout=self._connection_timeout
-                        )
-                        logger.debug("Connected to Binance API with minimal resources")
-                    except asyncio.TimeoutError:
-                        logger.error("Timeout connecting to Binance API")
-                        raise
-                    except Exception as e:
-                        logger.error(f"Failed to connect to Binance API: {str(e)}")
-                        raise
-                        
-        return self.client is not None
+        """Ensure minimal connection without pool initialization"""
+        return await self.ensure_connected()
+
+    # Remove old methods that bypass rate limiting
+    async def get_ticker_data(self):
+        """Deprecated: Use search_symbols or get_tickers_batch instead"""
+        logger.warning("get_ticker_data() is deprecated - use search_symbols() or get_tickers_batch()")
+        return []

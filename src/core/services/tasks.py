@@ -1,5 +1,10 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
+import os
+import redis
+from telegram import Bot, Update
+from telegram.ext import Application
+
 from .workers.celery_worker import celery_app
 from common.logger import logger
 
@@ -9,41 +14,21 @@ from infrastructure.database.influxdb.market_db import InfluxDBMarketDataReposit
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
-import os
-
-# --- Imports needed for the Telegram task (add these) ---
-import redis
-from telegram import Bot, Update
-from .workers.celery_worker import celery_app
-from common.logger import logger
-from telegram.ext import Application
-# --- Imports for existing data tasks ---
-from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
-from core.domain.entities.MarketDataEntity import MarketDataEntity
-from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
-
-# --- Initializations for Telegram task (move from server.py) ---
+# Environment variables (these are safe to load at module level)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
 
-# These can be module-level singletons for the worker
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-redis_client = redis.from_url(REDIS_URL)
+# ===================================================================
+# === LAZY INITIALIZATION FUNCTIONS ===============================
+# ===================================================================
 
-
-
-
-# --- Initializations for Telegram task (move from server.py) ---
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = os.getenv('REDIS_PORT')
-REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
-
-# These can be module-level singletons for the worker
-redis_client = redis.from_url(REDIS_URL)
+def get_redis_client():
+    """Lazy initialization of Redis client"""
+    if not hasattr(get_redis_client, '_client'):
+        get_redis_client._client = redis.from_url(REDIS_URL)
+    return get_redis_client._client
 
 # ===================================================================
 # === TELEGRAM TASK LOGIC WITH PROPER CONNECTION MANAGEMENT =======
@@ -67,6 +52,7 @@ async def _process_update_with_bot(update_data):
             logger.info(f"Processing message from user {user_id}: '{update.message.text}'")
             
             # Rate limiting
+            redis_client = get_redis_client()
             rate_key = f"rate_limit:{user_id}"
             if redis_client.exists(rate_key):
                 logger.warning(f"Rate limited user {user_id}")
@@ -141,8 +127,10 @@ def process_telegram_update(update_data):
         logger.error(f"Error in Celery task process_telegram_update: {e}")
         raise
 
+# ===================================================================
+# === DATA FETCHING TASKS =========================================
+# ===================================================================
 
-# --- Task for saving data ---
 @celery_app.task(name="src.core.services.tasks.save_market_data_task")
 def save_market_data_task(data_list_json):
     """Celery task to save a batch of market data."""
@@ -157,7 +145,6 @@ def save_market_data_task(data_list_json):
     asyncio.run(repo.save_market_data_bulk(data_entities))
     logger.info("Worker finished saving batch.")
 
-# --- Main Task for fetching full history ---
 @celery_app.task(name="src.core.services.tasks.fetch_and_save_full_history_task")
 def fetch_and_save_full_history_task(symbol: str, interval: str):
     """
@@ -302,7 +289,10 @@ async def fetch_and_save_full_history_parallel(symbol: str, interval: str, start
     if failed_chunks > 0:
         logger.warning(f"⚠️  {failed_chunks} chunks failed for {symbol} ({interval}). Consider running verification and backfill.")
 
-# --- Verification and Backfill Task ---
+# ===================================================================
+# === VERIFICATION AND BACKFILL TASKS ============================
+# ===================================================================
+
 def _find_gaps(existing_timestamps: set, expected_timestamps: list) -> list:
     """Compares existing timestamps to expected ones and returns a list of missing timestamps."""
     missing = [t for t in expected_timestamps if t not in existing_timestamps]
@@ -405,7 +395,6 @@ def verify_single_symbol_task(symbol: str, interval: str):
     logger.info(f"Starting verification and backfill for {symbol} ({interval})")
     asyncio.run(verify_symbol_data(symbol, interval))
     logger.info(f"Completed verification and backfill for {symbol} ({interval})")
-
 
 @celery_app.task(name="src.core.services.tasks.dispatch_verification_for_interval")
 def dispatch_verification_for_interval(interval: str):

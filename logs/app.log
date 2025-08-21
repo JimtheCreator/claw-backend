@@ -12186,3 +12186,347 @@ ImportError: cannot import name 'Bot' from 'telegram_app_handler' (d:\ClawInc\Cl
   }
 }
 2025-08-15 03:16:46,243 - ClawBackend - ERROR - [server.py:175] - Failed to send APK file: Failed to get http url content
+2025-08-19 02:18:17,671 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:17.671229+00:00
+2025-08-19 02:18:17,673 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:17.673679+00:00
+2025-08-19 02:18:17,675 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:17.675567+00:00
+2025-08-19 02:18:17,677 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:17.677341+00:00
+2025-08-19 02:18:18,099 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:18,099 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:18,100 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:18,100 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:19,105 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:19,118 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:19,121 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:19,124 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:20,110 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:20,129 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:20,137 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:20,138 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:21,112 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:21,131 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:21,141 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:21,142 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:21,664 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:21.664862+00:00
+2025-08-19 02:18:21,666 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:21.666620+00:00
+2025-08-19 02:18:21,668 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:21.668862+00:00
+2025-08-19 02:18:21,671 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:21.670963+00:00
+2025-08-19 02:18:21,672 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:21,715 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:21,724 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:21,724 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:22,715 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:22,720 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:22,733 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:22,735 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:23,720 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:23,725 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:23,738 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:23,747 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:24,721 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:24,727 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:24,742 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:24,748 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:25,668 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:25.668402+00:00
+2025-08-19 02:18:25,670 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:25.670524+00:00
+2025-08-19 02:18:25,674 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:25.674292+00:00
+2025-08-19 02:18:25,681 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:25.681030+00:00
+2025-08-19 02:18:25,685 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:25,687 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:25,692 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:25,694 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:26,691 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:26,694 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:26,697 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:26,700 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:27,697 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:27,699 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:27,702 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:27,705 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:28,716 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:28,717 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:28,717 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:28,718 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:29,676 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:29.676542+00:00
+2025-08-19 02:18:29,678 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:29.678374+00:00
+2025-08-19 02:18:29,681 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:29.681210+00:00
+2025-08-19 02:18:29,683 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:29,684 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:18:29.684382+00:00
+2025-08-19 02:18:29,688 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:29,695 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:29,697 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 1/3)
+2025-08-19 02:18:30,690 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:30,696 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:30,700 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:30,705 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 2/3)
+2025-08-19 02:18:31,695 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:31,700 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:31,711 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:31,714 - ClawBackend - WARNING - [market_db.py:45] - InfluxDB connection verification failed (attempt 3/3)
+2025-08-19 02:18:32,696 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:32,701 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:32,713 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:32,715 - ClawBackend - CRITICAL - [market_db.py:55] - Critical InfluxDB connection failure after retries
+2025-08-19 02:18:42,178 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-08-19 02:18:42,196 - ClawBackend - INFO - [cache.py:34] - ✅ Successfully connected to Redis
+2025-08-19 02:21:28,906 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-08-19 02:21:29,037 - ClawBackend - INFO - [cache.py:34] - ✅ Successfully connected to Redis
+2025-08-19 02:21:44,088 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:21:45,878 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:21:51,224 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:21:57,514 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BTCUSDT
+2025-08-19 02:22:08,422 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:22:07Z, end_time=2025-08-18T23:22:07Z, page=1, page_size=1000
+2025-08-19 02:22:08,423 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:22:07+00:00
+2025-08-19 02:22:08,424 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:22:07+00:00
+2025-08-19 02:22:08,424 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:22:07+00:00
+2025-08-19 02:22:08,424 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:22:08,482 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:22:08,813 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-08-19 02:22:08,814 - ClawBackend - INFO - [market_data.py:224] - No data found in InfluxDB for BTCUSDT (1m), fetching from Binance
+2025-08-19 02:22:08,819 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:22:07Z, end_time=2025-08-18T23:22:07Z, page=1, page_size=1000
+2025-08-19 02:22:08,820 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:22:07+00:00
+2025-08-19 02:22:08,820 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:22:07+00:00
+2025-08-19 02:22:08,821 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:22:07+00:00
+2025-08-19 02:22:08,821 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:22:09,019 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:22:09,096 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-08-19 02:22:09,097 - ClawBackend - INFO - [market_data.py:224] - No data found in InfluxDB for BTCUSDT (1m), fetching from Binance
+2025-08-19 02:22:10,830 - ClawBackend - INFO - [market_data.py:248] - Dispatching Celery task to fetch full history for BTCUSDT (1m)
+2025-08-19 02:22:12,344 - ClawBackend - INFO - [market_data.py:252] - Returning 300 records from Binance for page 1
+2025-08-19 02:22:12,345 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:22:12,354 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:22:12,435 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:22:12.433307+00:00
+2025-08-19 02:22:12,565 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:22:13,100 - ClawBackend - INFO - [tasks.py:241] - Created 130 parallel fetch tasks for BTCUSDT (1m).
+2025-08-19 02:22:13,101 - ClawBackend - INFO - [tasks.py:251] - Processing batch 1/7 (20 chunks)
+2025-08-19 02:22:13,964 - ClawBackend - INFO - [market_data.py:248] - Dispatching Celery task to fetch full history for BTCUSDT (1m)
+2025-08-19 02:22:13,967 - ClawBackend - INFO - [market_data.py:252] - Returning 300 records from Binance for page 1
+2025-08-19 02:22:13,969 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:22:13,973 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BTCUSDT (1m) from 2025-05-20 23:22:13.973004+00:00
+2025-08-19 02:22:13,987 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:22:15,714 - ClawBackend - INFO - [tasks.py:241] - Created 130 parallel fetch tasks for BTCUSDT (1m).
+2025-08-19 02:22:15,716 - ClawBackend - INFO - [tasks.py:251] - Processing batch 1/7 (20 chunks)
+2025-08-19 02:22:16,465 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BTCUSDT (1m)
+2025-08-19 02:22:17,062 - ClawBackend - INFO - [tasks.py:251] - Processing batch 2/7 (20 chunks)
+2025-08-19 02:22:18,438 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BTCUSDT (1m)
+2025-08-19 02:22:19,497 - ClawBackend - INFO - [tasks.py:251] - Processing batch 2/7 (20 chunks)
+2025-08-19 02:22:20,238 - ClawBackend - INFO - [tasks.py:251] - Processing batch 3/7 (20 chunks)
+2025-08-19 02:22:22,389 - ClawBackend - INFO - [tasks.py:251] - Processing batch 3/7 (20 chunks)
+2025-08-19 02:22:22,426 - ClawBackend - INFO - [tasks.py:251] - Processing batch 4/7 (20 chunks)
+2025-08-19 02:22:25,394 - ClawBackend - INFO - [tasks.py:251] - Processing batch 4/7 (20 chunks)
+2025-08-19 02:22:25,617 - ClawBackend - INFO - [tasks.py:251] - Processing batch 5/7 (20 chunks)
+2025-08-19 02:22:28,418 - ClawBackend - INFO - [tasks.py:251] - Processing batch 5/7 (20 chunks)
+2025-08-19 02:22:28,567 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BTCUSDT
+2025-08-19 02:22:28,568 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BTCUSDT
+2025-08-19 02:22:28,674 - ClawBackend - INFO - [tasks.py:251] - Processing batch 6/7 (20 chunks)
+2025-08-19 02:22:31,607 - ClawBackend - INFO - [tasks.py:251] - Processing batch 6/7 (20 chunks)
+2025-08-19 02:22:31,914 - ClawBackend - INFO - [tasks.py:251] - Processing batch 7/7 (10 chunks)
+2025-08-19 02:22:34,769 - ClawBackend - INFO - [tasks.py:251] - Processing batch 7/7 (10 chunks)
+2025-08-19 02:22:43,887 - ClawBackend - INFO - [tasks.py:293] - Successfully saved 129600 candles for BTCUSDT to InfluxDB.
+2025-08-19 02:22:43,888 - ClawBackend - INFO - [tasks.py:300] - Final status for BTCUSDT (1m): 130/130 chunks successful, 0 chunks had no data, 0 chunks failed
+2025-08-19 02:22:43,993 - ClawBackend - INFO - [tasks.py:169] - ✅ Completed parallel history fetch for BTCUSDT (1m)
+2025-08-19 02:22:47,458 - ClawBackend - INFO - [tasks.py:293] - Successfully saved 129600 candles for BTCUSDT to InfluxDB.
+2025-08-19 02:22:47,459 - ClawBackend - INFO - [tasks.py:300] - Final status for BTCUSDT (1m): 130/130 chunks successful, 0 chunks had no data, 0 chunks failed
+2025-08-19 02:22:47,549 - ClawBackend - INFO - [tasks.py:169] - ✅ Completed parallel history fetch for BTCUSDT (1m)
+2025-08-19 02:23:41,595 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:43,289 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:46,113 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:46,296 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BTCUSDT
+2025-08-19 02:23:46,297 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BTCUSDT
+2025-08-19 02:23:46,406 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:49,782 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:49,787 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:51,205 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:52,499 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:23:58,799 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:24:15,766 - ClawBackend - INFO - [user_symbol_watchlist.py:309] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:24:25,780 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:29:07,341 - ClawBackend - INFO - [app.py:62] - Binance connection pool closed.
+2025-08-19 02:29:07,434 - ClawBackend - INFO - [cache.py:416] - Redis connection closed
+2025-08-19 02:29:07,435 - ClawBackend - INFO - [app.py:64] - Redis cache connection closed.
+2025-08-19 02:29:07,437 - ClawBackend - INFO - [app.py:66] - Shutting down application...
+2025-08-19 02:30:03,543 - ClawBackend - INFO - [app.py:31] - Starting application...
+2025-08-19 02:30:03,725 - ClawBackend - INFO - [cache.py:34] - ✅ Successfully connected to Redis
+2025-08-19 02:33:53,896 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:33:56,935 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:33:58,470 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BTCUSDF
+2025-08-19 02:33:58,479 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:34:00,932 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:34:02,339 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BTCUSDT
+2025-08-19 02:34:05,588 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:34:05,600 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:34:05,777 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BTCUSDT
+2025-08-19 02:34:06,040 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:34:10,159 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:34:09Z, end_time=2025-08-18T23:34:09Z, page=1, page_size=1000
+2025-08-19 02:34:10,160 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:34:09+00:00
+2025-08-19 02:34:10,161 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:34:09+00:00
+2025-08-19 02:34:10,163 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:34:09+00:00
+2025-08-19 02:34:10,163 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:34:10,393 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:34:10,743 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 288 records
+2025-08-19 02:34:10,745 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BTCUSDT (1m), fetching missing candles.
+2025-08-19 02:34:10,749 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:34:09Z, end_time=2025-08-18T23:34:09Z, page=1, page_size=1000
+2025-08-19 02:34:10,750 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:34:09+00:00
+2025-08-19 02:34:10,751 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:34:09+00:00
+2025-08-19 02:34:10,752 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:34:09+00:00
+2025-08-19 02:34:10,753 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:34:10,761 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:34:10,852 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 288 records
+2025-08-19 02:34:10,853 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BTCUSDT (1m), fetching missing candles.
+2025-08-19 02:34:22,658 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 12 missing candles.
+2025-08-19 02:34:22,664 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:34:22,684 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 12 missing candles.
+2025-08-19 02:34:22,686 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:34:22,976 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:34:22,982 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:34:23,391 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 12 records.
+2025-08-19 02:34:23,393 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 12 records.
+2025-08-19 02:34:23,584 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 02:34:23,699 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 02:34:26,822 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BTCUSDT (1m)
+2025-08-19 02:34:44,461 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BTCUSDT
+2025-08-19 02:34:44,463 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BTCUSDT
+2025-08-19 02:34:44,862 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BNBUSDT
+2025-08-19 02:35:03,969 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BNBUSDT
+2025-08-19 02:35:05,521 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BNBUSDT with interval=1m, start_time=2025-08-18T18:35:04Z, end_time=2025-08-18T23:35:04Z, page=1, page_size=1000
+2025-08-19 02:35:05,523 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:35:04+00:00
+2025-08-19 02:35:05,524 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:35:04+00:00
+2025-08-19 02:35:05,525 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:35:04+00:00
+2025-08-19 02:35:05,527 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:35:05,536 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:35:05,593 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-08-19 02:35:05,594 - ClawBackend - INFO - [market_data.py:224] - No data found in InfluxDB for BNBUSDT (1m), fetching from Binance
+2025-08-19 02:35:05,921 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BNBUSDT with interval=1m, start_time=2025-08-18T18:35:04Z, end_time=2025-08-18T23:35:04Z, page=1, page_size=1000
+2025-08-19 02:35:05,922 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:35:04+00:00
+2025-08-19 02:35:05,923 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:35:04+00:00
+2025-08-19 02:35:05,925 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:35:04+00:00
+2025-08-19 02:35:05,926 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:35:05,937 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:35:05,992 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 0 records
+2025-08-19 02:35:05,994 - ClawBackend - INFO - [market_data.py:224] - No data found in InfluxDB for BNBUSDT (1m), fetching from Binance
+2025-08-19 02:35:07,759 - ClawBackend - INFO - [market_data.py:248] - Dispatching Celery task to fetch full history for BNBUSDT (1m)
+2025-08-19 02:35:07,766 - ClawBackend - INFO - [market_data.py:252] - Returning 300 records from Binance for page 1
+2025-08-19 02:35:07,769 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BNBUSDT page 1
+2025-08-19 02:35:07,777 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BNBUSDT (1m) from 2025-05-20 23:35:07.776932+00:00
+2025-08-19 02:35:07,786 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:35:07,903 - ClawBackend - INFO - [market_data.py:248] - Dispatching Celery task to fetch full history for BNBUSDT (1m)
+2025-08-19 02:35:07,907 - ClawBackend - INFO - [market_data.py:252] - Returning 300 records from Binance for page 1
+2025-08-19 02:35:07,909 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BNBUSDT page 1
+2025-08-19 02:35:07,917 - ClawBackend - INFO - [tasks.py:167] - 🚀 Starting parallel history fetch for BNBUSDT (1m) from 2025-05-20 23:35:07.917599+00:00
+2025-08-19 02:35:07,929 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:35:08,481 - ClawBackend - INFO - [tasks.py:241] - Created 130 parallel fetch tasks for BNBUSDT (1m).
+2025-08-19 02:35:08,482 - ClawBackend - INFO - [tasks.py:251] - Processing batch 1/7 (20 chunks)
+2025-08-19 02:35:08,553 - ClawBackend - INFO - [tasks.py:241] - Created 130 parallel fetch tasks for BNBUSDT (1m).
+2025-08-19 02:35:08,554 - ClawBackend - INFO - [tasks.py:251] - Processing batch 1/7 (20 chunks)
+2025-08-19 02:35:11,025 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BNBUSDT (1m)
+2025-08-19 02:35:11,730 - ClawBackend - INFO - [tasks.py:251] - Processing batch 2/7 (20 chunks)
+2025-08-19 02:35:11,780 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BNBUSDT (1m)
+2025-08-19 02:35:12,321 - ClawBackend - INFO - [tasks.py:251] - Processing batch 2/7 (20 chunks)
+2025-08-19 02:35:14,798 - ClawBackend - INFO - [tasks.py:251] - Processing batch 3/7 (20 chunks)
+2025-08-19 02:35:14,859 - ClawBackend - INFO - [tasks.py:251] - Processing batch 3/7 (20 chunks)
+2025-08-19 02:35:17,277 - ClawBackend - INFO - [tasks.py:251] - Processing batch 4/7 (20 chunks)
+2025-08-19 02:35:17,926 - ClawBackend - INFO - [tasks.py:251] - Processing batch 4/7 (20 chunks)
+2025-08-19 02:35:20,414 - ClawBackend - INFO - [tasks.py:251] - Processing batch 5/7 (20 chunks)
+2025-08-19 02:35:21,144 - ClawBackend - INFO - [tasks.py:251] - Processing batch 5/7 (20 chunks)
+2025-08-19 02:35:21,235 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BNBUSDT
+2025-08-19 02:35:21,237 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BNBUSDT
+2025-08-19 02:35:25,433 - ClawBackend - INFO - [tasks.py:251] - Processing batch 6/7 (20 chunks)
+2025-08-19 02:35:26,242 - ClawBackend - INFO - [tasks.py:251] - Processing batch 6/7 (20 chunks)
+2025-08-19 02:35:28,211 - ClawBackend - INFO - [tasks.py:251] - Processing batch 7/7 (10 chunks)
+2025-08-19 02:35:34,449 - ClawBackend - INFO - [tasks.py:251] - Processing batch 7/7 (10 chunks)
+2025-08-19 02:35:42,280 - ClawBackend - INFO - [tasks.py:293] - Successfully saved 129600 candles for BNBUSDT to InfluxDB.
+2025-08-19 02:35:42,284 - ClawBackend - INFO - [tasks.py:300] - Final status for BNBUSDT (1m): 130/130 chunks successful, 0 chunks had no data, 0 chunks failed
+2025-08-19 02:35:42,428 - ClawBackend - INFO - [tasks.py:169] - ✅ Completed parallel history fetch for BNBUSDT (1m)
+2025-08-19 02:35:46,071 - ClawBackend - INFO - [tasks.py:293] - Successfully saved 129600 candles for BNBUSDT to InfluxDB.
+2025-08-19 02:35:46,072 - ClawBackend - INFO - [tasks.py:300] - Final status for BNBUSDT (1m): 130/130 chunks successful, 0 chunks had no data, 0 chunks failed
+2025-08-19 02:35:46,217 - ClawBackend - INFO - [tasks.py:169] - ✅ Completed parallel history fetch for BNBUSDT (1m)
+2025-08-19 02:36:57,878 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:36:58,796 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BNBUSDT
+2025-08-19 02:36:58,798 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BNBUSDT
+2025-08-19 02:53:22,128 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BNBUSDT with interval=1m, start_time=2025-08-18T18:53:18Z, end_time=2025-08-18T23:53:18Z, page=1, page_size=1000
+2025-08-19 02:53:22,162 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:53:18+00:00
+2025-08-19 02:53:22,164 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:53:18+00:00
+2025-08-19 02:53:22,166 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:53:18+00:00
+2025-08-19 02:53:22,168 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:53:22,255 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:53:22,562 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 282 records
+2025-08-19 02:53:22,566 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BNBUSDT (1m), fetching missing candles.
+2025-08-19 02:53:22,659 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BNBUSDT with interval=1m, start_time=2025-08-18T18:53:17Z, end_time=2025-08-18T23:53:17Z, page=1, page_size=1000
+2025-08-19 02:53:22,660 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:53:17+00:00
+2025-08-19 02:53:22,661 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:53:17+00:00
+2025-08-19 02:53:22,662 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:53:17+00:00
+2025-08-19 02:53:22,663 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:53:22,672 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:53:22,791 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 282 records
+2025-08-19 02:53:22,791 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BNBUSDT (1m), fetching missing candles.
+2025-08-19 02:53:29,386 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 18 missing candles.
+2025-08-19 02:53:29,389 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BNBUSDT page 1
+2025-08-19 02:53:29,456 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 18 missing candles.
+2025-08-19 02:53:29,459 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BNBUSDT page 1
+2025-08-19 02:53:29,656 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:53:29,674 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 18 records.
+2025-08-19 02:53:29,676 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:53:29,683 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 18 records.
+2025-08-19 02:53:29,950 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 02:53:29,960 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 02:53:33,670 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BNBUSDT (1m)
+2025-08-19 02:53:54,087 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BNBUSDT
+2025-08-19 02:54:05,353 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BNBUSDT
+2025-08-19 02:54:05,355 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BNBUSDT
+2025-08-19 02:54:50,510 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:54:52,007 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:54:54,089 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:54:55,564 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:54:58,331 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:54:58,625 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:08,729 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:10,685 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:12,065 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:14,502 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:14,799 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:26,041 - ClawBackend - INFO - [get_symbol_market_data.py:183] - Searching cryptos with query: BTCUSDT
+2025-08-19 02:55:27,739 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:55:26Z, end_time=2025-08-18T23:55:26Z, page=1, page_size=1000
+2025-08-19 02:55:27,752 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:55:26+00:00
+2025-08-19 02:55:27,877 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:55:26+00:00
+2025-08-19 02:55:27,918 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:55:26+00:00
+2025-08-19 02:55:27,959 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:55:28,120 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:55:28,465 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 279 records
+2025-08-19 02:55:28,466 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BTCUSDT (1m), fetching missing candles.
+2025-08-19 02:55:28,472 - ClawBackend - INFO - [get_symbol_market_data.py:45] - 🔍 Request for BTCUSDT with interval=1m, start_time=2025-08-18T18:55:26Z, end_time=2025-08-18T23:55:26Z, page=1, page_size=1000
+2025-08-19 02:55:28,480 - ClawBackend - INFO - [get_symbol_market_data.py:70] - 🕒 Parsed end_time: 2025-08-18 23:55:26+00:00
+2025-08-19 02:55:28,483 - ClawBackend - INFO - [get_symbol_market_data.py:85] - 🕒 Parsed start_time: 2025-08-18 18:55:26+00:00
+2025-08-19 02:55:28,486 - ClawBackend - INFO - [get_symbol_market_data.py:87] - 🕒 Parsed end_time: 2025-08-18 23:55:26+00:00
+2025-08-19 02:55:28,494 - ClawBackend - INFO - [get_symbol_market_data.py:89] - 📦 Fetching crypto data from store/cache...
+2025-08-19 02:55:28,537 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:55:28,655 - ClawBackend - INFO - [market_db.py:228] - Data retrieved from INFLUXDB - Page 1, 279 records
+2025-08-19 02:55:28,658 - ClawBackend - INFO - [market_data.py:168] - Stale data detected for BTCUSDT (1m), fetching missing candles.
+2025-08-19 02:55:35,950 - ClawBackend - INFO - [user_symbol_watchlist.py:216] - New WebSocket connection accepted for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:55:44,775 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 21 missing candles.
+2025-08-19 02:55:44,777 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:55:44,851 - ClawBackend - INFO - [market_data.py:214] - Dispatched Celery task to save 21 missing candles.
+2025-08-19 02:55:44,858 - ClawBackend - INFO - [get_symbol_market_data.py:115] - ✅ Returning 300 records for BTCUSDT page 1
+2025-08-19 02:55:44,894 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:55:44,896 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-08-19 02:55:44,901 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 21 records.
+2025-08-19 02:55:44,903 - ClawBackend - INFO - [tasks.py:156] - Worker saving batch of 21 records.
+2025-08-19 02:55:47,698 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 02:55:47,786 - ClawBackend - INFO - [get_symbol_market_data.py:235] - New WebSocket connection for BTCUSDT (1m)
+2025-08-19 02:57:36,677 - ClawBackend - INFO - [user_symbol_watchlist.py:309] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:36,944 - ClawBackend - INFO - [user_symbol_watchlist.py:309] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:36,955 - ClawBackend - INFO - [user_symbol_watchlist.py:309] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:36,962 - ClawBackend - INFO - [user_symbol_watchlist.py:309] - Client disconnected: 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:37,938 - ClawBackend - INFO - [get_symbol_market_data.py:332] - Client disconnected for BTCUSDT
+2025-08-19 02:57:37,951 - ClawBackend - INFO - [get_symbol_market_data.py:337] - Closing connection for BTCUSDT
+2025-08-19 02:57:43,355 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:43,366 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:44,402 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 02:57:45,666 - ClawBackend - INFO - [user_symbol_watchlist.py:390] - WebSocket closed for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-08-19 03:00:50,283 - ClawBackend - INFO - [tasks.py:158] - Worker finished saving batch.
+2025-08-19 03:32:37,512 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: payment_intent.created
+2025-08-19 03:32:37,606 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: invoice.finalized
+2025-08-19 03:32:37,615 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: invoice.paid
+2025-08-19 03:32:37,622 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: payment_intent.succeeded
+2025-08-19 03:32:37,626 - ClawBackend - WARNING - [paid_plans.py:776] - Missing metadata in payment_intent.succeeded event. PI: pi_3RxdTRDIeiQ55dB60ua6EdyL
+2025-08-19 03:32:37,640 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: invoice.updated
+2025-08-19 03:32:37,650 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: invoice.payment_succeeded
+2025-08-19 03:32:37,675 - ClawBackend - INFO - [paid_plans.py:715] - Processing webhook event: charge.succeeded

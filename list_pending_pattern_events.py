@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 List all pending (unacknowledged) pattern match events for the notification-workers consumer group.
 """

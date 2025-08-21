@@ -714,7 +714,6 @@ async def stripe_webhook(
 
         logger.info(f"Processing webhook event: {event.type}")
 
-        # ...
         if event.type == "payment_intent.succeeded":
             payment_intent = event_object #
             user_id = payment_intent.metadata.get("user_id") #
@@ -774,7 +773,6 @@ async def stripe_webhook(
                 await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS) #
             else:
                 logger.warning(f"Missing metadata in payment_intent.succeeded event. PI: {payment_intent.id}")
-
 
         elif event.type == "payment_intent.payment_failed":
             # Handle one-time payment failure
@@ -898,7 +896,6 @@ async def stripe_webhook(
                     await firebase_repo.update_subscription(user_id, "free")
                     await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
 
-
         elif event.type == "customer.subscription.updated":
             subscription = event_object
             current_status = subscription.get("status")
@@ -941,7 +938,6 @@ async def stripe_webhook(
             else:
                 logger.warning("Could not determine user_id for subscription deletion event")
 
-        # In /stripe/webhook, replace the subscription_schedule.updated handling with this:
         elif event.type == 'subscription_schedule.updated':
             schedule = event_object
             current_time = int(time.time())
@@ -1092,9 +1088,10 @@ async def stripe_webhook(
             except Exception as e:
                 logger.error(f"Webhook {event.type}: Error processing subscription schedule update for schedule {schedule.id if schedule else 'N/A'}: {str(e)}. Event ID: {event.id if event else 'N/A'}", exc_info=True)
                     
-
         return {"status": "success"}
 
     except Exception as e:
         logger.error(f"Webhook processing error: {str(e)}", exc_info=True)
         return {"status": "error", "message": f"Internal error: {str(e)}"}
+    
+    
