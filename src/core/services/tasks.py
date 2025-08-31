@@ -145,6 +145,128 @@ def save_market_data_task(data_list_json):
     asyncio.run(repo.save_market_data_bulk(data_entities))
     logger.info("Worker finished saving batch.")
 
+
+async def fetch_history_sequential_batched(symbol: str, interval: str):
+    """Fetch history for one symbol using smart batching"""
+    
+    BATCH_SIZE = 1000  # Binance max per request
+    REQUESTS_PER_BATCH = 5  # Send 5 requests together
+    DELAY_BETWEEN_BATCHES = 2.0  # 2 seconds between batches
+    
+    repo = InfluxDBMarketDataRepository()
+    binance = BinanceMarketData()
+    await binance.ensure_connected()
+    
+    start_time = calculate_start_time(interval)
+    end_time = datetime.now(timezone.utc)
+    interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
+    
+    current_start_ms = int(start_time.timestamp() * 1000)
+    end_time_ms = int(end_time.timestamp() * 1000)
+    
+    all_data = []
+    batch_requests = []
+    
+    # Create request batches
+    while current_start_ms < end_time_ms:
+        batch_requests.append({
+            'start_time': current_start_ms,
+            'end_time': min(current_start_ms + (BATCH_SIZE * interval_ms), end_time_ms)
+        })
+        current_start_ms += BATCH_SIZE * interval_ms
+        
+        # Process when we have enough requests or reached the end
+        if len(batch_requests) >= REQUESTS_PER_BATCH or current_start_ms >= end_time_ms:
+            
+            # Process this batch
+            batch_data = await process_request_batch(
+                binance, symbol, interval, batch_requests
+            )
+            
+            if batch_data:
+                all_data.extend(batch_data)
+                # Save immediately to avoid memory issues
+                await repo.save_market_data_bulk(batch_data)
+                logger.info(f"Saved batch: {len(batch_data)} records for {symbol}")
+            
+            # Clear batch and wait
+            batch_requests = []
+            await asyncio.sleep(DELAY_BETWEEN_BATCHES)
+    
+    await binance.disconnect()
+    return len(all_data)
+
+async def process_request_batch(binance, symbol, interval, requests):
+    """Process a batch of requests with proper error handling"""
+    
+    tasks = []
+    for req in requests:
+        task = fetch_single_timeframe(
+            binance, symbol, interval, 
+            req['start_time'], req['end_time']
+        )
+        tasks.append(task)
+    
+    # Process batch with timeout
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(*tasks, return_exceptions=True),
+            timeout=15.0  # Short timeout
+        )
+        
+        # Collect valid results
+        all_klines = []
+        for result in results:
+            if isinstance(result, list) and result:
+                all_klines.extend(result)
+        
+        # Convert to entities
+        entities = []
+        for kline in all_klines:
+            if len(kline) >= 6:
+                entities.append(MarketDataEntity(
+                    symbol=symbol, interval=interval,
+                    timestamp=datetime.fromtimestamp(kline[0]/1000, tz=timezone.utc),
+                    open=float(kline[1]), high=float(kline[2]), 
+                    low=float(kline[3]), close=float(kline[4]), 
+                    volume=float(kline[5])
+                ))
+        
+        return entities
+        
+    except asyncio.TimeoutError:
+        logger.warning(f"Batch timeout for {symbol}, will retry individual requests")
+        return []
+    except Exception as e:
+        logger.error(f"Batch error for {symbol}: {e}")
+        return []
+
+async def fetch_single_timeframe(binance, symbol, interval, start_ms, end_ms):
+    """Fetch single timeframe with individual retry logic"""
+    
+    for attempt in range(3):
+        try:
+            klines = await asyncio.wait_for(
+                binance.get_klines(symbol, interval, limit=1000, 
+                                 start_time=start_ms, end_time=end_ms),
+                timeout=10.0  # Short timeout
+            )
+            
+            if klines:
+                return klines
+            else:
+                return []  # No data for this period
+                
+        except Exception as e:
+            if attempt < 2:  # Retry
+                delay = 2 ** attempt  # 1s, 2s
+                await asyncio.sleep(delay)
+            else:
+                logger.error(f"Failed timeframe for {symbol}: {e}")
+                return []
+    
+    return []
+
 @celery_app.task(name="src.core.services.tasks.fetch_and_save_full_history_task")
 def fetch_and_save_full_history_task(symbol: str, interval: str):
     """
@@ -155,25 +277,27 @@ def fetch_and_save_full_history_task(symbol: str, interval: str):
     asyncio.run(fetch_and_save_full_history_parallel(symbol, interval, start_time))
     logger.info(f"✅ Completed parallel history fetch for {symbol} ({interval})")
 
+
+# src/core/services/tasks.py
+
 async def fetch_single_chunk_with_retry(binance, symbol, interval, start_ms, end_ms, chunk_id, max_retries=3):
     """
     Fetch a single chunk with individual retry logic and detailed error logging.
+    Returns list of klines on success, [] on no data, and None on failure.
     """
     for attempt in range(1, max_retries + 1):
         try:
-            # Add timeout for individual requests
             klines = await asyncio.wait_for(
                 binance.get_klines(symbol, interval, limit=1000, start_time=start_ms, end_time=end_ms),
-                timeout=30.0  # 30 second timeout per request
+                timeout=30.0
             )
             
-            if klines is None:
-                logger.warning(f"Chunk {chunk_id}: No data returned (attempt {attempt}/{max_retries})")
-                if attempt < max_retries:
-                    await asyncio.sleep(1 * attempt)  # Exponential backoff
-                    continue
-                return None
-            
+            # --- FIX: Differentiate between "no data" and failure ---
+            if klines is None or not klines:
+                # The API call succeeded but returned no candles for this time range.
+                logger.debug(f"Chunk {chunk_id}: No data returned (attempt {attempt}/{max_retries})")
+                return [] # Return an empty list for "no data"
+
             logger.debug(f"Chunk {chunk_id}: Successfully fetched {len(klines)} candles (attempt {attempt})")
             return klines
             
@@ -181,25 +305,24 @@ async def fetch_single_chunk_with_retry(binance, symbol, interval, start_ms, end
             start_dt = datetime.fromtimestamp(start_ms/1000, tz=timezone.utc)
             end_dt = datetime.fromtimestamp(end_ms/1000, tz=timezone.utc)
             logger.error(f"Chunk {chunk_id}: Timeout on attempt {attempt}/{max_retries} for range {start_dt} to {end_dt}")
-            
             if attempt < max_retries:
-                await asyncio.sleep(2 * attempt)  # Exponential backoff
+                await asyncio.sleep(2 * attempt)
             else:
                 logger.error(f"Chunk {chunk_id}: Failed after {max_retries} attempts due to timeout")
-                return None
+                return None # --- Return None to signify total failure ---
                 
         except Exception as e:
             start_dt = datetime.fromtimestamp(start_ms/1000, tz=timezone.utc)
             end_dt = datetime.fromtimestamp(end_ms/1000, tz=timezone.utc)
             logger.error(f"Chunk {chunk_id}: Error on attempt {attempt}/{max_retries} for range {start_dt} to {end_dt}: {e}")
-            
             if attempt < max_retries:
                 await asyncio.sleep(1 * attempt)
             else:
                 logger.error(f"Chunk {chunk_id}: Failed after {max_retries} attempts due to error: {e}")
-                return None
+                return None # --- Return None to signify total failure ---
     
-    return None
+    return None # Should not be reached, but as a fallback
+
 
 async def fetch_and_save_full_history_parallel(symbol: str, interval: str, start_time: datetime):
     """
@@ -229,29 +352,47 @@ async def fetch_and_save_full_history_parallel(symbol: str, interval: str, start
     
     # Process chunks in smaller batches to avoid overwhelming the API
     batch_size = 20  # Process 20 chunks at a time
+
+    # --- FIX: Introduce a semaphore to limit concurrent requests ---
+    # This will allow a maximum of 5 tasks to run simultaneously, preventing API timeouts.
+    CONCURRENT_LIMIT = 5
+    semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
+
     all_klines = []
     no_data_chunks = 0
     failed_chunks = 0
     
+    # --- FIX: Create a helper function to wrap tasks with the semaphore ---
+    async def fetch_with_semaphore(chunk_id, start_ms, end_ms):
+        async with semaphore:
+            # This ensures only `CONCURRENT_LIMIT` tasks run at once.
+            return await fetch_single_chunk_with_retry(
+                binance, symbol, interval, start_ms, end_ms, chunk_id
+            )
+
     for i in range(0, len(time_ranges), batch_size):
         batch = time_ranges[i:i+batch_size]
-        logger.info(f"Processing batch {i//batch_size + 1}/{(len(time_ranges) + batch_size - 1)//batch_size} ({len(batch)} chunks)")
+        logger.info(f"Processing batch {i//batch_size + 1}/{(len(time_ranges) + batch_size - 1)//batch_size} ({len(batch)} chunks), concurrency limit: {CONCURRENT_LIMIT}")
         
-        # Create tasks for this batch
+        # --- FIX: Use the semaphore-wrapped helper in task creation ---
         tasks = [
-            fetch_single_chunk_with_retry(binance, symbol, interval, start_ms, end_ms, chunk_id)
+            fetch_with_semaphore(chunk_id, start_ms, end_ms)
             for chunk_id, start_ms, end_ms in batch
         ]
         
-        # Execute batch
+        # Execute batch (gather still waits for them all, but the semaphore controls execution)
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Process results
         for (chunk_id, start_ms, end_ms), result in zip(batch, results):
             if isinstance(result, Exception):
-                logger.error(f"Chunk {chunk_id}: Unexpected exception: {result}")
-                failed_chunks += 1
+                logger.error(f"Chunk {chunk_id}: Caught unexpected exception in main loop: {result}")
+                failed_chunks += 1 # Correctly count failures
             elif result is None:
+                # This now correctly signifies a chunk that failed after all retries.
+                failed_chunks += 1
+            elif not result:
+                # An empty list means the API returned no data for that period.
                 no_data_chunks += 1
             else:
                 all_klines.extend(result)
@@ -288,6 +429,9 @@ async def fetch_and_save_full_history_parallel(symbol: str, interval: str, start
     
     if failed_chunks > 0:
         logger.warning(f"⚠️  {failed_chunks} chunks failed for {symbol} ({interval}). Consider running verification and backfill.")
+
+# src/core/services/tasks.py (add these new functions at the end)
+
 
 # ===================================================================
 # === VERIFICATION AND BACKFILL TASKS ============================
@@ -408,4 +552,4 @@ def dispatch_verification_for_interval(interval: str):
     
     for symbol in symbols_to_check:
         # For each symbol, queue up the existing single-symbol verification task
-        verify_single_symbol_task.delay(symbol=symbol, interval=interval)
+        verify_single_symbol_task.delay(symbol=symbol, interval=interval)      

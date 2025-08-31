@@ -231,7 +231,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             logger.error(f"InfluxDB query error: {str(e)}")
             return []
         
-    # src/infrastructure/database/influxdb/market_data_repository.py (add this method)
+
 
     async def get_all_timestamps_for_symbol(
         self,

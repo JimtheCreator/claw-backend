@@ -12,6 +12,8 @@ from fastapi import HTTPException
 from infrastructure.database.firebase.repository import FirebaseRepository
 import uuid
 from infrastructure.database.redis.cache import redis_cache
+# Add this import at the top
+from typing import List, Literal, Set
 
 binance = BinanceMarketData()
 
@@ -164,7 +166,6 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error checking/incrementing {analysis_type} usage for {user_id}: {e}")
             raise HTTPException(status_code=500, detail=f"Could not verify {analysis_type} usage limit.")
 
-
     async def get_subscription_limits(self, user_id: str) -> dict:
         """Retrieve subscription limits from Supabase."""
         try:
@@ -184,6 +185,36 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Error fetching watchlist count for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to fetch watchlist count")
+        
+    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # +++ ADD THIS NEW METHOD TO THE CLASS +++
+    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    async def get_all_unique_watchlist_symbols(self) -> Set[str]:
+        """
+        Fetches a distinct set of all symbols present in any user's watchlist.
+        This is used by the background ticker service to know which data to fetch from Binance.
+        """
+        try:
+            # Supabase doesn't have a direct .distinct() method in the Python client,
+            # so we fetch all symbols and process them into a unique set.
+            # This is efficient as the number of unique symbols is far less than total watchlist entries.
+            result = self.client.table(self.watchlist_table).select("symbol").execute()
+
+            if not result.data:
+                return set()
+
+            # Use a set comprehension for an efficient and concise way to get unique symbols
+            unique_symbols = {item['symbol'] for item in result.data}
+            logger.info(f"Found {len(unique_symbols)} unique symbols across all watchlists.")
+            return unique_symbols
+
+        except Exception as e:
+            logger.error(f"Error fetching all unique watchlist symbols: {str(e)}")
+            # Return an empty set on failure to prevent the ticker service from crashing
+            return set()
+    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # +++ END OF NEW METHOD +++
+    # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
     async def get_watchlist(self, user_id: str) -> List[dict]:
         """Retrieve all items in the user's watchlist."""

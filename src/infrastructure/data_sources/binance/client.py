@@ -50,18 +50,21 @@ class GlobalRateLimiter:
             current_minute_weight = sum(req[1] for req in self.minute_window)
             current_second_weight = sum(req[1] for req in self.second_window)
             
-            # Wait if limits would be exceeded
+
             if current_minute_weight + weight > self.max_requests_per_minute:
-                wait_time = 60 - (now - self.minute_window[0][0])
-                logger.warning(f"Rate limit: waiting {wait_time:.2f}s for minute window")
-                await asyncio.sleep(wait_time)
-                return await self.acquire(weight)
-            
+                if self.minute_window:  # only wait if deque has entries
+                    wait_time = 60 - (now - self.minute_window[0][0])
+                    logger.warning(f"Rate limit: waiting {wait_time:.2f}s for minute window")
+                    await asyncio.sleep(max(wait_time, 0))
+                    return await self.acquire(weight)
+
             if current_second_weight + weight > self.max_requests_per_second:
-                wait_time = 1 - (now - self.second_window[0][0])
-                logger.warning(f"Rate limit: waiting {wait_time:.2f}s for second window")
-                await asyncio.sleep(wait_time)
-                return await self.acquire(weight)
+                if self.second_window:  # only wait if deque has entries
+                    wait_time = 1 - (now - self.second_window[0][0])
+                    logger.warning(f"Rate limit: waiting {wait_time:.2f}s for second window")
+                    await asyncio.sleep(max(wait_time, 0))
+                    return await self.acquire(weight)
+
             
             # Record the request
             self.minute_window.append((now, weight))
@@ -80,7 +83,7 @@ class GlobalRateLimiter:
 
 class CircuitBreaker:
     """Circuit breaker to handle API failures gracefully"""
-    def __init__(self, failure_threshold: int = 5, timeout: int = 300):
+    def __init__(self, failure_threshold: int = 5, timeout: int = 120):
         self.failure_threshold = failure_threshold
         self.timeout = timeout
         self.failure_count = 0
@@ -200,6 +203,23 @@ class BinanceMarketData:
                 
                 active_connections = sum(1 for c in self._connection_pool.values() if c is not None)
                 logger.info(f"Connection pool initialized with {active_connections} active connections")
+
+    async def get_all_tickers(self) -> list[dict]:
+        """Fetch all 24hr tickers in one request (80 weight)."""
+        await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
+
+        client = await self.get_pooled_client()
+        try:
+            tickers = await asyncio.wait_for(
+                client.get_ticker(),  # ✅ No symbol → returns ALL tickers
+                timeout=self._connection_timeout
+            )
+            return tickers
+        except Exception as e:
+            logger.error(f"Error fetching all tickers: {e}")
+            return []
+
+
                 
     async def get_pooled_client(self):
         """Get a client from the pool"""
@@ -283,7 +303,7 @@ class BinanceMarketData:
         limit: int = 500,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        max_retries: int = 2  # Reduced from 3 to 2
+        max_retries: int = 3  # Reduced from 3 to 2
     ) -> list:
         """Fetch OHLCV data with proper rate limiting and error handling"""
         # Validate interval
@@ -448,12 +468,7 @@ class BinanceMarketData:
     async def search_symbols(self, query: str, limit: int = 20):
         """Search for symbols with rate limiting"""
         async def _search_symbols():
-            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
-            client = await self.get_pooled_client()
-            return await asyncio.wait_for(
-                client.get_ticker(),
-                timeout=self._connection_timeout
-            )
+            await self.get_all_tickers()
 
         try:
             all_tickers = await self.circuit_breaker.call(_search_symbols)

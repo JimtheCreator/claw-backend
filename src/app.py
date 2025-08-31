@@ -18,10 +18,11 @@ from core.services.crypto_list import initialize_binance_connection_pool, close_
 from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
-from presentation.api.routes.user_symbol_watchlist import router as watchlist_router
+from presentation.api.routes.watchlist.user_symbol_watchlist import router as watchlist_router
 from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -106,5 +107,7 @@ if __name__ == "__main__":
         reload=True
     )
  
+
+
 # For NGROK TUNNELING USE
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
