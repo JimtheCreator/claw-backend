@@ -468,7 +468,9 @@ class BinanceMarketData:
     async def search_symbols(self, query: str, limit: int = 20):
         """Search for symbols with rate limiting"""
         async def _search_symbols():
+            logger.info(f"Searching for symbols...")
             await self.get_all_tickers()
+            logger.info(f"✅ DONE")
 
         try:
             all_tickers = await self.circuit_breaker.call(_search_symbols)
@@ -500,6 +502,7 @@ class BinanceMarketData:
             for symbol_data in exchange_info.get('symbols', []):
                 symbol = symbol_data.get('symbol')
                 if symbol:
+                    logger.info(f"Found symbol: {symbol}")
                     symbol_info[symbol] = {
                         'base_currency': symbol_data.get('quoteAsset'),
                         'asset': symbol_data.get('baseAsset')

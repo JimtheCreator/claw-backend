@@ -532,22 +532,30 @@ class PatternAlertWorker:
                 raise
 
     async def start_listener(self, symbol: str, interval: str):
-        """Start a WebSocket listener for real-time candles and update rolling window. Also run pattern detection and publish events."""
+        """Start a listener for real-time candles from Redis and update rolling window."""
         rolling_window_key = f"rolling_window:{symbol}:{interval}"
         candle_queue = asyncio.Queue()
         
-        async def websocket_producer():
+        async def redis_kline_consumer():
+            """Consumes kline data from the Redis channel published by the gateway."""
+            stream_name = f"{symbol.lower()}@kline_{interval}"
+            channel_name = f"binance:data:{stream_name}"
+            pubsub = None
             try:
-                logger.info(f"🎧 Starting WebSocket listener for {symbol}:{interval}")
-                ohlcv_stream = self.binance_client.stream_kline_events(symbol=symbol, interval=interval)
-                logger.info(f"📡 WebSocket stream established for {symbol}:{interval}, waiting for messages...")
-                async for message in ohlcv_stream:
-                    if self._shutdown_event.is_set():
-                        logger.info(f"🛑 Shutdown signal received, stopping WebSocket listener for {symbol}:{interval}")
-                        break
-                    logger.info(f"📨 Received WebSocket message for {symbol}:{interval}: {message.get('e', 'unknown_event')}")
-                    if message.get("k", {}).get("x"):  # Candle is closed
-                        closed_candle = message["k"]
+                # Inform the gateway to subscribe to this stream
+                await self.redis_cache.publish("binance:control", f"subscribe:{stream_name}")
+
+                pubsub = await self.redis_cache.subscribe(channel_name)
+                logger.info(f"🎧 Listening for kline data on Redis channel '{channel_name}'")
+
+                while not self._shutdown_event.is_set():
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if not message:
+                        continue
+
+                    kline_data = json.loads(message['data'])
+                    if kline_data.get("x"):  # Candle is closed
+                        closed_candle = kline_data
                         candle = {
                             "open": float(closed_candle["o"]),
                             "high": float(closed_candle["h"]),
@@ -558,16 +566,13 @@ class PatternAlertWorker:
                         }
                         logger.info(f"🕯️ Queuing closed candle for {symbol}:{interval} - Close: {candle['close']}, Time: {candle['timestamp']}")
                         await candle_queue.put(candle)
-                    else:
-                        logger.info(f"⏳ Received non-closed candle for {symbol}:{interval}, skipping")
             except Exception as e:
-                # Suppress WebSocket keepalive ping timeout errors (code 1011)
-                if hasattr(e, 'code') and getattr(e, 'code', None) == 1011 and 'ping timeout' in str(e):
-                    logger.warning(f"[WebSocket] Keepalive ping timeout for {symbol}:{interval}: {e}")
-                elif 'ping timeout' in str(e):
-                    logger.warning(f"[WebSocket] Keepalive ping timeout for {symbol}:{interval}: {e}")
-                else:
-                    logger.error(f"❌ WebSocket listener error for {symbol}:{interval}: {e}")
+                logger.error(f"❌ Redis kline consumer error for {symbol}:{interval}: {e}")
+            finally:
+                # Inform the gateway to unsubscribe when this listener stops
+                await self.redis_cache.publish("binance:control", f"unsubscribe:{stream_name}")
+                if pubsub:
+                    await pubsub.unsubscribe()
 
         async def consumer():
             while not self._shutdown_event.is_set():
@@ -586,8 +591,9 @@ class PatternAlertWorker:
                 except Exception as e:
                     logger.error(f"[QUEUE CONSUMER] Error processing candle for {symbol}:{interval}: {e}")
 
-        # Start both producer and consumer concurrently
-        await asyncio.gather(websocket_producer(), consumer())
+        # Start both consumer sub-tasks concurrently
+        await asyncio.gather(redis_kline_consumer(), consumer())
+
 
     async def health_monitor_loop(self):
         """Periodically log the status of all running listener tasks and restart any that have died."""

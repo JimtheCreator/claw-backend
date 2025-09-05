@@ -1,25 +1,39 @@
 # src/presentation/api/routes/market_data.py
 from fastapi import WebSocket, WebSocketDisconnect
-from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
-from core.domain.entities.MarketDataEntity import MarketDataEntity
-from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
-from core.use_cases.market.market_data import fetch_crypto_data_paginated
+from core.domain.entities.MarketDataEntity import MarketDataEntity, DeleteResponse
+from core.use_cases.market.market_data import fetch_crypto_data_paginated, delete_market_data
 import json
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from core.services.crypto_list import search_cryptos, downsample_sparkline
+from core.services.crypto_list import search_cryptos
 from common.logger import logger
-from fastapi.responses import StreamingResponse
-
-from core.domain.entities.MarketDataEntity import MarketDataResponse, DeleteResponse
-from core.use_cases.market.market_data import delete_market_data
 from datetime import datetime, timezone
 from typing import Optional
-import websockets
+from infrastructure.database.redis.cache import redis_cache
+import asyncio
+import time
+
+
+# A helper dictionary to map intervals to milliseconds. 
+# You could place this at the top of the file.
+INTERVAL_MS = {
+    "1m": 60000,
+    "3m": 180000,
+    "5m": 300000,
+    "15m": 900000,
+    "30m": 1800000,
+    "1h": 3600000,
+    "2h": 7200000,
+    "4h": 14400000,
+    "1d": 86400000,
+    "1M": 2592000000
+    # Add any other intervals you support
+}
 
 router = APIRouter(tags=["Market Data"])
 
@@ -42,7 +56,7 @@ async def get_market_data(
     This endpoint supports pagination and optional date range filtering.
     """
     try:
-        logger.info(f"🔍 Request for {symbol} with interval={interval}, "
+        logger.info(f"Request for {symbol} with interval={interval}, "
                     f"start_time={start_time}, end_time={end_time}, "
                     f"page={page}, page_size={page_size}")
 
@@ -53,9 +67,9 @@ async def get_market_data(
                 # Handle 'Z' suffix and convert to UTC datetime
                 start_time_clean = start_time.replace('Z', '+00:00') if 'Z' in start_time else start_time
                 start_datetime = datetime.fromisoformat(start_time_clean).astimezone(timezone.utc)
-                logger.debug(f"🕒 Parsed start_time: {start_datetime}")
+                logger.info(f"Parsed start_time: {start_datetime}")
             except ValueError as e:
-                logger.warning(f"❌ Invalid start_time format: {start_time}")
+                logger.warning(f"Invalid start_time format: {start_time}")
                 raise HTTPException(
                     status_code=400,
                     detail=f"Invalid start_time format: {start_time}. Use ISO 8601 format (e.g., 2025-04-15T11:06:31Z)"
@@ -67,9 +81,9 @@ async def get_market_data(
                 # Handle 'Z' suffix and convert to UTC datetime
                 end_time_clean = end_time.replace('Z', '+00:00') if 'Z' in end_time else end_time
                 end_datetime = datetime.fromisoformat(end_time_clean).astimezone(timezone.utc)
-                logger.info(f"🕒 Parsed end_time: {end_datetime}")
+                logger.info(f"Parsed end_time: {end_datetime}")
             except ValueError as e:
-                logger.warning(f"❌ Invalid end_time format: {end_time}")
+                logger.warning(f"Invalid end_time format: {end_time}")
                 raise HTTPException(
                     status_code=400,
                     detail=f"Invalid end_time format: {end_time}. Use ISO 8601 format (e.g., 2025-04-15T11:06:31Z)"
@@ -82,11 +96,11 @@ async def get_market_data(
                 detail="start_time must be before end_time"
             )
 
-        logger.info(f"🕒 Parsed start_time: {start_datetime}")
+        logger.info(f"Parsed start_time: {start_datetime}")
 
-        logger.info(f"🕒 Parsed end_time: {end_datetime}")
+        logger.info(f"Parsed end_time: {end_datetime}")
 
-        logger.info("📦 Fetching crypto data from store/cache...")
+        logger.info("Fetching crypto data from store/cache...")
         result = await fetch_crypto_data_paginated(
             symbol=symbol,
             interval=interval,
@@ -97,7 +111,7 @@ async def get_market_data(
         )
 
         if isinstance(result, dict) and "error" in result:
-            logger.warning(f"⚠️ Error from fetch function: {result}")
+            logger.warning(f"Error from fetch function: {result}")
             return result
 
         response_data = []
@@ -112,7 +126,7 @@ async def get_market_data(
                     "volume": entity.volume
                 })
 
-        logger.info(f"✅ Returning {len(response_data)} records for {symbol} page {page}")
+        logger.info(f"Returning {len(response_data)} records for {symbol} page {page}")
 
         return {
             "symbol": symbol,
@@ -125,8 +139,165 @@ async def get_market_data(
         }
 
     except Exception as e:
-        logger.exception("🔥 Unexpected error in get_market_data")
+        logger.exception("Unexpected error in get_market_data")
         return {"error": "An unexpected error occurred while processing your request"}
+
+@router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
+async def websocket_stream_market_data(
+    websocket: WebSocket,
+    symbol: str,
+    interval: str = "1m",
+    include_ohlcv: bool = True
+):
+    await websocket.accept()
+    logger.info(f"New client connected for {symbol} ({interval})")
+
+    symbol_lower = symbol.lower()
+    streams_to_subscribe = [f"{symbol_lower}@ticker"]
+    if include_ohlcv:
+        streams_to_subscribe.append(f"{symbol_lower}@kline_{interval}")
+
+    CONTROL_CHANNEL = "binance:control"
+    DATA_CHANNEL_PREFIX = "binance:data:"
+    client_id = f"{websocket.client.host}:{websocket.client.port}"
+    logger.info(f"Client ID: {client_id}, Streams to subscribe: {streams_to_subscribe}")
+    redis_pubsub = None
+    
+    try:
+        if include_ohlcv:
+            logger.info(f"Fetching initial candles for {symbol} using robust method")
+            
+            initial_entities = await fetch_crypto_data_paginated(
+                symbol=symbol,
+                interval=interval,
+                page=1,
+                page_size=15
+            )
+
+            initial_candles = []
+            # Get the millisecond duration for the requested interval, default to 1m if not found
+            interval_duration_ms = INTERVAL_MS.get(interval, 60000)
+
+            if initial_entities and not isinstance(initial_entities, dict):
+                for entity in initial_entities:
+                    open_time_ms = int(entity.timestamp.timestamp() * 1000)
+                    initial_candles.append({
+                        "open_time": open_time_ms,
+                        "close_time": open_time_ms + interval_duration_ms - 1, # DYNAMIC calculation
+                        "open": entity.open,
+                        "high": entity.high,
+                        "low": entity.low,
+                        "close": entity.close,
+                        "volume": entity.volume,
+                        "is_closed": True # This is a safe logical deduction for historical data
+                    })
+
+            if initial_candles:
+                await websocket.send_json({"type": "historical", "data": initial_candles})
+                logger.info(f"Sent {len(initial_candles)} historical candles to client")
+            else:
+                logger.warning(f"Could not retrieve initial candles for {symbol}")
+
+        # --- The rest of the function remains exactly the same ---
+        # (Subscription, message forwarding, and cleanup logic)
+
+        for stream in streams_to_subscribe:
+            subscribers_key = f"subscribers:{stream}"
+            current_subs = await redis_cache.incr(subscribers_key)
+            logger.info(f"Stream {stream} now has {current_subs} subscribers")
+            if current_subs == 1:
+                await redis_cache.publish(CONTROL_CHANNEL, f"subscribe:{stream}")
+                logger.info(f"Published SUBSCRIBE command for new stream: {stream}")
+            else:
+                logger.info(f"Stream {stream} already active with {current_subs} subscribers")
+
+        data_channels = [f"{DATA_CHANNEL_PREFIX}{s}" for s in streams_to_subscribe]
+        logger.info(f"Subscribing to Redis channels: {data_channels}")
+        redis_pubsub = await redis_cache.subscribe(*data_channels)
+        logger.info("Successfully subscribed to Redis data channels")
+
+        await websocket.send_json({
+            "type": "subscription_confirmed",
+            "streams": streams_to_subscribe,
+            "message": f"Subscribed to {len(streams_to_subscribe)} streams"
+        })
+
+        message_count = 0
+        last_ping = time.time()
+        while True:
+            try:
+                message = await redis_pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message and message.get("type") == "message":
+                    try:
+                        data = message['data']
+                        if isinstance(data, bytes):
+                            data = data.decode('utf-8')
+                        channel_name = message['channel']
+                        if isinstance(channel_name, bytes):
+                            channel_name = channel_name.decode('utf-8')
+                        parsed_data = json.loads(data)
+                        message_count += 1
+                        await websocket.send_json({
+                            "type": "live_data",
+                            "stream": channel_name.replace(DATA_CHANNEL_PREFIX, ''),
+                            "data": parsed_data,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        if message_count % 10 == 0:
+                            logger.info(f"Forwarded {message_count} messages to client {client_id}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse Redis message: {e}")
+                    except Exception as e:
+                        logger.error(f"Error processing Redis message: {e}")
+                current_time = time.time()
+                if current_time - last_ping > 30:
+                    await websocket.send_json({"type": "ping", "timestamp": current_time})
+                    last_ping = current_time
+            except asyncio.TimeoutError:
+                continue
+            # MODIFICATION HERE: Catch RuntimeError alongside WebSocketDisconnect
+            except (WebSocketDisconnect, RuntimeError) as e:
+                logger.info(f"Client {client_id} disconnected for {symbol}. Reason: {type(e).__name__}")
+                break
+            except json.JSONDecodeError as e:
+                # Keep this specific exception for bad data from Redis
+                logger.error(f"Failed to parse Redis message: {e}")
+                continue # Continue to the next message
+            except Exception as e:
+                logger.error(f"An unexpected error occurred in the WebSocket message loop: {e}")
+                break # Break on other unexpected errors
+    except WebSocketDisconnect:
+        logger.info(f"Client {client_id} disconnected for {symbol}")
+    except Exception as e:
+        logger.error(f"WebSocket error for {symbol}: {str(e)}")
+    finally:
+        logger.info(f"Cleaning up resources for {client_id}")
+        for stream in streams_to_subscribe:
+            try:
+                subscribers_key = f"subscribers:{stream}"
+                remaining_subs = await redis_cache.decr(subscribers_key)
+                logger.info(f"Stream {stream} now has {remaining_subs} subscribers after cleanup")
+                if remaining_subs <= 0:
+                    await redis_cache.publish(CONTROL_CHANNEL, f"unsubscribe:{stream}")
+                    logger.info(f"Published UNSUBSCRIBE command for idle stream: {stream}")
+                    await redis_cache.delete_key(subscribers_key)
+            except Exception as e:
+                logger.error(f"Error during cleanup for stream {stream}: {e}")
+        if redis_pubsub:
+            try:
+                await redis_pubsub.unsubscribe()
+                if hasattr(redis_pubsub, 'aclose'):
+                    await redis_pubsub.aclose()
+                elif hasattr(redis_pubsub, 'close'):
+                    await redis_pubsub.close()
+            except Exception as e:
+                logger.error(f"Error closing Redis pubsub: {e}")
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
 
 
 # Example usage in your API endpoint:
@@ -150,7 +321,6 @@ async def delete_market_data_endpoint(
         raise HTTPException(status_code=500, detail=result.get("message"))
         
     return result
-
 
 # DELETE endpoint for removing ALL market data (additional safeguard with a separate endpoint)
 @router.delete("/delete-all-data", response_model=DeleteResponse)
@@ -198,143 +368,7 @@ def calculate_change(current: float, previous: float) -> float:
 def update_sparkline(sparkline: list, new_price: float) -> list:
     return (sparkline + [new_price])[-20:]  # Keep last 20 points
 
-@router.get("/market/cryptos/stream-market-data/{symbol}")
-async def stream_market_data(symbol: str):
-    """Real-time streaming endpoint with sparkline support"""
-    # Use shared client
-    await shared_binance_client.ensure_connected()
-    
-    async def generate():
-        try:
-            async for msg in shared_binance_client.get_realtime_metrics(symbol):
-                # Get sparkline updates
-                klines = await shared_binance_client.get_klines(symbol, "1h", 24)
-                sparkline = downsample_sparkline([float(k[4]) for k in klines])
-                
-                yield json.dumps({
-                    "price": msg['price'],
-                    "change": msg['change'],
-                    "volume": msg['volume'],
-                    "sparkline": sparkline,
-                    "timestamp": msg['timestamp']
-                })
-        except Exception as e:
-            logger.error(f"Error in streaming market data for {symbol}: {e}")
-            # Don't disconnect the shared client
-    
-    return StreamingResponse(generate(), media_type="text/event-stream")
 
-@router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
-async def websocket_stream_market_data(
-    websocket: WebSocket,
-    symbol: str,
-    interval: str = "1m",
-    include_ohlcv: bool = True
-):
-    await websocket.accept()
-    logger.info(f"New WebSocket connection for {symbol} ({interval})")
-
-    # Initialize candle tracking
-    current_candle = None
-    symbol_lower = symbol.lower()
-    last_known_price = None
-    reference_price = None
-
-    if include_ohlcv:
-        # Initialize with historical candles including forming candle
-        try:
-            initial_candles = await get_historical_candles(symbol, interval, limit=2)
-            if initial_candles:
-                # Current forming candle is always the first in the list
-                current_candle = initial_candles[0]
-                last_known_price = current_candle.get("close")
-                
-                # Set reference price to previous close if available
-                if len(initial_candles) > 1:
-                    reference_price = initial_candles[1].get("close")
-                else:
-                    reference_price = current_candle.get("open")
-        except Exception as e:
-            logger.error(f"Error initializing candles: {e}")
-
-    try:
-        streams = [f"{symbol_lower}@ticker"]  # Always include ticker
-        if include_ohlcv:
-            streams.insert(0, f"{symbol_lower}@kline_{interval}")  # Kline first
-            
-        async with websockets.connect(
-            f"wss://stream.binance.com:9443/stream?streams={'/'.join(streams)}"
-        ) as binance_ws:
-            while True:
-                msg = await binance_ws.recv()
-                data = json.loads(msg)
-                stream_data = data.get('data', {})
-                stream_type = data.get('stream', '')
-
-                response = {"type": "update"}
-
-                # Process kline updates (both closed and forming candles)
-                if include_ohlcv and 'kline' in stream_type:
-                    kline = stream_data.get('k', {})
-                    is_closed = kline.get('x', False)
-
-                    # Update current candle with latest data
-                    current_candle = {
-                        "open_time": kline['t'],
-                        "close_time": kline['T'],
-                        "open": float(kline['o']),
-                        "high": float(kline['h']),
-                        "low": float(kline['l']),
-                        "close": float(kline['c']),
-                        "volume": float(kline['v']),
-                        "is_closed": is_closed
-                    }
-
-                    # Update reference price when candle closes
-                    if is_closed:
-                        reference_price = float(kline['c'])
-                        last_known_price = reference_price
-
-                    # Send candle update regardless of closure status
-                    response.update({
-                        "type": "candle",
-                        "ohlcv": current_candle,
-                        "timestamp": stream_data.get('E')
-                    })
-
-                # Process price updates from ticker
-                if 'ticker' in stream_type:
-                    current_price = float(stream_data.get('c', 0))
-                    change_percent = float(stream_data.get('P', 0.0))  # Use Binance's 24h change
-
-                    # Fallback calculation if no Binance percentage
-                    if change_percent == 0 and reference_price and current_price > 0:
-                        change_percent = ((current_price - reference_price) / reference_price) * 100
-
-                    price_response = {
-                        "type": "price",
-                        "price": current_price,
-                        "change": round(change_percent, 2),
-                        "timestamp": stream_data.get('E')
-                    }
-
-                    # Merge candle data if available
-                    if include_ohlcv and current_candle:
-                        price_response["ohlcv"] = current_candle
-
-                    response.update(price_response)
-
-                # Send response if we have valid data
-                if response["type"] != "update":
-                    await websocket.send_json(response)
-
-    except WebSocketDisconnect:
-        logger.info(f"Client disconnected for {symbol}")
-    except Exception as e:
-        logger.error(f"WebSocket error for {symbol}: {str(e)}")
-        await websocket.close(code=1011)
-    finally:
-        logger.info(f"Closing connection for {symbol}")
 
 
 async def get_historical_candles(symbol: str, interval: str, limit: int = 2) -> list:

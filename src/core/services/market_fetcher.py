@@ -1,0 +1,1 @@
+from core.use_cases.market.market_data import fetch_crypto_data_paginated

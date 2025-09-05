@@ -8,17 +8,28 @@ from telegram.ext import Application
 from .workers.celery_worker import celery_app
 from common.logger import logger
 
+from infrastructure.database.redis.cache import redis_cache
 # Import your existing modules
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
+# --- NEW IMPORTS FOR ANALYSIS TASK ---
+from core.use_cases.market_analysis.data_access import get_ohlcv_from_db
+from core.engines.chart_engine import ChartEngine
+from core.engines.trendline_engine import TrendlineEngine
+from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from pydantic import BaseModel
+from core.engines.support_resistance_engine import SupportResistanceEngine # Add this import
+import json # Add json import
+
 # Environment variables (these are safe to load at module level)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+
 
 # ===================================================================
 # === LAZY INITIALIZATION FUNCTIONS ===============================
@@ -135,7 +146,10 @@ def process_telegram_update(update_data):
 def save_market_data_task(data_list_json):
     """Celery task to save a batch of market data."""
     repo = InfluxDBMarketDataRepository()
-    data_entities = [MarketDataEntity.parse_raw(item) for item in data_list_json]
+    
+    # --- THIS IS THE CHANGE ---
+    # Replace 'parse_raw' with 'model_validate_json' for Pydantic V2
+    data_entities = [MarketDataEntity.model_validate_json(item) for item in data_list_json]
     
     if not data_entities:
         logger.info("No data to save.")
@@ -144,7 +158,6 @@ def save_market_data_task(data_list_json):
     logger.info(f"Worker saving batch of {len(data_entities)} records.")
     asyncio.run(repo.save_market_data_bulk(data_entities))
     logger.info("Worker finished saving batch.")
-
 
 async def fetch_history_sequential_batched(symbol: str, interval: str):
     """Fetch history for one symbol using smart batching"""
@@ -267,171 +280,6 @@ async def fetch_single_timeframe(binance, symbol, interval, start_ms, end_ms):
     
     return []
 
-@celery_app.task(name="src.core.services.tasks.fetch_and_save_full_history_task")
-def fetch_and_save_full_history_task(symbol: str, interval: str):
-    """
-    Celery task to fetch complete historical data in parallel and save it.
-    """
-    start_time = calculate_start_time(interval)
-    logger.info(f"🚀 Starting parallel history fetch for {symbol} ({interval}) from {start_time}")
-    asyncio.run(fetch_and_save_full_history_parallel(symbol, interval, start_time))
-    logger.info(f"✅ Completed parallel history fetch for {symbol} ({interval})")
-
-
-# src/core/services/tasks.py
-
-async def fetch_single_chunk_with_retry(binance, symbol, interval, start_ms, end_ms, chunk_id, max_retries=3):
-    """
-    Fetch a single chunk with individual retry logic and detailed error logging.
-    Returns list of klines on success, [] on no data, and None on failure.
-    """
-    for attempt in range(1, max_retries + 1):
-        try:
-            klines = await asyncio.wait_for(
-                binance.get_klines(symbol, interval, limit=1000, start_time=start_ms, end_time=end_ms),
-                timeout=30.0
-            )
-            
-            # --- FIX: Differentiate between "no data" and failure ---
-            if klines is None or not klines:
-                # The API call succeeded but returned no candles for this time range.
-                logger.debug(f"Chunk {chunk_id}: No data returned (attempt {attempt}/{max_retries})")
-                return [] # Return an empty list for "no data"
-
-            logger.debug(f"Chunk {chunk_id}: Successfully fetched {len(klines)} candles (attempt {attempt})")
-            return klines
-            
-        except asyncio.TimeoutError:
-            start_dt = datetime.fromtimestamp(start_ms/1000, tz=timezone.utc)
-            end_dt = datetime.fromtimestamp(end_ms/1000, tz=timezone.utc)
-            logger.error(f"Chunk {chunk_id}: Timeout on attempt {attempt}/{max_retries} for range {start_dt} to {end_dt}")
-            if attempt < max_retries:
-                await asyncio.sleep(2 * attempt)
-            else:
-                logger.error(f"Chunk {chunk_id}: Failed after {max_retries} attempts due to timeout")
-                return None # --- Return None to signify total failure ---
-                
-        except Exception as e:
-            start_dt = datetime.fromtimestamp(start_ms/1000, tz=timezone.utc)
-            end_dt = datetime.fromtimestamp(end_ms/1000, tz=timezone.utc)
-            logger.error(f"Chunk {chunk_id}: Error on attempt {attempt}/{max_retries} for range {start_dt} to {end_dt}: {e}")
-            if attempt < max_retries:
-                await asyncio.sleep(1 * attempt)
-            else:
-                logger.error(f"Chunk {chunk_id}: Failed after {max_retries} attempts due to error: {e}")
-                return None # --- Return None to signify total failure ---
-    
-    return None # Should not be reached, but as a fallback
-
-
-async def fetch_and_save_full_history_parallel(symbol: str, interval: str, start_time: datetime):
-    """
-    Fetches the complete historical data in parallel chunks and saves it to InfluxDB with improved error handling.
-    """
-    repo = InfluxDBMarketDataRepository()
-    binance = BinanceMarketData()
-    await binance.ensure_connected()
-    
-    end_time = datetime.now(timezone.utc)
-    interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-    chunk_duration_ms = 1000 * interval_ms  # For 1000 candles per chunk
-    
-    # Generate time ranges for parallel fetching
-    time_ranges = []
-    current_start_ms = int(start_time.timestamp() * 1000)
-    end_time_ms = int(end_time.timestamp() * 1000)
-    chunk_id = 0
-    
-    while current_start_ms < end_time_ms:
-        chunk_end_ms = current_start_ms + chunk_duration_ms - 1
-        time_ranges.append((chunk_id, current_start_ms, min(chunk_end_ms, end_time_ms)))
-        current_start_ms += chunk_duration_ms
-        chunk_id += 1
-    
-    logger.info(f"Created {len(time_ranges)} parallel fetch tasks for {symbol} ({interval}).")
-    
-    # Process chunks in smaller batches to avoid overwhelming the API
-    batch_size = 20  # Process 20 chunks at a time
-
-    # --- FIX: Introduce a semaphore to limit concurrent requests ---
-    # This will allow a maximum of 5 tasks to run simultaneously, preventing API timeouts.
-    CONCURRENT_LIMIT = 5
-    semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
-
-    all_klines = []
-    no_data_chunks = 0
-    failed_chunks = 0
-    
-    # --- FIX: Create a helper function to wrap tasks with the semaphore ---
-    async def fetch_with_semaphore(chunk_id, start_ms, end_ms):
-        async with semaphore:
-            # This ensures only `CONCURRENT_LIMIT` tasks run at once.
-            return await fetch_single_chunk_with_retry(
-                binance, symbol, interval, start_ms, end_ms, chunk_id
-            )
-
-    for i in range(0, len(time_ranges), batch_size):
-        batch = time_ranges[i:i+batch_size]
-        logger.info(f"Processing batch {i//batch_size + 1}/{(len(time_ranges) + batch_size - 1)//batch_size} ({len(batch)} chunks), concurrency limit: {CONCURRENT_LIMIT}")
-        
-        # --- FIX: Use the semaphore-wrapped helper in task creation ---
-        tasks = [
-            fetch_with_semaphore(chunk_id, start_ms, end_ms)
-            for chunk_id, start_ms, end_ms in batch
-        ]
-        
-        # Execute batch (gather still waits for them all, but the semaphore controls execution)
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Process results
-        for (chunk_id, start_ms, end_ms), result in zip(batch, results):
-            if isinstance(result, Exception):
-                logger.error(f"Chunk {chunk_id}: Caught unexpected exception in main loop: {result}")
-                failed_chunks += 1 # Correctly count failures
-            elif result is None:
-                # This now correctly signifies a chunk that failed after all retries.
-                failed_chunks += 1
-            elif not result:
-                # An empty list means the API returned no data for that period.
-                no_data_chunks += 1
-            else:
-                all_klines.extend(result)
-        
-        # Small delay between batches to be nice to the API
-        if i + batch_size < len(time_ranges):
-            await asyncio.sleep(0.5)
-    
-    await binance.disconnect()
-    
-    # Process all collected klines into MarketDataEntity objects
-    all_data_entities = []
-    for kline in all_klines:
-        if len(kline) >= 6 and all(kline[1:6]):
-            all_data_entities.append(MarketDataEntity(
-                symbol=symbol, interval=interval,
-                timestamp=datetime.fromtimestamp(kline[0]/1000, tz=timezone.utc),
-                open=float(kline[1]), high=float(kline[2]), low=float(kline[3]),
-                close=float(kline[4]), volume=float(kline[5])
-            ))
-    
-    # Sort and save the data
-    if all_data_entities:
-        all_data_entities.sort(key=lambda x: x.timestamp)
-        await repo.save_market_data_bulk(all_data_entities)
-        logger.info(f"Successfully saved {len(all_data_entities)} candles for {symbol} to InfluxDB.")
-    else:
-        logger.warning(f"No data entities created for {symbol} ({interval})")
-    
-    # Log final status
-    total_chunks = len(time_ranges)
-    successful_chunks = total_chunks - no_data_chunks - failed_chunks
-    logger.info(f"Final status for {symbol} ({interval}): {successful_chunks}/{total_chunks} chunks successful, {no_data_chunks} chunks had no data, {failed_chunks} chunks failed")
-    
-    if failed_chunks > 0:
-        logger.warning(f"⚠️  {failed_chunks} chunks failed for {symbol} ({interval}). Consider running verification and backfill.")
-
-# src/core/services/tasks.py (add these new functions at the end)
-
 
 # ===================================================================
 # === VERIFICATION AND BACKFILL TASKS ============================
@@ -553,3 +401,219 @@ def dispatch_verification_for_interval(interval: str):
     for symbol in symbols_to_check:
         # For each symbol, queue up the existing single-symbol verification task
         verify_single_symbol_task.delay(symbol=symbol, interval=interval)      
+
+
+# ===================================================================
+# === ANALYSIS CELERY TASKS =======================================
+# ===================================================================
+
+# Add this helper function for synchronous Redis publishing
+def send_progress_sync(analysis_id: str, step: int, total_steps: int, message: str, extra_data: dict = None):
+    """FIXED: Synchronous Redis publishing that works properly in Celery workers"""
+    progress_data = {
+        "analysis_id": analysis_id,
+        "status": "processing",
+        "progress": message,
+        "step": step,
+        "total_steps": total_steps,
+        "timestamp": datetime.now().timestamp()
+    }
+    if extra_data:
+        progress_data.update(extra_data)
+    
+    # Use the direct Redis client - this is more reliable in Celery workers
+    try:
+        redis_client = get_redis_client()
+        redis_client.publish(f"analysis:{analysis_id}", json.dumps(progress_data))
+        logger.info(f"[Celery:TrendlineTask:{analysis_id}] Step {step}: {message} - Redis message published")
+        
+    except Exception as redis_error:
+        logger.error(f"[Celery:TrendlineTask:{analysis_id}] Redis publish error: {redis_error}")
+    
+    logger.info(f"[Celery:TrendlineTask:{analysis_id}] Step {step}: {message}")
+
+@celery_app.task(name="src.core.services.tasks.analyze_trendlines_task")
+def analyze_trendlines_task(
+    analysis_id: str,
+    user_id: str,
+    symbol: str,
+    interval: str,
+    timeframe: str
+):
+    """
+    Celery task for CPU-intensive trendline analysis.
+    Fixed to use the same Redis connection as SSE listener.
+    """
+    logger.info(f"[Celery:TrendlineTask:{analysis_id}] Starting trendline analysis for {symbol}")
+    
+    async def _run_analysis():
+        repo = SupabaseCryptoRepository()
+        
+        try:
+            # Step 1: Initialize
+            send_progress_sync(analysis_id, 1, 15, "Initializing analysis parameters...")
+            
+            # Step 2: Fetch OHLCV data
+            send_progress_sync(analysis_id, 2, 15, "Fetching OHLCV data from database...")
+            ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+            if not ohlcv or not ohlcv.get('timestamp'):
+                raise ValueError("OHLCV data could not be fetched or is empty.")
+
+            # Step 3: Data preprocessing
+            send_progress_sync(analysis_id, 3, 15, "Preprocessing market data and calculating technical indicators...")
+            
+            # Step 4: Initialize trendline engine
+            send_progress_sync(analysis_id, 4, 15, "Initializing trendline detection engine...")
+            trendline_engine = TrendlineEngine(interval=interval)
+
+            # Steps 5-7: Trendline detection
+            send_progress_sync(analysis_id, 5, 15, "Identifying significant price pivots and swing points...")
+            send_progress_sync(analysis_id, 6, 15, "Detecting and validating support trendlines...")
+            send_progress_sync(analysis_id, 7, 15, "Detecting and validating resistance trendlines...")
+            
+            # Perform the actual CPU-intensive trendline detection
+            trendline_result = await trendline_engine.detect(ohlcv)
+            logger.info(f"[Celery:TrendlineTask:{analysis_id}] Trendline detection complete - found {len(trendline_result.get('trendlines', []))} trendlines")
+
+            # Step 8: Validate trendlines
+            send_progress_sync(analysis_id, 8, 15, f"Validating {len(trendline_result.get('trendlines', []))} detected trendlines for strength and accuracy...")
+
+            # Steps 9-12: Chart generation
+            send_progress_sync(analysis_id, 9, 15, "Initializing chart visualization engine...")
+            chart = ChartEngine(ohlcv_data=ohlcv, analysis_data=trendline_result)
+            
+            send_progress_sync(analysis_id, 10, 15, "Plotting support levels and demand zones on chart...")
+            send_progress_sync(analysis_id, 11, 15, "Plotting resistance levels and supply zones on chart...")
+            send_progress_sync(analysis_id, 12, 15, "Drawing trendlines and trend channels on chart...")
+            
+            # Step 13: Render chart
+            send_progress_sync(analysis_id, 13, 15, "Rendering final chart with annotations and styling...")
+            image_bytes = chart.create_chart(output_type="image")
+            logger.info(f"[Celery:TrendlineTask:{analysis_id}] Chart generated successfully")
+
+            # Step 14: Upload to cloud
+            send_progress_sync(analysis_id, 14, 15, "Uploading chart image to cloud storage...")
+            chart_url = await repo.upload_chart_image(
+                file_bytes=image_bytes,
+                analysis_id=analysis_id,
+                user_id=user_id
+            )
+            logger.info(f"[Celery:TrendlineTask:{analysis_id}] Chart uploaded to {chart_url}")
+
+            # Step 15: Save results
+            send_progress_sync(analysis_id, 15, 15, "Saving analysis results to database...")
+            updates = {
+                "status": "completed",
+                "analysis_data": trendline_result,
+                "error_message": None
+            }
+            
+            try:
+                updates["chart_url"] = chart_url
+                await repo.update_analysis_record(analysis_id, updates)
+            except Exception as e:
+                if "chart_url" in str(e):
+                    logger.warning(f"chart_url column not found, updating without it: {e}")
+                    updates.pop("chart_url", None)
+                    await repo.update_analysis_record(analysis_id, updates)
+                else:
+                    raise e
+
+            # FIXED: Send final completion message using direct Redis client
+            completion_data = {
+                "analysis_id": analysis_id,
+                "status": "completed",
+                "progress": "Analysis completed successfully! Chart and results are ready.",
+                "step": 15,
+                "total_steps": 15,
+                "analysis_data": trendline_result,
+                "chart_url": chart_url,
+                "summary": {
+                    "trendlines_found": len(trendline_result.get('trendlines', [])),
+                    "support_lines": len([t for t in trendline_result.get('trendlines', []) if t.get('type') == 'support']),
+                    "resistance_lines": len([t for t in trendline_result.get('trendlines', []) if t.get('type') == 'resistance']),
+                    "symbol": symbol,
+                    "interval": interval,
+                    "timeframe": timeframe
+                },
+                "timestamp": datetime.now().timestamp()
+            }
+            
+            # Use direct Redis client for final message
+            try:
+                redis_client = get_redis_client()
+                redis_client.publish(f"analysis:{analysis_id}", json.dumps(completion_data))
+                logger.info(f"[Celery:TrendlineTask:{analysis_id}] Final completion message published to Redis channel analysis:{analysis_id}")
+            except Exception as redis_error:
+                logger.error(f"[Celery:TrendlineTask:{analysis_id}] Failed to publish completion message: {redis_error}")
+            
+            logger.info(f"[Celery:TrendlineTask:{analysis_id}] Analysis completed successfully")
+
+        except Exception as e:
+            logger.error(f"[Celery:TrendlineTask:{analysis_id}] Analysis failed: {e}", exc_info=True)
+            
+            # Update record to failed
+            error_updates = {
+                "status": "failed",
+                "error_message": str(e)
+            }
+            await repo.update_analysis_record(analysis_id, error_updates)
+            
+            # Send error message using direct Redis client
+            error_data = {
+                "analysis_id": analysis_id,
+                "status": "failed",
+                "progress": f"Analysis failed: {str(e)}",
+                "error_message": str(e),
+                "error_details": {
+                    "symbol": symbol,
+                    "interval": interval,
+                    "timeframe": timeframe,
+                    "error_type": type(e).__name__
+                },
+                "timestamp": datetime.now().timestamp()
+            }
+            
+            try:
+                redis_client = get_redis_client()
+                redis_client.publish(f"analysis:{analysis_id}", json.dumps(error_data))
+                logger.info(f"[Celery:TrendlineTask:{analysis_id}] Error message published to Redis")
+            except Exception as redis_error:
+                logger.error(f"[Celery:TrendlineTask:{analysis_id}] Failed to publish error message: {redis_error}")
+            
+            raise
+    
+    # Use asyncio.run() instead of loop.run_until_complete()
+    return asyncio.run(_run_analysis()) 
+
+@celery_app.task(name="src.core.services.tasks.analyze_sr_task")
+def analyze_sr_task(
+    user_id: str,
+    symbol: str,
+    interval: str,
+    timeframe: str
+):
+    """
+    Celery task for CPU-intensive support/resistance analysis.
+    Returns the analysis result directly since S/R is typically faster.
+    """
+    logger.info(f"[Celery:SRTask] Starting S/R analysis for {symbol}")
+    
+    async def _run_sr_analysis():
+        try:
+            ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+            if not ohlcv or not ohlcv.get('timestamp'):
+                raise ValueError("OHLCV data could not be fetched or is empty.")
+            
+            sr_engine = SupportResistanceEngine(interval=interval)
+            result = await sr_engine.detect(ohlcv)
+            logger.info(f"[Celery:SRTask] S/R detection complete for {symbol}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"[Celery:SRTask] S/R analysis failed for {symbol}: {e}", exc_info=True)
+            raise
+    
+    # Cleaner and safer
+    return asyncio.run(_run_sr_analysis())

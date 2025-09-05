@@ -2,7 +2,6 @@
 Universal pattern notification body formatter for all pattern types.
 All notifications will include only the pattern name and the start/end time window.
 """
-
 from typing import Dict, Any
 from datetime import datetime
 

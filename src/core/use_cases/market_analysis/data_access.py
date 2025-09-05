@@ -1,18 +1,12 @@
 # src/core/use_cases/market_analysis/data_access.py
-from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
-from infrastructure.data_sources.binance.client import BinanceMarketData
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 from fastapi import BackgroundTasks
-from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
-from core.use_cases.market.market_data import fetch_crypto_data_paginated  # Import the existing function
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
-from common.logger import logger
 import re
 
 async def get_ohlcv_from_db(
@@ -36,6 +30,7 @@ async def get_ohlcv_from_db(
     }
     """
     try:
+        from core.use_cases.market.market_data import fetch_crypto_data_paginated  # lazy import
         # Convert timeframe to start/end parameters
         start_time = _parse_timeframe(timeframe)
         end_time = datetime.now(timezone.utc)

@@ -23,7 +23,6 @@ from presentation.api.routes.alerts_endpoints.price_alerts import router as pric
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 🚀 Startup

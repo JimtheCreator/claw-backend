@@ -364,6 +364,8 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             return True
         elif interval == "1h" and date_range.days > 180:
             return True
+        elif interval == "2h" and date_range.days > 270:
+            return True
         elif interval == "4h" and date_range.days > 365:
             return True
         elif interval == "1d" and date_range.days > 730:  # 2 years

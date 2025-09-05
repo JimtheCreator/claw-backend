@@ -13,12 +13,12 @@ from common.logger import configure_logging, logger
 class AlertManager:
     ALERT_HASH_PREFIX = "price_alerts"
     CONTROL_CHANNEL = "price_alerts_control_channel"
+    DATA_CHANNEL_PREFIX = "binance:data:"
 
     def __init__(self):
-        self.binance_client = BinanceMarketData()
         self.supabase_repo = SupabaseCryptoRepository()
         self.firebase_repo = FirebaseRepository()
-        self._listener_task: asyncio.Task = None
+        self._price_listener_task: asyncio.Task = None
         self._is_running = False
         self._control_listener_task: asyncio.Task = None
 
@@ -33,27 +33,25 @@ class AlertManager:
             return
 
         logger.info("Starting AlertManager service...")
-        configure_logging() # Configure logging for the standalone service
+        configure_logging()
         await redis_cache.initialize()
         await self._load_alerts_into_redis()
         
         self._is_running = True
-        self._listener_task = asyncio.create_task(self._listen_for_price_updates())
+        self._price_listener_task = asyncio.create_task(self._listen_for_redis_price_updates())
         self._control_listener_task = asyncio.create_task(self._listen_for_control_messages())
         logger.info("AlertManager service started successfully. Listening for price updates and control messages.")
-
 
     async def stop(self):
         """Stops all running tasks and closes connections."""
         self._is_running = False
-        if self._listener_task and not self._listener_task.done():
-            self._listener_task.cancel()
+        if self._price_listener_task and not self._price_listener_task.done():
+            self._price_listener_task.cancel()
             logger.info("Price update listener task cancelled.")
         if self._control_listener_task and not self._control_listener_task.done():
             self._control_listener_task.cancel()
             logger.info("Control message listener task cancelled.")
             
-        await self.binance_client.disconnect()
         await redis_cache.close()
         logger.info("AlertManager service stopped.")
 
@@ -80,7 +78,6 @@ class AlertManager:
             logger.info("Control message listener cancelled.")
         except Exception as e:
             logger.error(f"Failed to subscribe to Redis channel: {e}")
-
 
     async def _load_alerts_into_redis(self):
         """
@@ -113,34 +110,45 @@ class AlertManager:
         else:
             logger.info("Alerts are already being loaded by another instance. Skipping.")
 
-    async def _listen_for_price_updates(self):
-        """The main loop that connects to Binance and processes real-time ticker data."""
-        while self._is_running:
-            alert_keys = await redis_cache.get_keys_by_pattern(f"{self.ALERT_HASH_PREFIX}:*")
-            symbols = list(set([key.split(":")[1] for key in alert_keys]))
 
-            if not symbols:
-                logger.info("No active alerts in Redis. Listener is pausing for 60 seconds.")
-                await asyncio.sleep(60)
-                continue
+    async def _listen_for_redis_price_updates(self):
+        """Listens to Redis Pub/Sub for ticker updates from the gateway."""
+        pubsub = None
+        try:
+            # Use pattern subscription for wildcard matching
+            pubsub = await redis_cache.psubscribe(f"{self.DATA_CHANNEL_PREFIX}*@ticker")
+            logger.info("Subscribed to all Redis ticker data channels.")
+            while self._is_running:
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if message and 'data' in message:
+                        ticker_data = json.loads(message['data'])
+                        # Channel is already a string due to decode_responses=True in Redis config
+                        channel = message['channel']
+                        # Extract stream name like 'btcusdt@ticker'
+                        stream_name = channel.replace(self.DATA_CHANNEL_PREFIX, '')
+                        symbol = stream_name.split('@')[0].upper()
+                        
+                        await self._process_message(symbol, ticker_data)
+                except asyncio.TimeoutError:
+                    continue
+                except Exception as e:
+                    logger.error(f"Error processing Redis ticker message: {e}")
+        except asyncio.CancelledError:
+            logger.info("Redis price listener cancelled.")
+        except Exception as e:
+            logger.error(f"Failed to subscribe to Redis ticker channels: {e}")
+        finally:
+            if pubsub:
+                await pubsub.punsubscribe()
 
-            logger.info(f"Connecting to combined WebSocket stream for symbols: {symbols}")
-            try:
-                async for message in self.binance_client.get_combined_stream_for_tickers(symbols):
-                    await self._process_message(message)
-            except asyncio.CancelledError:
-                logger.info("Listener task was cancelled.")
-                break
-            except Exception as e:
-                logger.error(f"WebSocket listener error: {e}. Reconnecting in 10 seconds...")
-                await asyncio.sleep(10)
 
-    async def _process_message(self, message: dict):
-        if "ticker" not in message:
+    async def _process_message(self, symbol: str, ticker_data: dict):
+        """Processes a single ticker update from Redis."""
+        current_price = float(ticker_data.get('c')) # 'c' is the close price in ticker data
+        if not current_price:
             return
-
-        symbol = message['symbol']
-        current_price = message['ticker']['price']
+        
         hash_key = self._get_hash_key(symbol)
 
         active_alerts = await redis_cache.hgetall_data(hash_key)
@@ -169,7 +177,6 @@ class AlertManager:
         if triggered_alerts_data:
             await self._handle_triggered_alerts(triggered_alerts_data, current_price)
 
-
     async def add_alert(self, alert_data: dict):
         required_fields = ['symbol', 'id']
         for field in required_fields:
@@ -181,14 +188,12 @@ class AlertManager:
         alert_id = alert_data['id']
         hash_key = self._get_hash_key(symbol)
         
-        is_new_symbol = not await redis_cache.exists(hash_key)
-
         await redis_cache.hset_data(hash_key, str(alert_id), json.dumps(alert_data))
         logger.info(f"Added alert {alert_id} to Redis for symbol {symbol} via control channel.")
-
-        if is_new_symbol and self._listener_task:
-            logger.info(f"New symbol '{symbol}' detected. Restarting WebSocket listener to subscribe.")
-            self._listener_task.cancel()
+        
+        # Inform the gateway to subscribe if needed. The gateway handles deduplication.
+        stream_name = f"{symbol.lower()}@ticker"
+        await redis_cache.publish("binance:control", f"subscribe:{stream_name}")
 
     async def remove_alert(self, alert_id: str, symbol: str):
         hash_key = self._get_hash_key(symbol)
@@ -196,9 +201,11 @@ class AlertManager:
         logger.info(f"Removed alert {alert_id} from Redis for symbol {symbol} via control channel.")
 
         remaining_alerts_count = await redis_cache.hlen(hash_key)
-        if remaining_alerts_count == 0 and self._listener_task:
-            logger.info(f"Last alert for '{symbol}' removed. Restarting WebSocket listener to unsubscribe.")
-            self._listener_task.cancel()
+        if remaining_alerts_count == 0:
+            # Inform the gateway it can unsubscribe from this ticker stream.
+            stream_name = f"{symbol.lower()}@ticker"
+            await redis_cache.publish("binance:control", f"unsubscribe:{stream_name}")
+
 
     async def _handle_triggered_alerts(self, alerts: List[dict], current_price: float):
         alert_ids_to_deactivate = [alert['id'] for alert in alerts]
@@ -277,9 +284,11 @@ class AlertManager:
         """
         if not notification_requests:
             return
-        
-        # For small batches, use multicast (more efficient)
-        await self._send_via_multicast_batches(notification_requests)
+
+        # NEW: Add cleanup logic for invalid tokens
+        failed_tokens = await self._send_via_multicast_batches(notification_requests)
+        if failed_tokens:
+            await self._cleanup_invalid_tokens(failed_tokens)
 
     async def _send_via_multicast_batches(self, notification_requests: List[dict]):
         """
@@ -435,7 +444,13 @@ class AlertManager:
 # --- Main execution block to run as a standalone service ---
 if __name__ == "__main__":
     manager = AlertManager()
-    loop = asyncio.get_event_loop()
+    
+    # Fix for the deprecation warning
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     try:
         loop.run_until_complete(manager.start())

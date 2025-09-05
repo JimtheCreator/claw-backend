@@ -9,18 +9,19 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from contextlib import asynccontextmanager
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
-from infrastructure.notifications.notification_service import NotificationService
+from core.services.notifications.notification_service import NotificationService
 from infrastructure.database.redis.cache import redis_cache
 from firebase_admin import messaging
 from common.logger import logger
 import signal
 from dotenv import load_dotenv
-from infrastructure.notifications.alerts.pattern_alerts.pattern_notification_formatters import format_pattern_notification_body
+from core.services.workers.alerts.pattern_alerts.notification_formatters import format_pattern_notification_body
 
 load_dotenv()
 # Print for debug
 print("[DEBUG] FIREBASE_DATABASE_URL:", os.getenv("FIREBASE_DATABASE_URL"))
 print("[DEBUG] FIREBASE_CREDENTIALS_PATH:", os.getenv("FIREBASE_CREDENTIALS_PATH"))
+
 
 class WorkerState(Enum):
     STARTING = "starting"
@@ -400,7 +401,20 @@ class NotificationWorker:
             try:
                 t2 = time.time()
                 await asyncio.wait_for(
-                    self._send_notifications(user_ids_to_notify, symbol, interval, pattern, pattern_type, status, price, confidence, timestamp, ohlcv_snapshot, details, event_data),
+                    self._send_notifications(
+                        user_ids=user_ids_to_notify, 
+                        symbol=symbol, 
+                        interval=interval, 
+                        pattern=pattern, 
+                        pattern_type=pattern_type, 
+                        status=status, 
+                        price=price, 
+                        confidence=confidence, 
+                        timestamp=timestamp, 
+                        ohlcv_snapshot=ohlcv_snapshot, 
+                        details=details, 
+                        original_event_data=event_data
+                    ),
                     timeout=30.0
                 )
                 t3 = time.time()
@@ -485,6 +499,7 @@ class NotificationWorker:
             "price": price,
             "confidence": confidence,
             "timestamp": timestamp,
+            "notification_type": "pattern_alert",
             # Remove large ohlcv_snapshot to prevent "message too big" errors
             # "ohlcv_snapshot": ohlcv_snapshot,
             # Keep only essential details, not the full details object

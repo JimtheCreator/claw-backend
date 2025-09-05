@@ -12,9 +12,7 @@ from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
 import asyncio
 from typing import List, Dict, Any
-# Make sure to add these imports at the top of the file
-import json
-from src.core.services.tasks import fetch_and_save_full_history_task, save_market_data_task
+from src.core.services.tasks import save_market_data_task
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
 
@@ -228,7 +226,9 @@ async def fetch_crypto_data_paginated(
             # Fetch the first page of data directly from Binance
             binance_start_ms = int(start_time.timestamp() * 1000)
             klines = await binance.get_klines(
-                symbol=symbol, interval=interval, limit=page_size,
+                symbol=symbol,
+                interval=interval,
+                limit=page_size,
                 start_time=binance_start_ms
             )
             
@@ -243,11 +243,16 @@ async def fetch_crypto_data_paginated(
                 ) for k in klines if len(k) >= 6 and all(k[1:6])
             ]
             
-            # **THIS IS THE KEY CHANGE**
-            if data_entities and page == 1:
-                logger.info(f"Dispatching Celery task to fetch full history for {symbol} ({interval})")
-                # Call the Celery task using .delay() instead of BackgroundTasks
-                fetch_and_save_full_history_task.delay(symbol, interval)
+             # === THIS IS THE KEY CHANGE ===
+            # Instead of fetching the full history, we save the data we just got.
+            if data_entities:
+                logger.info(f"Dispatching Celery task to save {len(data_entities)} fetched records for {symbol} ({interval})")
+                
+                # Celery works best with simple, serializable data like JSON.
+                data_to_save_json = [entity.model_dump_json() for entity in data_entities]
+                
+                # Call the task that is designed to just save data.
+                save_market_data_task.delay(data_to_save_json)
             
             logger.info(f"Returning {len(data_entities)} records from Binance for page {page}")
             return data_entities
@@ -260,101 +265,7 @@ async def fetch_crypto_data_paginated(
         logger.critical(f"Critical error in fetch_crypto_data_paginated: {str(e)}")
         return {"error": "Internal server error"}
 
-async def fetch_and_save_full_history(symbol: str, interval: str, start_time: datetime):
-    """
-    Fetch the complete historical data and save it to InfluxDB.
-    This is meant to be run as a background task.
-    """
-    task_key = (symbol, interval)
-    try:
-        # Register this task as active
-        ACTIVE_BACKGROUND_TASKS[task_key] = True
-        logger.info(f"Started background task to fetch full history for {symbol} ({interval})")
-        
-        repo = InfluxDBMarketDataRepository()
-        binance = BinanceMarketData()
-        await binance.ensure_connected()
-        
-        # Fetch data in batches
-        all_data = []
-        # Keep track of the last successful timestamp
-        last_timestamp_ms = int(start_time.timestamp() * 1000)
-        end_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-        
-        while last_timestamp_ms < end_time_ms:
-            try:
-                # Always start the next fetch from the last known good timestamp
-                current_start_ms = last_timestamp_ms
 
-                klines = await binance.get_klines(
-                    symbol=symbol,
-                    interval=interval,
-                    limit=1000,
-                    start_time=current_start_ms,
-                    end_time=end_time_ms
-                )
-                
-                # If no data is returned, we don't stop. We advance our time window
-                # to check for the next period. This prevents getting stuck.
-                if not klines:
-                    logger.info(f"No data returned for window starting at {datetime.fromtimestamp(current_start_ms/1000, tz=timezone.utc)}. Advancing window.")
-                    # Advance the start time by the maximum possible duration of the fetch (1000 * interval)
-                    interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-                    last_timestamp_ms += 1000 * interval_ms
-                    await asyncio.sleep(0.5) # Prevent rapid-fire empty requests
-                    continue # Continue to the next iteration of the while loop
-                
-                # Process batch
-                batch_entities = []
-                for k in klines:
-                    if len(k) >= 6 and all(k[1:6]):
-                        entity = MarketDataEntity(
-                            symbol=symbol,
-                            interval=interval,
-                            timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                            open=float(k[1]),
-                            high=float(k[2]),
-                            low=float(k[3]),
-                            close=float(k[4]),
-                            volume=float(k[5])
-                        )
-                        batch_entities.append(entity)
-                
-                if batch_entities:
-                    # Save this batch
-                    await repo.save_market_data_bulk(batch_entities)
-                    
-                    # Update progress
-                    all_data.extend(batch_entities)
-
-                    # IMPORTANT: Update the last successful timestamp
-                    last_timestamp_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1 # +1 to ensure we don't re-fetch the last candle
-                    
-                    logger.info(f"Saved batch of {len(batch_entities)} records. "
-                               f"Progress: {batch_entities[-1].timestamp} "
-                               f"({len(all_data)} total records saved)")
-                else:
-                    # If processing resulted in no valid entities, still advance the time
-                    interval_ms = INTERVAL_MINUTES[interval] * 60 * 1000
-                    last_timestamp_ms += 1000 * interval_ms
-                
-                # Small delay to avoid API rate limits
-                await asyncio.sleep(0.5)
-                
-            except Exception as e:
-                logger.error(f"Error in background fetch batch: {str(e)}. Retrying after delay.")
-                # On error, wait and let the loop retry from the same `last_timestamp_ms`
-                await asyncio.sleep(5) 
-        
-        await binance.disconnect()
-        logger.info(f"✅ Background task completed: Saved {len(all_data)} total records for {symbol} ({interval})")
-        
-    except Exception as e:
-        logger.error(f"Background task failed for {symbol} ({interval}): {str(e)}")
-    finally:
-        # Always unregister the task
-        ACTIVE_BACKGROUND_TASKS.pop(task_key, None)
-        logger.info(f"Unregistered background task for {symbol} ({interval})")
 
 async def delete_market_data(
     symbol: str = None,

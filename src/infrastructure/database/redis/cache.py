@@ -154,6 +154,28 @@ class RedisCache:
             logger.error(f"Error deleting messages from stream '{stream}': {e}")
             raise
 
+
+    async def psubscribe(self, *patterns: str):
+        """
+        Subscribes to one or more Redis channel patterns using pattern matching.
+        
+        Args:
+            *patterns (str): Channel patterns to subscribe to (supports wildcards like *)
+            
+        Returns:
+            Redis PubSub object
+        """
+        if not self._initialized:
+            raise RuntimeError("Redis is not initialized.")
+        try:
+            pubsub = self._redis.pubsub()
+            await pubsub.psubscribe(*patterns)
+            logger.debug(f"Pattern subscribed to patterns: {patterns}")
+            return pubsub
+        except Exception as e:
+            logger.error(f"Error pattern subscribing to patterns {patterns}: {e}")
+            raise
+
     async def publish(self, channel: str, message: str) -> int:
         """
         Publishes a message to a Redis channel.
