@@ -266,7 +266,7 @@ class BinanceMarketData:
         """Safely close a client connection"""
         try:
             await client.close_connection()
-            logger.debug(f"Closed pooled connection {index}")
+            logger.info(f"Closed pooled connection {index}")
         except Exception as e:
             logger.error(f"Error closing pooled connection {index}: {e}")
 
@@ -286,7 +286,7 @@ class BinanceMarketData:
         """Safely close a WebSocket connection"""
         try:
             await websocket.close()
-            logger.debug(f"Closed WebSocket connection: {key}")
+            logger.info(f"Closed WebSocket connection: {key}")
         except Exception as e:
             logger.error(f"Error closing WebSocket {key}: {e}")
 
@@ -300,7 +300,7 @@ class BinanceMarketData:
         self,
         symbol: str,
         interval: str,
-        limit: int = 500,
+        limit: int = 1000,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
         max_retries: int = 3  # Reduced from 3 to 2
@@ -344,7 +344,7 @@ class BinanceMarketData:
         # Retry logic with exponential backoff
         for attempt in range(max_retries):
             try:
-                logger.debug(f"Attempt {attempt + 1}/{max_retries}: Fetching {limit} {interval} klines for {symbol}")
+                logger.info(f"Attempt {attempt + 1}/{max_retries}: Fetching {limit} {interval} klines for {symbol}")
                 
                 klines = await self.circuit_breaker.call(_fetch_klines)
 
@@ -437,7 +437,7 @@ class BinanceMarketData:
         try:
             for i in range(0, len(symbols), batch_size):
                 batch = symbols[i:i + batch_size]
-                logger.debug(f"Processing ticker batch {i//batch_size + 1}: {batch}")
+                logger.info(f"Processing ticker batch {i//batch_size + 1}: {batch}")
                 
                 # Process batch with controlled concurrency
                 batch_tasks = [self.get_ticker(symbol) for symbol in batch]

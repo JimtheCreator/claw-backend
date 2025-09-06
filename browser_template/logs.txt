@@ -1,0 +1,101 @@
+PS D:\ClawInc\Claw-Backend> & D:/ClawInc/Claw-Backend/.venv/Scripts/Activate.ps1
+(.venv) PS D:\ClawInc\Claw-Backend> & D:/ClawInc/Claw-Backend/.venv/Scripts/python.exe d:/ClawInc/Claw-Backend/src/core/services/workers/alerts/pattern_alerts/pattern_alert_worker.py
+2025-09-07 02:00:04,107 - ClawBackend - INFO - [pattern_alert_worker.py:94] - 🚀 Initializing PatternAlertWorker...
+2025-09-07 02:00:04,127 - ClawBackend - INFO - [cache.py:34] - ✅ Successfully connected to Redis
+2025-09-07 02:00:04,858 - ClawBackend - INFO - [pattern_alert_worker.py:100] - 🎯 Active (symbol, interval) pairs to listen for: {('BTCUSDT', '1m')}
+2025-09-07 02:00:04,859 - ClawBackend - INFO - [pattern_alert_worker.py:167] - 🔧 Initializing Redis subscription map with current alerts...
+2025-09-07 02:00:05,191 - ClawBackend - INFO - [pattern_alert_worker.py:169] - 📋 Found 1 active pattern alerts in database
+2025-09-07 02:00:05,191 - ClawBackend - INFO - [pattern_alert_worker.py:178] - ➕ Adding alert to subscription map: BTCUSDT:1m - Standard Doji for user 3AYShBCRy7ffqTPUDxkwPBPZoyu2
+2025-09-07 02:00:05,194 - ClawBackend - INFO - [pattern_alert_worker.py:197] - Added user 3AYShBCRy7ffqTPUDxkwPBPZoyu2 to BTCUSDT:1m pattern Standard Doji
+2025-09-07 02:00:05,195 - ClawBackend - INFO - [pattern_alert_worker.py:185] - ✅ Initialized Redis subscription map with current alerts
+2025-09-07 02:00:05,197 - ClawBackend - INFO - [pattern_alert_worker.py:111] - [DEBUG] Redis pattern_listeners:BTCUSDT:1m: {'Standard Doji': '["GY4VGhxdQlSz6pe2FqaKjcZ0ZMu1", "3AYShBCRy7ffqTPUDxkwPBPZoyu2"]'}
+2025-09-07 02:00:05,197 - ClawBackend - INFO - [pattern_alert_worker.py:119] - [CLEANUP] Starting self-healing cleanup of ghost patterns in Redis...
+2025-09-07 02:00:05,546 - ClawBackend - INFO - [pattern_alert_worker.py:152] - [CLEANUP] Keeping pattern 'Standard Doji' in pattern_listeners:BTCUSDT:1m (still in Supabase)
+2025-09-07 02:00:05,546 - ClawBackend - INFO - [pattern_alert_worker.py:672] - Initializing rolling windows for all active pairs...
+2025-09-07 02:00:05,559 - ClawBackend - INFO - [market_db.py:41] - Successfully connected to InfluxDB
+2025-09-07 02:00:05,560 - ClawBackend - INFO - [market_data.py:168] - Using smart recent-priority fetch for BTCUSDT (1m) - estimated 129599 candles
+2025-09-07 02:00:05,697 - ClawBackend - INFO - [market_db.py:329] - Retrieved 20 downsampled records (REVERSE) from InfluxDB for BTCUSDT (1m)
+2025-09-07 02:00:05,698 - ClawBackend - INFO - [market_data.py:187] - Returning 20 recent records (chronological order) for BTCUSDT (1m)
+2025-09-07 02:00:05,699 - ClawBackend - INFO - [cache.py:318] - Initializing key removal for 'rolling_window:BTCUSDT:1m'...
+2025-09-07 02:00:05,701 - ClawBackend - INFO - [cache.py:310] - Deleted 1 key(s): rolling_window:BTCUSDT:1m
+2025-09-07 02:00:05,702 - ClawBackend - INFO - [cache.py:322] - CACHED KEY 'rolling_window:BTCUSDT:1m' DELETED ✅
+2025-09-07 02:00:05,714 - ClawBackend - INFO - [pattern_alert_worker.py:415] - Initialized rolling window for BTCUSDT:1m with 20 candles (window size: 20)
+2025-09-07 02:00:05,714 - ClawBackend - INFO - [pattern_alert_worker.py:676] - ✅ Rolling window initialized for BTCUSDT:1m
+2025-09-07 02:00:05,715 - ClawBackend - INFO - [pattern_alert_worker.py:683] - Running initial pattern detection on all active pairs...
+2025-09-07 02:00:05,715 - ClawBackend - INFO - [pattern_alert_worker.py:687] - --> [STARTUP_TRACE] 1. Attempting initial detection for BTCUSDT:1m
+2025-09-07 02:00:05,716 - ClawBackend - INFO - [pattern_alert_worker.py:430] - 🔍 Starting pattern detection for BTCUSDT:1m
+2025-09-07 02:00:05,718 - ClawBackend - INFO - [pattern_alert_worker.py:437] - [PERF] Redis lrange for BTCUSDT:1m took 0.002s
+2025-09-07 02:00:05,719 - ClawBackend - INFO - [pattern_alert_worker.py:441] - 📊 Found 20 candles in rolling window for BTCUSDT:1m
+2025-09-07 02:00:05,720 - ClawBackend - INFO - [pattern_alert_worker.py:444] - [DEBUG] Last candle in rolling window for BTCUSDT:1m: {'open': 110228.28, 'high': 110228.29, 'low': 110206.36, 'close': 110206.36, 'volume': 4.85221, 'timestamp': 1757199605560}
+2025-09-07 02:00:05,721 - ClawBackend - INFO - [pattern_alert_worker.py:453] - 📈 OHLCV data prepared for BTCUSDT:1m - Last close: 110206.36
+2025-09-07 02:00:05,722 - ClawBackend - INFO - [pattern_alert_worker.py:459] - [PERF] Redis hgetall_data for BTCUSDT:1m took 0.001s
+2025-09-07 02:00:05,723 - ClawBackend - INFO - [pattern_alert_worker.py:463] - 🎯 Found 1 active patterns for BTCUSDT:1m: ['Standard Doji']
+2025-09-07 02:00:05,723 - ClawBackend - INFO - [pattern_alert_worker.py:470] - 🔍 Adding detection task for pattern 'Standard Doji' with 2 users
+2025-09-07 02:00:05,724 - ClawBackend - INFO - [pattern_alert_worker.py:477] - 🚀 Running 1 pattern detection tasks for BTCUSDT:1m
+2025-09-07 02:00:05,724 - ClawBackend - INFO - [pattern_alert_worker.py:515] - 🎯 Running detector for doji (requested type: standard_doji) on BTCUSDT:1m
+2025-09-07 02:00:05,725 - ClawBackend - INFO - [pattern_alert_worker.py:522] - [PERF] Pattern detection for BTCUSDT:1m Standard Doji took 0.000s
+2025-09-07 02:00:05,725 - ClawBackend - INFO - [pattern_alert_worker.py:524] - ❌ No doji pattern detected for BTCUSDT:1m
+2025-09-07 02:00:05,726 - ClawBackend - INFO - [pattern_alert_worker.py:542] - [PERF] detect_pattern_with_semaphore total for BTCUSDT:1m Standard Doji took 0.002s
+2025-09-07 02:00:05,726 - ClawBackend - INFO - [pattern_alert_worker.py:481] - [PERF] All pattern detection tasks for BTCUSDT:1m took 0.002s
+2025-09-07 02:00:05,727 - ClawBackend - WARNING - [pattern_alert_worker.py:492] - ❌ Pattern not found or unexpected result for task 0 on BTCUSDT:1m: {'detected': False}
+2025-09-07 02:00:05,727 - ClawBackend - INFO - [pattern_alert_worker.py:496] - [PERF] Total notification processing for BTCUSDT:1m took 0.011s
+2025-09-07 02:00:05,728 - ClawBackend - INFO - [pattern_alert_worker.py:497] - ✅ Pattern detection completed for BTCUSDT:1m
+2025-09-07 02:00:05,728 - ClawBackend - INFO - [pattern_alert_worker.py:692] - --> [STARTUP_TRACE] 2. Initial detection COMPLETED for BTCUSDT:1m
+2025-09-07 02:00:05,728 - ClawBackend - INFO - [pattern_alert_worker.py:696] - 🏁 Finished all initial pattern detections. NOW starting WebSocket listeners...
+2025-09-07 02:00:05,729 - ClawBackend - INFO - [pattern_alert_worker.py:699] - Starting WebSocket listeners for all active pairs...
+2025-09-07 02:00:05,729 - ClawBackend - INFO - [pattern_alert_worker.py:702] - --> [STARTUP_TRACE] 3. Creating listener task for BTCUSDT:1m
+2025-09-07 02:00:05,730 - ClawBackend - INFO - [pattern_alert_worker.py:708] - --> [STARTUP_TRACE] 4. Listener task CREATED for BTCUSDT:1m
+2025-09-07 02:00:05,730 - ClawBackend - INFO - [pattern_alert_worker.py:716] - 🎉 PatternAlertWorker started successfully!
+2025-09-07 02:00:05,731 - ClawBackend - INFO - [pattern_alert_worker.py:307] - Started Redis subscription listener for pattern alert updates
+2025-09-07 02:00:05,732 - ClawBackend - INFO - [pattern_alert_worker.py:651] - Health check: 1 listeners alive, 0 restarted. Alive: ['BTCUSDT:1m']
+2025-09-07 02:00:05,732 - ClawBackend - INFO - [pattern_alert_worker.py:119] - [CLEANUP] Starting self-healing cleanup of ghost patterns in Redis...
+2025-09-07 02:00:06,059 - ClawBackend - INFO - [pattern_alert_worker.py:573] - Attempting to establish data flow for btcusdt@kline_1m...
+2025-09-07 02:00:06,062 - ClawBackend - INFO - [pattern_alert_worker.py:310] - [REDIS SUB] Raw message: {'type': 'subscribe', 'pattern': None, 'channel': 'pattern_alerts:updates', 'data': 1}
+2025-09-07 02:00:06,077 - ClawBackend - INFO - [pattern_alert_worker.py:577] - Published 'subscribe' request for btcusdt@kline_1m to the control channel.
+2025-09-07 02:00:06,079 - ClawBackend - INFO - [pattern_alert_worker.py:581] - Subscribed to data channel 'binance:data:btcusdt@kline_1m'. Waiting for data...
+2025-09-07 02:00:06,083 - ClawBackend - INFO - [pattern_alert_worker.py:152] - [CLEANUP] Keeping pattern 'Standard Doji' in pattern_listeners:BTCUSDT:1m (still in Supabase)
+2025-09-07 02:00:06,181 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:08,159 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:10,167 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:12,157 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:14,170 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:16,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:18,151 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:21,175 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:22,170 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:24,160 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:26,165 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:28,146 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:30,159 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:32,167 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:34,148 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:35,739 - ClawBackend - INFO - [pattern_alert_worker.py:651] - Health check: 1 listeners alive, 0 restarted. Alive: ['BTCUSDT:1m']
+2025-09-07 02:00:36,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:38,163 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:40,148 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:42,150 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:44,159 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:46,163 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:48,150 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:50,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:52,155 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:54,156 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:56,158 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:00:58,259 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:00,148 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:01,173 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:02,178 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:04,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:05,745 - ClawBackend - INFO - [pattern_alert_worker.py:651] - Health check: 1 listeners alive, 0 restarted. Alive: ['BTCUSDT:1m']
+2025-09-07 02:01:06,164 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:08,153 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:10,153 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:12,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:14,150 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:16,157 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:18,279 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:20,150 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:22,148 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:24,176 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:26,156 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.
+2025-09-07 02:01:28,149 - ClawBackend - INFO - [pattern_alert_worker.py:589] - Data is flowing for btcusdt@kline_1m. Processing message.

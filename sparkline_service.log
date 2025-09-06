@@ -384,3 +384,1395 @@
 2025-09-04 05:29:58,160 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
 2025-09-04 05:30:00,140 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
 2025-09-04 05:32:51,214 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:00:45,265 - infrastructure.data_sources.binance.client - INFO - Connected to Binance API
+2025-09-05 21:00:46,738 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:00:47,556 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:00:47,558 - infrastructure.data_sources.binance.client - INFO - Initializing connection pool with 2 connections
+2025-09-05 21:00:49,882 - infrastructure.data_sources.binance.client - INFO - Connection pool initialized with 2 active connections
+2025-09-05 21:00:50,594 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:03:40,409 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:06:30,399 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:06:31,338 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:09:20,693 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:12:11,079 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:12:11,944 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:15:01,083 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:17:50,774 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:17:51,567 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:20:40,264 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:23:28,586 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:23:29,433 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:26:16,325 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:29:06,411 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:29:07,192 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:31:54,715 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:34:46,649 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:34:49,150 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:37:36,308 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:40:23,685 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:40:24,553 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:43:13,864 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:46:02,051 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:46:05,532 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:48:55,008 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:51:52,610 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:51:53,663 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:54:42,249 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:57:29,985 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 21:57:30,999 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:00:21,210 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:03:10,640 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:03:11,653 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:06:00,749 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:08:49,097 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:08:50,372 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:11:38,265 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:14:30,378 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:14:33,787 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:17:23,994 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:20:14,159 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:20:14,929 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:23:03,959 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:25:54,674 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:25:55,559 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:28:44,735 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:31:36,292 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:31:39,879 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:34:32,287 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:37:20,311 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:37:21,087 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:40:09,207 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:43:02,549 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:43:04,508 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:45:53,991 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:48:42,231 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:48:42,985 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:51:30,211 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:54:18,173 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:54:19,081 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:57:06,150 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:59:53,956 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 22:59:54,998 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:02:44,323 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:05:31,668 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:05:32,417 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:08:19,495 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:11:07,007 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:11:07,776 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:13:54,649 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:16:41,968 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-05 23:16:42,824 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:13:37,604 - infrastructure.data_sources.binance.client - INFO - Connected to Binance API
+2025-09-06 23:13:39,977 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:13:41,094 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:13:41,096 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:13:41,096 - infrastructure.data_sources.binance.client - INFO - Initializing connection pool with 2 connections
+2025-09-06 23:13:43,394 - infrastructure.data_sources.binance.client - INFO - Connection pool initialized with 2 active connections
+2025-09-06 23:13:44,562 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:13:44,572 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:13:47,864 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:13:51,158 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:13:54,449 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:13:57,740 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:14:01,033 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:14:04,335 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:14:07,632 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:14:10,913 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:14:14,207 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:14:17,489 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:14:20,791 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:14:24,087 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:14:27,388 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:14:30,710 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:16:32,220 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:16:32,226 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:16:35,655 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:16:38,941 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:16:42,227 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:16:45,533 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:16:48,820 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:16:52,133 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:16:55,429 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:16:58,728 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:17:02,026 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:17:05,315 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:17:08,609 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:17:11,903 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:17:15,194 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:17:18,497 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:19:19,726 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:19:19,730 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:19:20,468 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:19:20,470 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:19:23,744 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:19:27,052 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:19:30,328 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:19:33,627 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:19:36,933 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:19:40,227 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:19:43,531 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:19:46,817 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:19:50,105 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:19:53,401 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:19:56,709 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:19:59,999 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:20:03,286 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:20:06,573 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:22:07,572 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:22:07,577 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:22:10,938 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:22:14,219 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:22:17,503 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:22:20,786 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:22:24,091 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:22:27,389 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:22:30,689 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:22:33,999 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:22:37,290 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:22:40,576 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:22:43,858 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:22:47,141 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:22:50,417 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:22:53,699 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:24:54,819 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:24:54,824 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:24:55,530 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:24:55,532 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:24:58,806 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:25:02,111 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:25:05,402 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:25:08,710 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:25:12,001 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:25:15,285 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:25:18,583 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:25:21,881 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:25:25,172 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:25:28,476 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:25:31,761 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:25:35,036 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:25:38,325 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:25:41,598 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:27:43,091 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:27:43,097 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:27:46,537 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:27:49,824 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:27:53,111 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:27:56,386 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:27:59,681 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:28:02,973 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:28:06,266 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:28:09,565 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:28:12,851 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:28:16,125 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:28:19,429 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:28:22,757 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:28:26,061 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:28:29,341 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:30:30,293 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:30:30,298 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:30:31,096 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:30:32,105 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:30:35,389 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:30:38,709 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:30:42,094 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:30:45,379 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:30:48,674 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:30:52,023 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:30:55,319 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:30:58,595 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:31:01,868 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:31:05,148 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:31:08,513 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:31:11,809 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:31:15,108 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:31:18,421 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:33:19,577 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:33:19,584 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:33:23,000 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:33:26,293 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:33:29,597 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:33:32,897 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:33:37,213 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:33:40,508 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:33:43,797 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:33:47,082 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:33:50,407 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:33:53,808 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:33:57,098 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:34:00,392 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:34:03,721 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:34:07,097 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:36:08,221 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:36:08,231 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:36:08,979 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:36:09,003 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:36:12,341 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:36:15,628 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:36:18,910 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:36:22,197 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:36:25,503 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:36:28,802 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:36:32,546 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:36:35,831 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:36:39,127 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:36:42,417 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:36:45,705 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:36:48,998 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:36:52,295 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:36:55,655 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:38:56,750 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:38:56,761 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:39:00,293 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:39:03,573 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:39:06,876 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:39:10,211 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:39:13,596 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:39:16,955 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:39:20,339 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:39:23,653 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:39:26,944 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:39:30,280 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:39:33,652 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:39:37,039 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:39:40,325 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:39:43,618 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:41:44,381 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:41:45,389 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:41:46,165 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:41:46,173 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:41:49,456 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:41:52,817 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:41:56,109 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:41:59,401 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:42:02,751 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:42:06,032 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:42:09,328 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:42:12,634 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:42:15,957 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:42:22,293 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:42:25,580 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:42:28,967 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:42:32,280 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:42:35,568 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:44:36,418 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:44:37,452 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:44:40,975 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:44:44,338 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:44:47,622 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:44:50,993 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:44:54,280 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:44:57,559 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:45:00,924 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:45:04,617 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:45:07,998 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:45:11,303 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:45:14,643 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:45:18,033 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:45:21,322 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:45:24,606 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:47:25,791 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:47:25,796 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:47:26,806 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:47:27,816 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:47:31,153 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:47:34,525 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:47:37,829 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:47:41,184 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:47:44,494 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:47:47,844 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:47:51,191 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:47:54,597 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:47:57,979 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:48:02,282 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:48:05,571 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:48:08,902 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:48:12,211 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:48:15,504 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:50:16,536 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:50:16,613 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:50:20,456 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:50:23,796 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:50:27,174 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:50:30,555 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:50:33,941 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:50:37,316 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:50:40,655 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:50:43,978 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:50:47,349 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:50:50,735 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:50:54,210 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:50:57,593 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:51:00,977 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:51:04,258 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:53:05,752 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:53:05,756 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:53:06,638 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:53:07,677 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:53:10,977 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:53:14,295 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:53:17,583 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:53:20,869 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:53:24,230 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:53:27,519 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:53:30,804 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:53:34,095 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:53:37,392 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:53:40,691 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:53:44,093 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:53:47,387 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:53:50,722 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:53:54,031 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:55:55,676 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:55:55,729 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:55:59,240 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:56:02,534 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:56:05,828 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:56:09,194 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:56:12,590 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:56:15,952 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:56:19,323 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:56:22,704 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:56:26,081 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:56:30,387 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:56:33,675 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:56:37,043 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:56:40,426 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:56:43,801 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-06 23:58:45,008 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:58:45,013 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:58:45,823 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-06 23:58:45,836 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-06 23:58:49,144 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-06 23:58:52,519 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-06 23:58:55,896 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-06 23:58:59,284 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-06 23:59:02,570 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-06 23:59:05,894 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-06 23:59:09,212 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-06 23:59:12,528 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-06 23:59:15,866 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-06 23:59:19,256 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-06 23:59:22,547 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-06 23:59:25,904 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-06 23:59:29,285 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-06 23:59:32,592 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:01:34,273 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:01:34,283 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:01:37,691 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:01:41,177 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:01:44,442 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:01:47,727 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:01:51,008 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:01:54,288 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:01:57,564 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:02:00,939 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:02:04,228 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:02:07,607 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:02:10,976 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:02:14,352 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:02:17,738 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:02:21,021 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:04:22,323 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:04:22,329 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:04:23,130 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:04:23,142 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:04:26,444 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:04:29,834 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:04:33,207 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:04:36,484 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:04:39,867 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:04:43,142 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:04:46,519 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:04:49,806 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:04:53,281 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:04:57,075 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:05:00,439 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:05:03,818 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:05:07,213 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:05:10,588 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:07:11,641 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:07:11,654 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:07:15,099 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:07:18,380 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:07:21,664 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:07:25,039 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:07:28,340 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:07:31,642 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:07:34,934 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:07:38,216 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:07:41,514 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:07:44,793 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:07:48,084 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:07:51,392 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:07:54,734 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:07:58,116 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:09:59,220 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:09:59,229 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:10:00,130 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:10:00,137 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:10:03,413 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:10:06,733 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:10:10,100 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:10:13,379 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:10:16,658 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:10:19,930 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:10:23,315 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:10:26,696 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:10:29,982 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:10:33,361 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:10:36,647 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:10:39,919 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:10:43,275 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:10:46,553 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:12:47,657 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:12:47,665 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:12:51,079 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:12:54,450 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:12:57,724 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:13:01,020 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:13:04,298 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:13:07,562 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:13:10,843 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:13:14,224 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:13:17,507 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:13:20,875 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:13:24,166 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:13:27,531 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:13:30,822 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:13:34,101 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:15:35,095 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:15:35,099 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:15:35,800 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:15:35,805 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:15:39,098 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:15:42,374 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:15:45,679 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:15:49,021 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:15:52,298 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:15:55,577 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:15:58,877 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:16:02,153 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:16:05,539 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:16:08,921 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:16:12,201 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:16:15,573 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:16:18,856 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:16:22,158 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:18:23,223 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:18:23,235 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:18:26,610 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:18:29,916 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:18:33,210 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:18:36,588 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:18:39,962 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:18:43,245 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:18:46,606 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:18:49,887 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:18:53,223 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:18:56,510 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:18:59,847 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:19:03,196 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:19:06,481 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:19:09,757 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:21:10,994 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:21:11,002 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:21:11,721 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:21:11,727 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:21:15,000 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:21:18,365 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:21:21,642 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:21:24,945 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:21:28,219 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:21:31,583 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:21:34,960 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:21:38,239 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:21:41,509 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:21:44,900 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:21:48,271 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:21:51,540 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:21:54,922 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:21:58,199 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:23:59,156 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:23:59,161 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:24:02,500 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:24:05,862 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:24:09,133 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:24:12,411 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:24:15,730 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:24:19,109 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:24:22,446 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:24:25,772 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:24:29,076 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:24:32,413 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:24:35,713 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:24:39,074 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:24:42,352 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:24:45,733 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:26:46,919 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:26:46,923 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:26:47,749 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:26:47,755 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:26:51,064 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:26:54,396 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:26:57,704 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:27:01,002 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:27:04,288 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:27:07,573 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:27:10,841 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:27:14,125 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:27:17,405 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:27:20,688 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:27:24,024 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:27:27,298 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:27:30,580 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:27:33,952 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:29:36,301 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:29:37,323 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:29:40,755 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:29:44,015 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:29:47,293 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:29:50,596 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:29:53,901 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:29:57,226 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:30:00,621 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:30:04,029 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:30:07,371 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:30:10,758 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:30:14,085 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:30:17,375 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:30:20,681 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:30:23,971 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:32:24,738 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:32:24,742 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:32:25,411 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:32:25,420 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:32:28,704 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:32:31,994 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:32:35,302 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:32:38,613 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:32:41,913 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:32:45,195 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:32:48,492 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:32:51,818 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:32:55,091 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:32:58,388 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:33:01,755 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:33:05,054 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:33:08,361 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:33:11,649 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:35:14,443 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:35:14,452 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:35:17,846 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:35:21,134 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:35:24,407 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:35:27,687 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:35:31,985 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:35:35,266 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:35:38,629 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:35:41,908 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:35:45,300 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:35:48,681 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:35:51,965 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:35:55,245 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:35:58,521 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:36:01,872 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:38:02,747 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:38:02,750 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:38:03,489 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:38:03,496 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:38:06,815 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:38:10,189 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:38:13,576 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:38:16,938 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:38:20,321 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:38:23,598 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:38:26,876 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:38:30,163 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:38:33,435 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:38:36,735 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:38:40,030 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:38:43,309 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:38:46,587 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:38:49,865 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:40:50,920 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:40:50,928 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:40:54,337 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:40:57,606 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:41:00,989 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:41:04,362 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:41:07,748 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:41:11,130 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:41:14,508 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:41:17,781 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:41:21,053 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:41:24,346 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:41:27,722 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:41:31,086 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:41:34,484 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:41:37,822 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:43:38,965 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:43:38,997 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:43:39,823 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:43:39,831 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:43:43,100 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:43:46,376 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:43:49,661 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:43:52,930 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:43:56,203 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:43:59,476 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:44:02,749 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:44:06,020 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:44:09,305 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:44:12,683 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:44:15,968 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:44:19,246 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:44:22,512 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:44:25,890 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:46:27,813 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:46:27,863 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:46:31,287 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:46:34,608 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:46:37,875 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:46:41,271 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:46:44,589 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:46:47,919 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:46:51,304 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:46:54,683 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:46:57,965 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:47:02,269 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:47:05,631 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:47:08,904 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:47:12,191 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:47:15,564 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:49:16,704 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:49:16,712 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:49:17,795 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:49:17,808 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:49:21,088 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:49:24,492 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:49:27,876 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:49:31,247 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:49:34,628 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:49:38,007 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:49:41,274 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:49:44,658 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:49:48,040 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:49:52,320 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:49:55,600 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:49:58,870 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:50:02,154 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:50:05,436 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:52:06,245 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:52:06,254 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:52:09,652 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:52:13,050 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:52:16,432 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:52:19,800 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:52:23,093 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:52:26,460 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:52:29,844 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:52:33,210 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:52:36,496 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:52:39,872 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:52:43,159 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:52:46,528 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:52:49,802 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:52:53,148 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:54:53,918 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:54:53,921 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:54:54,675 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:54:54,678 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:54:57,952 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:55:01,224 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:55:04,697 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:55:08,355 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:55:11,628 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:55:14,899 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:55:18,165 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:55:21,438 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:55:24,724 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:55:28,007 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:55:31,278 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:55:34,549 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:55:37,840 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:55:41,120 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 00:57:41,841 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 00:57:41,846 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 00:57:45,189 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 00:57:48,469 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 00:57:51,734 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 00:57:54,996 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 00:57:58,272 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 00:58:01,557 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 00:58:04,846 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 00:58:08,125 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 00:58:11,434 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 00:58:14,706 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 00:58:17,977 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 00:58:21,248 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 00:58:24,518 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 00:58:27,794 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:00:28,513 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:00:28,542 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:00:29,320 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:00:29,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:00:32,598 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:00:35,895 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:00:39,182 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:00:42,447 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:00:46,155 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:00:49,422 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:00:52,703 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:00:55,984 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:00:59,255 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:01:02,535 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:01:05,802 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:01:09,069 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:01:12,332 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:01:15,602 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:03:16,577 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:03:17,599 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:03:21,007 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:03:24,272 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:03:27,549 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:03:30,817 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:03:34,097 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:03:37,365 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:03:40,635 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:03:43,913 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:03:47,200 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:03:50,489 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:03:53,763 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:03:57,045 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:04:00,329 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:04:03,625 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:06:04,451 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:06:04,457 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:06:05,228 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:06:05,233 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:06:08,511 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:06:11,800 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:06:15,106 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:06:18,388 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:06:21,672 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:06:24,942 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:06:28,212 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:06:31,484 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:06:34,775 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:06:38,067 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:06:41,348 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:06:44,609 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:06:47,885 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:06:51,165 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:08:52,116 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:08:52,122 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:08:55,462 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:08:58,744 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:09:02,013 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:09:05,287 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:09:08,570 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:09:11,841 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:09:15,189 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:09:18,456 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:09:21,723 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:09:25,091 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:09:28,393 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:09:31,659 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:09:34,948 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:09:38,219 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:11:40,203 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:11:40,210 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:11:40,932 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:11:40,940 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:11:44,209 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:11:47,481 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:11:50,751 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:11:54,029 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:11:57,299 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:12:00,594 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:12:03,872 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:12:07,155 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:12:10,466 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:12:13,732 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:12:17,035 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:12:20,299 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:12:23,578 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:12:26,971 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:14:27,982 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:14:27,988 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:14:31,399 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:14:34,680 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:14:37,945 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:14:41,222 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:14:44,504 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:14:47,826 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:14:51,123 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:14:54,454 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:14:57,730 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:15:01,013 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:15:04,475 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:15:07,855 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:15:11,187 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:15:14,476 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:17:15,481 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:17:15,485 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:17:16,265 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:17:16,271 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:17:19,642 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:17:23,019 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:17:26,416 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:17:29,802 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:17:33,193 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:17:36,529 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:17:39,914 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:17:43,289 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:17:46,666 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:17:50,055 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:17:53,442 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:17:56,826 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:18:00,237 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:18:03,611 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:20:04,664 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:20:05,678 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:20:09,156 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:20:12,525 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:20:15,908 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:20:19,308 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:20:22,674 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:20:26,045 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:20:29,442 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:20:32,826 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:20:36,243 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:20:39,625 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:20:42,996 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:20:46,385 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:20:49,769 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:20:53,179 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:22:54,329 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:22:54,332 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:22:55,175 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:22:55,187 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:22:58,574 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:23:01,938 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:23:05,319 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:23:08,708 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:23:12,101 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:23:15,556 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:23:18,937 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:23:22,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:23:25,689 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:23:29,057 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:23:32,440 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:23:35,807 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:23:39,188 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:23:42,567 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:25:43,705 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:25:43,708 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:25:47,148 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:25:50,505 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:25:53,883 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:25:57,249 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:26:00,649 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:26:04,048 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:26:07,450 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:26:10,836 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:26:14,217 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:26:17,613 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:26:20,997 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:26:24,373 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:26:27,764 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:26:31,136 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:28:32,256 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:28:32,257 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:28:33,083 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:28:33,087 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:28:36,460 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:28:39,837 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:28:43,232 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:28:46,611 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:28:50,005 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:28:53,380 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:28:56,760 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:29:00,168 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:29:03,534 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:29:06,915 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:29:10,309 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:29:13,702 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:29:17,081 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:29:20,453 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:31:21,292 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:31:21,294 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:31:24,745 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:31:28,124 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:31:31,503 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:31:34,888 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:31:38,260 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:31:41,637 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:31:45,011 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:31:48,402 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:31:51,793 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:31:55,179 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:31:58,558 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:32:01,940 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:32:05,327 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:32:08,719 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:34:09,917 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:34:09,927 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:34:10,734 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:34:10,737 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:34:14,103 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:34:17,508 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:34:20,901 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:34:24,381 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:34:27,814 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:34:31,201 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:34:34,584 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:34:37,981 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:34:41,350 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:34:44,728 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:34:48,091 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:34:51,541 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:34:54,931 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:34:58,325 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:36:59,378 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:36:59,384 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:37:02,815 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:37:06,208 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:37:09,598 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:37:12,966 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:37:16,337 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:37:19,707 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:37:23,085 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:37:26,458 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:37:29,839 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:37:33,227 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:37:36,614 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:37:40,003 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:37:43,387 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:37:46,762 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:39:47,857 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:39:47,863 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:39:48,649 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:39:48,656 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:39:52,031 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:39:55,425 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:39:58,799 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:40:02,185 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:40:05,575 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:40:08,948 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:40:12,330 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:40:15,709 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:40:19,088 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:40:22,478 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:40:25,857 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:40:29,244 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:40:32,620 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:40:36,005 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:42:37,178 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:42:37,187 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:42:40,656 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:42:44,059 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:42:47,439 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:42:50,835 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:42:54,207 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:42:57,599 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:43:00,970 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:43:04,365 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:43:07,736 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:43:11,109 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:43:14,503 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:43:17,882 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:43:21,305 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:43:24,679 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:45:25,820 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:45:25,824 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:45:26,621 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:45:26,625 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:45:29,991 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:45:33,383 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:45:36,749 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:45:40,133 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:45:43,520 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:45:46,884 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:45:50,260 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:45:53,626 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:45:57,002 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:46:00,413 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:46:03,799 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:46:07,159 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:46:10,534 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:46:13,907 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:48:14,801 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:48:14,808 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:48:18,267 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:48:21,636 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:48:25,015 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:48:28,390 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:48:31,773 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:48:35,146 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:48:38,515 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:48:41,901 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:48:45,278 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:48:48,643 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:48:52,022 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:48:55,424 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:48:58,797 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:49:02,181 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:51:03,100 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:51:03,103 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:51:03,901 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:51:03,906 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:51:07,277 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:51:10,669 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:51:14,051 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:51:17,439 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:51:20,809 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:51:24,178 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:51:27,583 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:51:30,951 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:51:34,357 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:51:37,735 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:51:41,122 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:51:44,507 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:51:47,901 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:51:51,277 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:53:52,303 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:53:52,307 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:53:55,736 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:53:59,104 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:54:02,479 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:54:05,849 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:54:09,214 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:54:12,583 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:54:15,982 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:54:19,348 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:54:22,716 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:54:26,092 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:54:29,466 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:54:32,843 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:54:36,222 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:54:39,598 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:56:40,488 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:56:40,490 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:56:41,239 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:56:41,243 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:56:44,617 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:56:48,024 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:56:51,398 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:56:54,783 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:56:58,183 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:57:01,559 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:57:04,939 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:57:08,326 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 01:57:11,683 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 01:57:15,063 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 01:57:18,431 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 01:57:21,811 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 01:57:25,203 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 01:57:28,585 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 01:59:29,640 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 01:59:29,645 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 01:59:33,074 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 01:59:36,460 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 01:59:39,835 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 01:59:43,209 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 01:59:46,610 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 01:59:50,058 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 01:59:53,445 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 01:59:56,816 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:00:00,180 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:00:03,551 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:00:06,956 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:00:10,330 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:00:13,723 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:00:17,088 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:02:18,338 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:02:18,340 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:02:19,126 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:02:19,131 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:02:22,500 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:02:25,875 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:02:29,277 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:02:32,643 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:02:36,025 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:02:39,388 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:02:42,757 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:02:46,134 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:02:49,504 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:02:52,885 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:02:56,259 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:02:59,630 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:03:03,029 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:03:06,395 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:05:07,214 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:05:07,219 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:05:10,694 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:05:14,060 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:05:17,444 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:05:20,823 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:05:24,204 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:05:27,592 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:05:30,977 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:05:34,353 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:05:37,743 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:05:41,113 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:05:44,509 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:05:47,894 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:05:51,289 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:05:54,686 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:07:55,788 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:07:55,793 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:07:56,616 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:07:56,623 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:08:00,035 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:08:03,415 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:08:06,997 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:08:10,473 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:08:13,859 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:08:17,240 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:08:20,716 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:08:24,197 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:08:27,675 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:08:31,059 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:08:34,425 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:08:37,822 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:08:41,189 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:08:44,595 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:10:45,446 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:10:45,468 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:10:48,933 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:10:52,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:10:55,700 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:10:59,072 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:11:02,457 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:11:05,892 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:11:09,284 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:11:12,659 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:11:16,127 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:11:19,499 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:11:22,903 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:11:26,366 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:11:29,747 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:11:33,226 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:13:34,533 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:13:34,538 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:13:35,449 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:13:35,453 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:13:38,864 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:13:42,343 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:13:45,736 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:13:49,206 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:13:52,607 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:13:56,082 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:13:59,466 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:14:02,843 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:14:06,409 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:14:09,900 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:14:13,276 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:14:16,652 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:14:20,021 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:14:23,423 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:16:24,447 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:16:24,453 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:16:27,884 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:16:31,256 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:16:34,643 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:16:38,087 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:16:41,460 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:16:44,841 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:16:48,313 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:16:51,699 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:16:55,081 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:16:58,471 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:17:01,862 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:17:05,245 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:17:08,728 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:17:12,166 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:19:13,064 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:19:13,068 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:19:13,984 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:19:13,987 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:19:17,414 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:19:20,890 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:19:24,363 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:19:27,754 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:19:31,229 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:19:34,706 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:19:38,104 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:19:41,562 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:19:44,953 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:19:48,333 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:19:51,806 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:19:55,191 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:19:58,671 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:20:02,044 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:22:02,995 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:22:03,001 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:22:06,470 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:22:09,867 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:22:13,243 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:22:16,716 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:22:20,092 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:22:23,454 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:22:26,824 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:22:30,225 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:22:33,616 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:22:37,089 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:22:40,676 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:22:44,060 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:22:47,525 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:22:50,907 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:24:53,344 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:24:53,459 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:24:54,466 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:24:54,470 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:24:57,894 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:25:01,275 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:25:04,777 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:25:08,230 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:25:11,723 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:25:15,193 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:25:18,597 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:25:22,046 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:25:25,445 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:25:29,834 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:25:33,216 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:25:36,603 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:25:40,073 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:25:43,438 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:27:44,313 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:27:44,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:27:47,764 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:27:51,354 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:27:54,842 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:27:58,319 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:28:01,716 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:28:05,172 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:28:08,561 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:28:12,058 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:28:16,466 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:28:19,927 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:28:23,301 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:28:26,762 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:28:30,159 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:28:33,651 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:30:34,831 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:30:34,869 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:30:35,766 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:30:35,784 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:30:39,160 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:30:42,540 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:30:45,941 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:30:49,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:30:52,812 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:30:56,286 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:30:59,664 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:31:03,035 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:31:06,431 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:31:11,021 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:31:14,414 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:31:17,805 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:31:21,274 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:31:24,758 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:33:25,859 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:33:25,871 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:33:29,352 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:33:32,759 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:33:36,153 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:33:39,556 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:33:42,940 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:33:46,328 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:33:49,715 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:33:53,142 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:33:56,611 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:34:00,006 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:34:03,385 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:34:06,770 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:34:10,132 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:34:13,616 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:36:14,816 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:36:14,824 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:36:15,678 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:36:15,683 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:36:19,048 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:36:22,461 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:36:25,909 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:36:29,287 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:36:32,782 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:36:36,166 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:36:39,540 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:36:42,926 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:36:46,397 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:36:49,771 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:36:53,153 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:36:56,541 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:37:00,008 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:37:03,391 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:39:04,270 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:39:04,276 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:39:07,812 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:39:11,845 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:39:15,207 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:39:18,650 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:39:22,053 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:39:25,433 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:39:28,908 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:39:32,391 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:39:35,872 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:39:39,268 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:39:42,738 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:39:46,122 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:39:49,493 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:39:52,871 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:41:53,815 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:41:53,818 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:41:54,588 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:41:54,594 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:41:57,988 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:42:01,491 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:42:04,964 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:42:08,340 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:42:11,719 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:42:15,095 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:42:18,477 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:42:21,877 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:42:25,258 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:42:28,720 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:42:32,100 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:42:35,489 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:42:38,965 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:42:42,359 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:44:43,335 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:44:43,340 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:44:46,864 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:44:50,335 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:44:53,720 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:44:57,107 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:45:00,488 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:45:03,963 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:45:07,324 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:45:10,918 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:45:14,300 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:45:17,680 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:45:21,158 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:45:24,644 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:45:28,051 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:45:31,424 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT
+2025-09-07 02:47:32,280 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:47:32,284 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:47:33,106 - httpx - INFO - HTTP Request: GET https://ednpvwbgpodeepjdefjy.supabase.co/rest/v1/watchlist?select=symbol "HTTP/2 200 OK"
+2025-09-07 02:47:34,125 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNBUSDT
+2025-09-07 02:47:37,529 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for FLMUSDT
+2025-09-07 02:47:40,938 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for SOLUSDT
+2025-09-07 02:47:44,420 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHETH
+2025-09-07 02:47:48,004 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDC
+2025-09-07 02:47:51,491 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for USDCUSDT
+2025-09-07 02:47:54,962 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBTCUSDT
+2025-09-07 02:47:58,343 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WBETHUSDT
+2025-09-07 02:48:01,930 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for AVAXUSDT
+2025-09-07 02:48:05,297 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for ETHUSDT
+2025-09-07 02:48:08,696 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BNSOLUSDT
+2025-09-07 02:48:12,073 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for BTCUSDT
+2025-09-07 02:48:15,454 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for WLDUSDT
+2025-09-07 02:48:18,832 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for XRPUSDT
+2025-09-07 02:48:22,214 - infrastructure.data_sources.binance.client - INFO - Attempt 1/3: Fetching 96 15m klines for UNIUSDT

@@ -230,8 +230,107 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         except Exception as e:
             logger.error(f"InfluxDB query error: {str(e)}")
             return []
-        
+    
+    async def get_historical_data_reverse(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: datetime,
+        end_time: datetime,
+        page: int = 1,
+        page_size: int = 1000
+    ) -> list[MarketDataEntity]:
+        """
+        Get historical data in REVERSE order (newest first) with pagination.
+        This method should be added to your InfluxDBMarketDataRepository class.
+        """
+        try:
+            # Calculate offset for reverse pagination
+            offset = (page - 1) * page_size
+            
+            # Check if downsampling is appropriate based on the date range
+            date_range = end_time - start_time
+            if self._should_downsample(interval, date_range):
+                return await self._get_downsampled_data_reverse(symbol, interval, start_time, end_time, page, page_size)
+            
+            # Build query with reverse ordering (sort by timestamp DESC)
+            query = f'''
+            from(bucket: "{self.bucket}")
+            |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
+            |> filter(fn: (r) => r._measurement == "market_data")
+            |> filter(fn: (r) => r.symbol == "{symbol}")
+            |> filter(fn: (r) => r.interval == "{interval}")
+            |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
+            |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+            |> sort(columns: ["_time"], desc: true)
+            |> limit(n: {page_size}, offset: {offset})
+            '''
+            
+            result = self.client.query_api().query(query)
+            
+            parsed_records = []
+            for table in result:
+                for record in table.records:
+                    parsed = self.parse_flux_record(record)
+                    if parsed:
+                        try:
+                            parsed_records.append(MarketDataEntity(**parsed))
+                        except ValidationError as e:
+                            logger.error(f"Invalid MarketDataEntity: {str(e)}")
+            
+            logger.info(f"Data retrieved from INFLUXDB (REVERSE) - Page {page}, {len(parsed_records)} records")
+            return parsed_records
+            
+        except Exception as e:
+            logger.error(f"Error fetching reverse historical data: {str(e)}")
+            return []
 
+    async def _get_downsampled_data_reverse(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: datetime,
+        end_time: datetime,
+        page: int = 1,
+        page_size: int = 500
+    ) -> list[MarketDataEntity]:
+        """Get downsampled data in reverse order for chart rendering optimization"""
+        target_points = 300
+        date_range_seconds = (end_time - start_time).total_seconds()
+        window_seconds = max(int(date_range_seconds / target_points), 60)
+        window_duration = self._seconds_to_flux_duration(window_seconds)
+        offset = (page - 1) * page_size
+
+        query = f'''
+        from(bucket: "{self.bucket}")
+        |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
+        |> filter(fn: (r) => r._measurement == "market_data")
+        |> filter(fn: (r) => r.symbol == "{symbol}")
+        |> filter(fn: (r) => r.interval == "{interval}")
+        |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
+        |> aggregateWindow(every: {window_duration}, fn: first, createEmpty: false)
+        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: {page_size}, offset: {offset})
+        '''
+
+        try:
+            result = self.client.query_api().query(query)
+            parsed_records = []
+            for table in result:
+                for record in table.records:
+                    parsed = self.parse_flux_record(record)
+                    if parsed:
+                        try:
+                            parsed_records.append(MarketDataEntity(**parsed))
+                        except ValidationError as e:
+                            logger.error(f"Invalid MarketDataEntity: {str(e)}")
+
+            logger.info(f"Retrieved {len(parsed_records)} downsampled records (REVERSE) from InfluxDB for {symbol} ({interval})")
+            return parsed_records
+        except Exception as e:
+            logger.error(f"InfluxDB reverse downsampling query error: {str(e)}")
+            return []
 
     async def get_all_timestamps_for_symbol(
         self,

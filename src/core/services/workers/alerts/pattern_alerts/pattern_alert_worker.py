@@ -1,3 +1,4 @@
+from ast import In
 import asyncio
 import time
 from typing import Dict, Optional
@@ -8,6 +9,7 @@ from core.use_cases.market_analysis.detect_patterns_engine import PatternDetecto
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
 import time as _time
+from core.use_cases.market.market_data import fetch_crypto_data_paginated
 
 class CircuitBreaker:
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
@@ -55,9 +57,7 @@ class PatternAlertWorker:
         for base_name, info in initialized_pattern_registry.items():
             for t in info.get('types', []):
                 self.pattern_type_to_base[t] = base_name
-        # Add alias: 'doji' -> 'standard_doji' if not present
-        if 'standard_doji' in self.pattern_type_to_base.values() and 'doji' not in self.pattern_type_to_base:
-            self.pattern_type_to_base['doji'] = 'standard_doji'
+                
         # --- NEW: Category-based window sizes ---
         self.category_window_sizes = {
             'candlestick': 20,
@@ -343,7 +343,8 @@ class PatternAlertWorker:
         """Fetch historical data and initialize rolling window in Redis for (symbol, interval)."""
         rolling_window_key = f"rolling_window:{symbol}:{interval}"
         max_retries = 3
-        # --- NEW: Determine window size based on active patterns' categories ---
+        
+        # --- Determine window size based on active patterns' categories ---
         window_size = self.config['rolling_window_size']
         try:
             redis_key = f"pattern_listeners:{symbol}:{interval}"
@@ -362,45 +363,66 @@ class PatternAlertWorker:
                 window_size = max(required_window_sizes)
         except Exception as e:
             logger.error(f"[ROLLING WINDOW] Error determining window size for {symbol}:{interval}: {e}")
+        
         for attempt in range(max_retries):
             try:
-                klines = await asyncio.wait_for(
-                    self.binance_client.get_klines(
+                # FIXED: Use the unified fetch_crypto_data_paginated function
+                # This will check InfluxDB first, then Binance if needed
+                market_data_entities = await asyncio.wait_for(
+                    fetch_crypto_data_paginated(
                         symbol=symbol,
                         interval=interval,
-                        limit=window_size
+                        page=1,
+                        page_size=window_size
                     ),
-                    timeout=30
+                    timeout=60
                 )
-                if not klines:
+                
+                # Handle error response from fetch function
+                if isinstance(market_data_entities, dict) and "error" in market_data_entities:
+                    raise Exception(f"Data fetch error: {market_data_entities['error']}")
+                
+                if not market_data_entities:
                     raise Exception("No historical data received")
+                
+                # Clear existing rolling window
                 async for _ in self._redis_operation("delete_key"):
                     await self.redis_cache.delete_key(rolling_window_key)
+                
+                # Convert MarketDataEntity objects to candle format
                 candles = []
-                for kline in klines:  # CHANGED: removed reversed()
+                for entity in market_data_entities:
                     candle = {
-                        "open": float(kline[1]),
-                        "high": float(kline[2]),
-                        "low": float(kline[3]),
-                        "close": float(kline[4]),
-                        "volume": float(kline[5]),
-                        "timestamp": kline[0]
+                        "open": entity.open,
+                        "high": entity.high,
+                        "low": entity.low,
+                        "close": entity.close,
+                        "volume": entity.volume,
+                        "timestamp": int(entity.timestamp.timestamp() * 1000)  # Convert to milliseconds
                     }
                     candles.append(json.dumps(candle))
+                
                 if candles:
+                    # Add candles to Redis rolling window
                     for candle in candles:
                         async for _ in self._redis_operation("rpush"):
                             await self.redis_cache.rpush(rolling_window_key, candle)
+                    
+                    # Trim to maintain window size
                     async for _ in self._redis_operation("ltrim"):
                         await self.redis_cache.ltrim(rolling_window_key, 0, window_size - 1)
+                
                 logger.info(f"Initialized rolling window for {symbol}:{interval} with {len(candles)} candles (window size: {window_size})")
                 return
+                
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout initializing rolling window for {symbol}:{interval}, attempt {attempt + 1}")
             except Exception as e:
                 logger.error(f"Failed to initialize rolling window for {symbol}:{interval}, attempt {attempt + 1}: {e}")
+            
             if attempt < max_retries - 1:
                 await asyncio.sleep(2 ** attempt)
+        
         raise Exception(f"Failed to initialize rolling window after {max_retries} attempts for {symbol}:{interval}")
 
     async def detect_and_publish_patterns(self, symbol: str, interval: str):
@@ -467,7 +489,7 @@ class PatternAlertWorker:
                     t7 = _time.perf_counter()
                     logger.info(f"[PERF] Notification publish for {symbol}:{interval} {result.get('pattern_name')} took {t7-t6:.3f}s")
                 else:
-                    logger.warning(f"❌ Pattern not found or unexpected result for task {i} on {symbol}:{interval}: {result}")
+                    logger.warning(f"❌ Pattern not found or unexpected result for task {i} on {symbol}:{interval}")
         else:
             logger.warning(f"⚠️ No detection tasks created for {symbol}:{interval}")
         end_total = _time.perf_counter()
@@ -484,7 +506,6 @@ class PatternAlertWorker:
                     logger.warning(f"⚠️ No base pattern found for: {pattern_name} (normalized: {normalized_pattern_name})")
                     logger.info(f"📚 Available pattern types: {list(self.pattern_type_to_base.keys())[:10]}...")
                     return {"detected": False}
-                from core.use_cases.market_analysis.detect_patterns_engine import initialized_pattern_registry
                 detector_info = initialized_pattern_registry.get(base_pattern)
                 if not detector_info:
                     logger.warning(f"⚠️ Pattern detector not found for base: {base_pattern} (from {pattern_name})")
@@ -536,43 +557,65 @@ class PatternAlertWorker:
         rolling_window_key = f"rolling_window:{symbol}:{interval}"
         candle_queue = asyncio.Queue()
         
+        # ... inside start_listener method in pattern_alert_worker.py
+        
         async def redis_kline_consumer():
-            """Consumes kline data from the Redis channel published by the gateway."""
+            """
+            Consumes kline data from the Redis channel. 
+            This version is resilient and will continuously try to establish a data flow.
+            """
             stream_name = f"{symbol.lower()}@kline_{interval}"
             channel_name = f"binance:data:{stream_name}"
-            pubsub = None
-            try:
-                # Inform the gateway to subscribe to this stream
-                await self.redis_cache.publish("binance:control", f"subscribe:{stream_name}")
+            
+            while not self._shutdown_event.is_set():
+                pubsub = None
+                try:
+                    logger.info(f"Attempting to establish data flow for {stream_name}...")
+                    
+                    # 1. Publish the subscription request to the manager
+                    await self.redis_cache.publish("binance:control", f"subscribe:{stream_name}")
+                    logger.info(f"Published 'subscribe' request for {stream_name} to the control channel.")
 
-                pubsub = await self.redis_cache.subscribe(channel_name)
-                logger.info(f"🎧 Listening for kline data on Redis channel '{channel_name}'")
+                    # 2. Subscribe to the data channel where we expect data
+                    pubsub = await self.redis_cache.subscribe(channel_name)
+                    logger.info(f"Subscribed to data channel '{channel_name}'. Waiting for data...")
 
-                while not self._shutdown_event.is_set():
-                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-                    if not message:
-                        continue
+                    # 3. Listen for incoming messages
+                    async for message in pubsub.listen():
+                        if self._shutdown_event.is_set():
+                            break
+                        
+                        if message and message.get('type') == 'message':
+                            logger.info(f"Data is flowing for {stream_name}. Processing message.")
+                            kline_data = json.loads(message['data'])
+                            
+                            # --- START: CORRECTED LOGIC ---
+                            candle_details = kline_data.get("k", {})
+                            is_closed = candle_details.get("x", False)
 
-                    kline_data = json.loads(message['data'])
-                    if kline_data.get("x"):  # Candle is closed
-                        closed_candle = kline_data
-                        candle = {
-                            "open": float(closed_candle["o"]),
-                            "high": float(closed_candle["h"]),
-                            "low": float(closed_candle["l"]),
-                            "close": float(closed_candle["c"]),
-                            "volume": float(closed_candle["v"]),
-                            "timestamp": closed_candle["t"]
-                        }
-                        logger.info(f"🕯️ Queuing closed candle for {symbol}:{interval} - Close: {candle['close']}, Time: {candle['timestamp']}")
-                        await candle_queue.put(candle)
-            except Exception as e:
-                logger.error(f"❌ Redis kline consumer error for {symbol}:{interval}: {e}")
-            finally:
-                # Inform the gateway to unsubscribe when this listener stops
-                await self.redis_cache.publish("binance:control", f"unsubscribe:{stream_name}")
-                if pubsub:
-                    await pubsub.unsubscribe()
+                            if is_closed:
+                                candle = {
+                                    "open": float(candle_details.get("o", 0)),
+                                    "high": float(candle_details.get("h", 0)),
+                                    "low": float(candle_details.get("l", 0)),
+                                    "close": float(candle_details.get("c", 0)),
+                                    "volume": float(candle_details.get("v", 0)),
+                                    "timestamp": candle_details.get("t", 0)
+                                }
+                                logger.info(f"🕯️ Queuing closed candle for {symbol}:{interval} - Close: {candle['close']}")
+                                await candle_queue.put(candle)
+
+                except Exception as e:
+                    logger.error(f"❌ Redis kline consumer for {symbol}:{interval} encountered an error: {e}. Retrying in 15 seconds.")
+                
+                finally:
+                    # Cleanup before retrying
+                    if pubsub:
+                        await pubsub.unsubscribe()
+                    # Inform the gateway to unsubscribe to prevent duplicate subscriptions on retry
+                    await self.redis_cache.publish("binance:control", f"unsubscribe:{stream_name}")
+                
+                await asyncio.sleep(15) # Wait before the next attempt
 
         async def consumer():
             while not self._shutdown_event.is_set():
@@ -593,7 +636,6 @@ class PatternAlertWorker:
 
         # Start both consumer sub-tasks concurrently
         await asyncio.gather(redis_kline_consumer(), consumer())
-
 
     async def health_monitor_loop(self):
         """Periodically log the status of all running listener tasks and restart any that have died."""
@@ -639,22 +681,35 @@ class PatternAlertWorker:
             except Exception as e:
                 logger.error(f"Error initializing rolling window for {symbol}:{interval}: {e}")
         
+        # ... inside the start() method ...
+        
         # Run initial pattern detection on all active pairs
         logger.info("Running initial pattern detection on all active pairs...")
         for symbol, interval in self.active_pairs:
             try:
-                logger.info(f"🔍 Running initial pattern detection for {symbol}:{interval}")
+                # ADD THIS LOG
+                logger.info(f"--> [STARTUP_TRACE] 1. Attempting initial detection for {symbol}:{interval}")
+                
                 await self.detect_and_publish_patterns(symbol, interval)
-                logger.info(f"✅ Initial pattern detection completed for {symbol}:{interval}")
+                
+                # ADD THIS LOG
+                logger.info(f"--> [STARTUP_TRACE] 2. Initial detection COMPLETED for {symbol}:{interval}")
             except Exception as e:
                 logger.error(f"Error running initial pattern detection for {symbol}:{interval}: {e}")
-        
+
+        logger.info("🏁 Finished all initial pattern detections. NOW starting WebSocket listeners...")
+
         # Start WebSocket listeners for all active pairs
         logger.info("Starting WebSocket listeners for all active pairs...")
         for symbol, interval in self.active_pairs:
+            # ADD THIS LOG
+            logger.info(f"--> [STARTUP_TRACE] 3. Creating listener task for {symbol}:{interval}")
+            
             task = asyncio.create_task(self.start_listener(symbol, interval))
             self._running_tasks[f"{symbol}:{interval}"] = task
-            logger.info(f"✅ WebSocket listener started for {symbol}:{interval}")
+            
+            # ADD THIS LOG
+            logger.info(f"--> [STARTUP_TRACE] 4. Listener task CREATED for {symbol}:{interval}")
         
         # Start Redis subscription listener for real-time updates
         subscription_task = asyncio.create_task(self._redis_subscription_loop())

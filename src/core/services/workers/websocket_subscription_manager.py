@@ -4,9 +4,7 @@ import json
 import websockets
 from collections import defaultdict, deque
 import time
-from datetime import datetime, timezone
-import logging
-from typing import Dict, Set, Optional, List
+from typing import Dict, Optional, List
 import sys
 import os
 
@@ -175,6 +173,9 @@ class EnhancedSubscriptionManager:
         self.control_task = None
         self.health_task = None
         self.subscription_processor_task = None
+
+
+        self.message_handler_tasks: Dict[int, asyncio.Task] = {}
         
     async def initialize(self):
         """Initialize the connection pool"""
@@ -553,73 +554,68 @@ class EnhancedSubscriptionManager:
         except Exception as e:
             logger.error(f"Error caching candle data: {e}")
     
+    # In websocket_subscription_manager.py
+
     async def _health_monitor(self):
-        """Monitor connection health and handle reconnections"""
-        # Initial delay to let connections stabilize
-        await asyncio.sleep(60)  # Increased to 1 minute
-        
+        """Monitor connection and task health, and handle reconnections."""
+        await asyncio.sleep(15)  # Initial delay for stabilization
+
         while True:
             try:
-                unhealthy_connections = []
-                
-                for i, connection in enumerate(self.connections):
-                    if not connection.is_healthy():
-                        unhealthy_connections.append((i, connection))
-                
-                # Handle unhealthy connections
-                for i, connection in unhealthy_connections:
-                    logger.warning(f"Connection {connection.connection_id} is unhealthy, attempting reconnection...")
-                    
-                    # Store streams that need to be resubscribed
-                    streams_to_restore = list(connection.active_streams)
-                    
-                    # Clear stream tracking
-                    for stream in streams_to_restore:
-                        self.stream_to_connection.pop(stream, None)
-                    self.active_streams.difference_update(streams_to_restore)
-                    
-                    # Disconnect and reconnect
-                    await connection.disconnect()
-                    
-                    if connection.reconnect_attempts < connection.max_reconnect_attempts:
+                for conn in self.connections:
+                    task = self.message_handler_tasks.get(conn.connection_id)
+                    is_task_running = task and not task.done()
+
+                    # CASE 1: Connection is unhealthy. Kill the task and reconnect.
+                    if not conn.is_healthy():
+                        logger.warning(f"Connection {conn.connection_id} is unhealthy. Attempting recovery.")
+                        if is_task_running:
+                            logger.info(f"Cancelling stale message handler for connection {conn.connection_id}.")
+                            task.cancel()
+                        
+                        streams_to_restore = list(conn.active_streams)
+                        for stream in streams_to_restore:
+                            self.stream_to_connection.pop(stream, None)
+                        self.active_streams.difference_update(streams_to_restore)
+                        
+                        await conn.disconnect()
+                        await asyncio.sleep(2) # Brief pause before reconnect
+
                         try:
-                            # Wait a bit before reconnecting
-                            await asyncio.sleep(2)
-                            await connection.connect()
-                            
-                            # Restore streams if successful
-                            if streams_to_restore:
-                                logger.info(f"Restoring {len(streams_to_restore)} streams on reconnected connection {connection.connection_id}")
-                                self.pending_subscriptions.update(streams_to_restore)
-                                
+                            if conn.reconnect_attempts < conn.max_reconnect_attempts:
+                                await conn.connect()
+                                logger.info(f"Connection {conn.connection_id} reconnected successfully.")
+                                if streams_to_restore:
+                                    logger.info(f"Restoring {len(streams_to_restore)} streams on reconnected conn {conn.connection_id}.")
+                                    self.pending_subscriptions.update(streams_to_restore)
+                            else:
+                                logger.error(f"Connection {conn.connection_id} exceeded max reconnect attempts. Waiting before retrying.")
+                                await asyncio.sleep(300)
+                                conn.reconnect_attempts = 0
+
                         except Exception as e:
-                            logger.error(f"Failed to reconnect connection {connection.connection_id}: {e}")
-                            # Don't increment attempts on connection failure
-                    else:
-                        logger.error(f"Connection {connection.connection_id} exceeded max reconnection attempts")
-                        # Reset attempts after a longer wait
-                        await asyncio.sleep(300)  # 5 minutes
-                        connection.reconnect_attempts = 0
-                
-                # Process any pending subscriptions
-                if self.pending_subscriptions:
-                    pending = list(self.pending_subscriptions)
-                    self.pending_subscriptions.clear()
-                    await self._subscribe_streams_batch(pending)
-                
-                # Log statistics every 5 minutes
+                            logger.error(f"Failed to reconnect connection {conn.connection_id}: {e}")
+
+                    # CASE 2: Connection is healthy, but the listener task is dead or missing. Start it.
+                    elif conn.is_healthy() and not is_task_running:
+                        logger.info(f"Connection {conn.connection_id} is healthy, but its handler task is not running. Starting new task.")
+                        new_task = asyncio.create_task(self._handle_connection_messages(conn))
+                        self.message_handler_tasks[conn.connection_id] = new_task
+
+                # Log statistics periodically
                 current_time = int(time.time())
                 if current_time % 300 == 0:
                     total_streams = sum(len(conn.active_streams) for conn in self.connections)
-                    healthy_connections = sum(1 for conn in self.connections if conn.is_healthy())
-                    
-                    logger.info(f"Health check: {healthy_connections}/{len(self.connections)} connections healthy, "
-                               f"{total_streams} total active streams")
-                
-                await asyncio.sleep(30)  # Check every 30 seconds
-                
+                    healthy_conns = sum(1 for conn in self.connections if conn.is_healthy())
+                    running_tasks = sum(1 for task in self.message_handler_tasks.values() if task and not task.done())
+                    logger.info(f"Health check: {healthy_conns}/{len(self.connections)} connections healthy. "
+                               f"{running_tasks}/{len(self.connections)} handler tasks running. "
+                               f"{total_streams} total active streams.")
+
+                await asyncio.sleep(30)  # Check health every 30 seconds
+
             except Exception as e:
-                logger.error(f"Error in health monitor: {e}")
+                logger.error(f"Error in health monitor: {e}", exc_info=True)
                 await asyncio.sleep(60)
     
     async def _subscription_processor(self):
@@ -644,11 +640,6 @@ class EnhancedSubscriptionManager:
             await redis_cache.initialize()
             await self.initialize()
             
-            # Start all message handlers for each connection
-            message_tasks = [
-                asyncio.create_task(self._handle_connection_messages(conn)) 
-                for conn in self.connections
-            ]
             
             # Start background tasks
             background_tasks = [
@@ -657,7 +648,7 @@ class EnhancedSubscriptionManager:
                 asyncio.create_task(self._subscription_processor())
             ]
             
-            all_tasks = message_tasks + background_tasks
+            all_tasks = background_tasks
             
             logger.info("WebSocket Subscription Manager is running...")
             

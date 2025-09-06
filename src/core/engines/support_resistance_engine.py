@@ -33,9 +33,11 @@ class SupportResistanceEngine:
 
         # Default window sizes based on interval
         interval_defaults = {
-            "1m": (120, 600), "5m": (150, 750), "15m": (200, 1000), "30m": (240, 1200),
-            "1h": (300, 1500), "2h": (400, 2000), "4h": (500, 2500), "1d": (600, 3000)
+            "1m": (120, 300), "5m": (72, 300), "15m": (96, 400), "30m": (96, 400),
+            "1h": (120, 600), "2h": (180, 800), "4h": (200, 900), "6h": (250, 1000),
+            "1d": (300, 1200), "3d": (400, 1400), "1w": (500, 1500), "1M": (600, 1800)
         }
+
         self.min_window, self.max_window = interval_defaults.get(interval, (120, 1500))
         if min_window is not None: self.min_window = min_window
         if max_window is not None: self.max_window = max_window

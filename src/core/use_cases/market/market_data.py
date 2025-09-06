@@ -128,14 +128,18 @@ async def fetch_crypto_data_paginated(
     end_time: Optional[datetime] = None,
     page: int = 1,
     page_size: int = 1000,
-    # The 'background_tasks' parameter is now removed from the function signature
+    prioritize_recent: bool = True,  # NEW: Control recent data priority
 ):
     """
-    Fetch cryptocurrency data with pagination support.
+    Fetch cryptocurrency data with pagination support and smart recent-data priority.
     
-    This will first try to fetch from the local InfluxDB storage with pagination.
-    If data is not available or is stale, it will fetch from Binance and dispatch
-    Celery tasks to save the data in the background.
+    When prioritize_recent=True:
+    - For large requests that might timeout, fetch from end_time backwards
+    - Always return data in chronological order (oldest → newest) for compatibility
+    - Ensures latest data is captured even if request gets cut short
+    
+    When prioritize_recent=False:
+    - Traditional behavior: fetch from start_time forwards
     """
     try:
         if interval not in INTERVAL_MINUTES:
@@ -143,98 +147,185 @@ async def fetch_crypto_data_paginated(
         
         repo = InfluxDBMarketDataRepository()
         
-        # Set default start_time if not provided
+        # Set default times
+        if not end_time:
+            end_time = datetime.now(timezone.utc)
         if not start_time:
             start_time = calculate_start_time(interval)
         
-        # Set default end_time if not provided
-        if not end_time:
-            end_time = datetime.now(timezone.utc)
-    
+        # Calculate total time range to determine if we should prioritize recent data
+        time_range = end_time - start_time
+        estimated_candles = time_range.total_seconds() / (INTERVAL_MINUTES[interval] * 60)
+        
+        # If request is large and we're prioritizing recent data, use smart fetching
+        should_use_smart_fetch = (
+            prioritize_recent and 
+            estimated_candles > page_size * 2 and  # More than 2x the page size
+            page == 1  # Only for first page to avoid complications
+        )
+        
+        if should_use_smart_fetch:
+            logger.info(f"Using smart recent-priority fetch for {symbol} ({interval}) - estimated {int(estimated_candles)} candles")
+            
+            # Fetch recent data first using reverse method
+            recent_data = await repo.get_historical_data_reverse(
+                symbol, interval, start_time, end_time, page, page_size
+            )
+            
+            if recent_data:
+                # Convert back to chronological order for API compatibility
+                recent_data.sort(key=lambda x: x.timestamp)
+                
+                # Check for stale data and fetch missing if needed
+                latest_candle_time = recent_data[-1].timestamp
+                stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=INTERVAL_MINUTES[interval])
+                
+                if latest_candle_time < stale_threshold:
+                    logger.info(f"Recent data is stale for {symbol} ({interval}), fetching latest...")
+                    await _fetch_and_save_missing_data(symbol, interval, latest_candle_time, end_time)
+                
+                logger.info(f"Returning {len(recent_data)} recent records (chronological order) for {symbol} ({interval})")
+                return recent_data
+        
+        # Standard fetch (either not prioritizing recent, or small request)
         historical = await repo.get_historical_data(
             symbol, interval, start_time, end_time, page, page_size
         )
         
         if historical:
-            # Check for stale data on the first page request
+            # Standard stale data check for first page
             if page == 1:
-                try:
-                    last_candle_time = historical[-1].timestamp
-                    stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=INTERVAL_MINUTES[interval])
-                    
-                    if last_candle_time < stale_threshold:
-                        logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing candles.")
-                        
-                        binance = BinanceMarketData()
-                        await binance.ensure_connected()
-                        
-                        missing_data = []
-                        interval_duration = timedelta(minutes=INTERVAL_MINUTES[interval])
-                        current_start_time = last_candle_time + interval_duration
-                        current_start_ms = int(current_start_time.timestamp() * 1000)
-                        end_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
-
-                        while current_start_ms < end_time_ms:
-                            klines = await binance.get_klines(
-                                symbol=symbol,
-                                interval=interval,
-                                start_time=current_start_ms,
-                                end_time=end_time_ms,
-                                limit=1000
-                            )
-
-                            if not klines:
-                                break
-
-                            batch_entities = [
-                                MarketDataEntity(
-                                    symbol=symbol, interval=interval,
-                                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                                    open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                                    close=float(k[4]), volume=float(k[5])
-                                ) for k in klines if len(k) >= 6 and all(k[1:6])
-                            ]
-                            
-                            if not batch_entities:
-                                break
-
-                            missing_data.extend(batch_entities)
-                            current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1
-                            await asyncio.sleep(0.5)
-
-                        await binance.disconnect()
-                        
-                        if missing_data:
-                            # MODIFICATION: Dispatch a Celery task to save the missing data
-                            # Celery works best with JSON-serializable data.
-                            missing_data_json = [entity.json() for entity in missing_data]
-                            save_market_data_task.delay(missing_data_json)
-                            logger.info(f"Dispatched Celery task to save {len(missing_data)} missing candles.")
-                        
-                        historical.extend(missing_data)
-                except Exception as e:
-                    logger.error(f"Error checking for stale data: {str(e)}")
-            
+                # --- FIX: Capture the freshly fetched data ---
+                newly_fetched_data = await _check_and_update_stale_data(historical, symbol, interval, end_time)
+                if newly_fetched_data:
+                    # --- FIX: Append it to the response ---
+                    historical.extend(newly_fetched_data)
             return historical
         
         # No data in InfluxDB, fetch from Binance
-        try:
-            logger.info(f"No data found in InfluxDB for {symbol} ({interval}), fetching from Binance")
-            binance = BinanceMarketData()
-            await binance.ensure_connected()
+        return await _fetch_from_binance_chronological(
+            symbol, interval, start_time, end_time, page_size, prioritize_recent
+        )
+
+    except Exception as e:
+        logger.critical(f"Critical error in fetch_crypto_data_paginated: {str(e)}")
+        return {"error": "Internal server error"}
+
+
+async def _fetch_from_binance_chronological(
+    symbol: str, 
+    interval: str, 
+    start_time: datetime, 
+    end_time: datetime, 
+    page_size: int,
+    prioritize_recent: bool
+) -> list:
+    """Fetch from Binance with optional recent-data priority, always return chronological"""
+    binance = None
+    try:
+        logger.info(f"No data found in InfluxDB for {symbol} ({interval}), fetching from Binance")
+        binance = BinanceMarketData()
+        await binance.ensure_connected()
+        
+        if prioritize_recent:
+            # Fetch recent data by calculating backwards from end_time
+            interval_minutes = INTERVAL_MINUTES[interval] 
+            lookback_duration = timedelta(minutes=interval_minutes * page_size)
+            fetch_start_time = max(start_time, end_time - lookback_duration)  # Don't go before start_time
             
-            # Fetch the first page of data directly from Binance
+            binance_start_ms = int(fetch_start_time.timestamp() * 1000)
+            binance_end_ms = int(end_time.timestamp() * 1000)
+            
+            logger.info(f"Priority fetch: getting recent {page_size} candles from {fetch_start_time} to {end_time}")
+        else:
+            # Standard fetch from start_time
             binance_start_ms = int(start_time.timestamp() * 1000)
+            binance_end_ms = int(end_time.timestamp() * 1000)
+        
+        klines = await binance.get_klines(
+            symbol=symbol,
+            interval=interval,
+            start_time=binance_start_ms,
+            end_time=binance_end_ms,
+            limit=page_size
+        )
+        
+        data_entities = [
+            MarketDataEntity(
+                symbol=symbol, interval=interval,
+                timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                close=float(k[4]), volume=float(k[5])
+            ) for k in klines if len(k) >= 6 and all(k[1:6])
+        ]
+        
+        # Always return in chronological order
+        data_entities.sort(key=lambda x: x.timestamp)
+        
+        # Save the data in background
+        if data_entities:
+            logger.info(f"Dispatching Celery task to save {len(data_entities)} fetched records")
+            data_to_save_json = [entity.model_dump_json() for entity in data_entities]
+            save_market_data_task.delay(data_to_save_json)
+        
+        logger.info(f"Returning {len(data_entities)} records from Binance (chronological order)")
+        return data_entities
+        
+    except Exception as e:
+        logger.error(f"Error fetching data from Binance: {str(e)}")
+        return {"error": f"Failed to fetch data from Binance: {str(e)}"}
+    finally:
+        # CRITICAL: Always close the connection, even on timeout/exception  
+        if binance:
+            try:
+                await binance.disconnect()
+            except Exception as cleanup_error:
+                logger.error(f"Error closing Binance connection: {str(cleanup_error)}")
+
+async def _check_and_update_stale_data(historical: list, symbol: str, interval: str, end_time: datetime):
+    """Check if data is stale and fetch missing recent candles"""
+    try:
+        last_candle_time = historical[-1].timestamp
+        stale_threshold = end_time - timedelta(minutes=INTERVAL_MINUTES[interval])
+        
+        if last_candle_time < stale_threshold:
+            logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing candles.")
+            # --- FIX: Capture and return the result ---
+            missing_data = await _fetch_and_save_missing_data(symbol, interval, last_candle_time, end_time)
+            return missing_data
+    except Exception as e:
+        logger.error(f"Error checking for stale data: {str(e)}")
+    
+    # --- FIX: Return an empty list if no new data was fetched ---
+    return []
+
+
+async def _fetch_and_save_missing_data(symbol: str, interval: str, from_time: datetime, to_time: datetime):
+    """Fetch and save missing data between two timestamps"""
+    try:
+        binance = BinanceMarketData()
+        await binance.ensure_connected()
+        
+        missing_data = []
+        interval_duration = timedelta(minutes=INTERVAL_MINUTES[interval])
+        # MODIFICATION: Start fetching from the candle *after* the last known time
+        current_start_time = from_time + interval_duration
+        current_start_ms = int(current_start_time.timestamp() * 1000)
+        end_time_ms = int(to_time.timestamp() * 1000)
+
+        while current_start_ms < end_time_ms:
             klines = await binance.get_klines(
                 symbol=symbol,
                 interval=interval,
-                limit=page_size,
-                start_time=binance_start_ms
+                start_time=current_start_ms,
+                end_time=end_time_ms,
+                limit=1000
             )
-            
-            await binance.disconnect()
-            
-            data_entities = [
+
+            if not klines:
+                break
+
+            batch_entities = [
                 MarketDataEntity(
                     symbol=symbol, interval=interval,
                     timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
@@ -243,29 +334,28 @@ async def fetch_crypto_data_paginated(
                 ) for k in klines if len(k) >= 6 and all(k[1:6])
             ]
             
-             # === THIS IS THE KEY CHANGE ===
-            # Instead of fetching the full history, we save the data we just got.
-            if data_entities:
-                logger.info(f"Dispatching Celery task to save {len(data_entities)} fetched records for {symbol} ({interval})")
-                
-                # Celery works best with simple, serializable data like JSON.
-                data_to_save_json = [entity.model_dump_json() for entity in data_entities]
-                
-                # Call the task that is designed to just save data.
-                save_market_data_task.delay(data_to_save_json)
-            
-            logger.info(f"Returning {len(data_entities)} records from Binance for page {page}")
-            return data_entities
-            
-        except Exception as e:
-            logger.error(f"Error fetching data from Binance: {str(e)}")
-            return {"error": f"Failed to fetch data from Binance: {str(e)}"}
+            if not batch_entities:
+                break
 
+            missing_data.extend(batch_entities)
+            # MODIFICATION: Ensure we always move forward
+            current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1 
+            await asyncio.sleep(0.2) # Reduced sleep time is fine
+
+        await binance.disconnect()
+        
+        if missing_data:
+            missing_data_json = [entity.model_dump_json() for entity in missing_data]
+            save_market_data_task.delay(missing_data_json)
+            logger.info(f"Dispatched Celery task to save {len(missing_data)} missing candles.")
+            
+        # --- FIX: Return the fetched data ---
+        return missing_data
+            
     except Exception as e:
-        logger.critical(f"Critical error in fetch_crypto_data_paginated: {str(e)}")
-        return {"error": "Internal server error"}
-
-
+        logger.error(f"Error fetching missing data: {str(e)}")
+        # --- FIX: Return an empty list on error ---
+        return []
 
 async def delete_market_data(
     symbol: str = None,
