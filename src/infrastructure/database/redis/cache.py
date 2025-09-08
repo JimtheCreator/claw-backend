@@ -39,6 +39,15 @@ class RedisCache:
                 logger.critical(f"🔥 Critical Redis connection failure: {str(e)}")
                 raise
 
+    def get_redis_client(self) -> Redis:
+        """
+        Returns the raw redis.asyncio.Redis client instance.
+        This is useful for advanced operations like pipelines or transactions.
+        """
+        if not self._initialized or not self._redis:
+            raise RuntimeError("Redis is not initialized. Call `await redis_cache.initialize()` first.")
+        return self._redis
+
     async def get_cached_data(self, key: str) -> Optional[str]:
         if not self._initialized:
             raise RuntimeError("Redis is not initialized. Call `await redis_cache.initialize()` first.")

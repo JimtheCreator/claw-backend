@@ -369,8 +369,6 @@ def update_sparkline(sparkline: list, new_price: float) -> list:
     return (sparkline + [new_price])[-20:]  # Keep last 20 points
 
 
-
-
 async def get_historical_candles(symbol: str, interval: str, limit: int = 2) -> list:
     """Get the most recent candles from Binance including closed and current ones"""
     try:

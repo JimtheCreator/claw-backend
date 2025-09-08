@@ -3,13 +3,10 @@
 Standalone Sparkline Service
 Runs independently of your main application and continuously updates Redis with sparkline data.
 """
-
 import asyncio
-import os
 import signal
 import json
 import sys
-import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -17,12 +14,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from typing import List, Set, Dict, Optional
+from typing import List, Dict
 from collections import defaultdict
 import time
 
 # Your existing imports
-from common.logger import logger
+from common.logger import logger, configure_logging
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.redis.cache import redis_cache
@@ -336,14 +333,7 @@ class StandaloneSparklineService:
 
 def setup_logging():
     """Configure logging for standalone operation"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('sparkline_service.log')
-        ]
-    )
+    configure_logging()
 
 async def main():
     """Main entry point"""

@@ -31,7 +31,12 @@ BATCH_SIZES = {
 ACTIVE_BACKGROUND_TASKS: Dict[Tuple[str, str], bool] = {}
 
 
-async def batch_save_market_data(repo: InfluxDBMarketDataRepository, data_entities: List[MarketDataEntity], symbol: str, interval: str):
+async def batch_save_market_data(
+    repo: InfluxDBMarketDataRepository, 
+    data_entities: List[MarketDataEntity], 
+    symbol: str, 
+    interval: str
+):
     """
     Save market data in appropriate batch sizes based on the interval type.
     Includes retry logic to ensure no data is lost due to temporary failures.
@@ -182,7 +187,13 @@ async def fetch_crypto_data_paginated(
                 
                 if latest_candle_time < stale_threshold:
                     logger.info(f"Recent data is stale for {symbol} ({interval}), fetching latest...")
-                    await _fetch_and_save_missing_data(symbol, interval, latest_candle_time, end_time)
+                    await _fetch_and_save_missing_data(
+                        symbol,
+                        interval,
+                        latest_candle_time,
+                        end_time,
+                        page_size=page_size
+                    )
                 
                 logger.info(f"Returning {len(recent_data)} recent records (chronological order) for {symbol} ({interval})")
                 return recent_data
@@ -196,7 +207,13 @@ async def fetch_crypto_data_paginated(
             # Standard stale data check for first page
             if page == 1:
                 # --- FIX: Capture the freshly fetched data ---
-                newly_fetched_data = await _check_and_update_stale_data(historical, symbol, interval, end_time)
+                newly_fetched_data = await _check_and_update_stale_data(
+                    historical,
+                    symbol,
+                    interval,
+                    end_time,
+                    page_size
+                )
                 if newly_fetched_data:
                     # --- FIX: Append it to the response ---
                     historical.extend(newly_fetched_data)
@@ -213,10 +230,10 @@ async def fetch_crypto_data_paginated(
 
 
 async def _fetch_from_binance_chronological(
-    symbol: str, 
-    interval: str, 
-    start_time: datetime, 
-    end_time: datetime, 
+    symbol: str,
+    interval: str,
+    start_time: datetime,
+    end_time: datetime,
     page_size: int,
     prioritize_recent: bool
 ) -> list:
@@ -282,7 +299,13 @@ async def _fetch_from_binance_chronological(
             except Exception as cleanup_error:
                 logger.error(f"Error closing Binance connection: {str(cleanup_error)}")
 
-async def _check_and_update_stale_data(historical: list, symbol: str, interval: str, end_time: datetime):
+async def _check_and_update_stale_data(
+    historical: list, 
+    symbol: str,
+    interval: str, 
+    end_time: datetime, 
+    page_size: int
+):
     """Check if data is stale and fetch missing recent candles"""
     try:
         last_candle_time = historical[-1].timestamp
@@ -291,7 +314,7 @@ async def _check_and_update_stale_data(historical: list, symbol: str, interval: 
         if last_candle_time < stale_threshold:
             logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing candles.")
             # --- FIX: Capture and return the result ---
-            missing_data = await _fetch_and_save_missing_data(symbol, interval, last_candle_time, end_time)
+            missing_data = await _fetch_and_save_missing_data(symbol, interval, last_candle_time, end_time, page_size)
             return missing_data
     except Exception as e:
         logger.error(f"Error checking for stale data: {str(e)}")
@@ -300,7 +323,13 @@ async def _check_and_update_stale_data(historical: list, symbol: str, interval: 
     return []
 
 
-async def _fetch_and_save_missing_data(symbol: str, interval: str, from_time: datetime, to_time: datetime):
+async def _fetch_and_save_missing_data(
+    symbol: str,
+    interval: str,
+    from_time: datetime,
+    to_time: datetime,
+    page_size: int
+):
     """Fetch and save missing data between two timestamps"""
     try:
         binance = BinanceMarketData()
@@ -319,7 +348,7 @@ async def _fetch_and_save_missing_data(symbol: str, interval: str, from_time: da
                 interval=interval,
                 start_time=current_start_ms,
                 end_time=end_time_ms,
-                limit=1000
+                limit=page_size
             )
 
             if not klines:

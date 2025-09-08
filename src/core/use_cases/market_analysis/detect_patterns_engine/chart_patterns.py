@@ -3,13 +3,9 @@
 Chart pattern detection functions. Import and use the pattern_registry for registration.
 """
 import numpy as np
-import pandas as pd
 from scipy.signal import argrelextrema
-from typing import Tuple, Dict, List, Any, Optional, Callable
 from .pattern_registry import register_pattern
-import numpy as np
-import pandas as pd
-from typing import Tuple, Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from common.logger import logger
 
 # --- Chart Pattern Detection Functions ---
