@@ -444,14 +444,12 @@ class PatternAlertWorker:
             logger.error(f"Redis operation {operation_name} failed: {e}")
             raise
 
-    async def initialize_rolling_window(self, symbol: str, interval: str, window_size: int):
+    async def initialize_rolling_window(self, symbol: str, interval: str):
         """
         Fetch historical data, perform an immediate catch-up to prevent gaps,
         and initialize the rolling window in Redis.
         """
-        """FIXED: Always calculate dynamic window size if not provided."""
-        if window_size is None:
-            window_size = await self._get_dynamic_window_size(symbol, interval)
+        window_size = await self._get_dynamic_window_size(symbol, interval)
 
         rolling_window_key = f"rolling_window:{symbol}:{interval}"
         max_retries = 3
@@ -663,7 +661,7 @@ class PatternAlertWorker:
 
             # STEP 2: Initialize the rolling window with a built-in catch-up.
             # This is the equivalent of the API fetching historical data on connect.
-            await self.initialize_rolling_window(symbol, interval, window_size)
+            await self.initialize_rolling_window(symbol, interval)
             logger.info(f"[{symbol}:{interval}] Fresh data window initialized with size {window_size}.")
 
             # STEP 3: Run pattern detection IMMEDIATELY on this fresh data.
