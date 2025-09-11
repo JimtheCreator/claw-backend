@@ -110,4 +110,7 @@ if __name__ == "__main__":
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
 
 # fly deploy --config docker/core-api/fly.toml --remote-only
+
+# fly deploy --config docker/service-workers/fly.toml --remote-only
+
 # fly deploy --config docker/influxdb/fly.toml --remote-only

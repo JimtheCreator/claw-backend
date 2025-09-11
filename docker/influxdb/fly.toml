@@ -4,7 +4,7 @@
 #
 
 app = 'watchers-data-storage'
-primary_region = 'iad'
+primary_region = "sin"
 
 [build]
   image = 'influxdb:2.7-alpine'

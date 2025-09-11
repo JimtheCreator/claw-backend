@@ -1,0 +1,19 @@
+# fly.toml for watchers-data-workers
+app = "watchers-data-workers"
+primary_region = "sin"
+
+[build]
+  context = "../.."
+  dockerfile = "Dockerfile"
+  ignorefile = ".dockerignore"
+
+[processes]
+  worker = "supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+[deploy]
+  strategy = "immediate"

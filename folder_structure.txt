@@ -1,6 +1,6 @@
 FOLDER STRUCTURE REPORT
 Generated on: D:\ClawInc\Claw-Backend
-Ignored folders: .vscode, .github, .pytest_cache, .venv
+Ignored folders: .pytest_cache, .vscode, .github, .venv
 Skip contents folders: docker/influxdb/data
 
 ==================================================
@@ -26,6 +26,7 @@ docker/
 │   ├── docker-compose.yml
 │   └── redis.conf
 └── service-workers
+    ├── docker-compose.yml
     ├── Dockerfile
     └── fly.toml
 

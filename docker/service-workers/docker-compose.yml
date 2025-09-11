@@ -1,0 +1,38 @@
+# This docker-compose file is optimized for LOCAL DEVELOPMENT of data workers.
+# It connects to the existing core-api and data-storage services.
+
+name: watchers-data-workers
+
+services:
+  # The 'data-workers' service, which runs all background worker services via Supervisor
+  data-workers:
+    build:
+      context: ../../  # Repository root
+      dockerfile: docker/service-workers/Dockerfile
+    # Load .env file from root directory
+    env_file:
+      - ../../.env
+    environment:
+      # Connect to shared Redis and InfluxDB from the main stack
+      - REDIS_HOST=redis
+      - INFLUXDB_URL=http://influxdb:8086
+      # Reference the main API if workers need to call it
+      - CORE_API_URL=http://core-api:8000
+    volumes:
+      # Mount the source code to enable live-reloading during development
+      - ../../src:/app/src
+    # Connect to the main watchers network so it can access Redis and InfluxDB
+    networks:
+      - watchers_default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "/app/health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# Connect to the existing watchers network created by the main docker-compose
+networks:
+  watchers_default:
+    external: true

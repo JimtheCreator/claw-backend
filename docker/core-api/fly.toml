@@ -1,6 +1,6 @@
 # fly.toml for watchers-core-api
 app = "watchers-core-api"
-primary_region = "fra"
+primary_region = "sin"
 
 [build]
   context = "../.."
