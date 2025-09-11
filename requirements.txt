@@ -7,19 +7,16 @@ numpy
 celery
 redis
 psycopg2-binary  # PostgreSQL
-influxdb-client  # Time-series data
-python-jose[cryptography] # JWT (future auth)
-pytest
-pytest-asyncio
+asyncpg
+influxdb-client
+python-jose[cryptography]
 requests
 TA-Lib
 python-binance
 slowapi
 prometheus-client
-aioredis
 binance-connector
 supabase
-psycopg2
 orjson
 scipy
 pydantic[email]
@@ -27,15 +24,10 @@ firebase_admin
 stripe
 apscheduler
 anyio
-pytest-tornado
-pytest-trio
-pytest-twisted
-twisted
 plotly
 sse-starlette
 kaleido
 concurrent-log-handler
-signal
 scikit-learn
 python-telegram-bot
-asyncpg
+twisted

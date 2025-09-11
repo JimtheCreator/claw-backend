@@ -1,0 +1,41 @@
+# fly.toml for watchers-core-api
+app = "watchers-core-api"
+primary_region = "fra"
+
+[build]
+  context = "../.."
+  dockerfile = "Dockerfile"
+  ignorefile = ".dockerignore"
+
+[processes]
+  # supervisord will launch nginx, main, telegram, websocket inside ONE VM
+  core-api = "supervisord -c /etc/supervisor/conf.d/supervisord.conf"
+
+# Main API service now points to NGINX on port 8080
+[http_service]
+  internal_port = 8080  # <-- IMPORTANT CHANGE
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["core-api"]
+
+  # The health check still works because Nginx will forward it to the main app
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "1m0s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+
+# DELETE the entire [[services]] block for the telegram app.
+# It is no longer needed because Nginx is handling the routing.
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+[deploy]
+  strategy = "immediate"

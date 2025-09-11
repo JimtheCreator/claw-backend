@@ -1,0 +1,368 @@
+FOLDER STRUCTURE REPORT
+Generated on: D:\ClawInc\Claw-Backend
+Ignored folders: .vscode, .github, .pytest_cache, .venv
+Skip contents folders: docker/influxdb/data
+
+==================================================
+FOLDER STRUCTURE: docker
+==================================================
+docker/
+├── core-api
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   ├── fly.toml
+│   └── nginx.conf
+├── influxdb
+│   ├── data
+│   │   [Contents skipped]
+│   ├── docker-compose.yml
+│   ├── fly.toml
+│   └── init.sh
+├── nginx
+│   └── nginx.conf
+├── redis
+│   ├── redis
+│   │   └── redis.conf
+│   ├── docker-compose.yml
+│   └── redis.conf
+└── service-workers
+    ├── Dockerfile
+    └── fly.toml
+
+
+==================================================
+FOLDER STRUCTURE: src
+==================================================
+src/
+├── __pycache__
+│   ├── __init__.cpython-313.pyc
+│   ├── app.cpython-313.pyc
+│   └── dependencies.cpython-313.pyc
+├── account_creation
+│   ├── login
+│   │   └── __init__.py
+│   ├── registration
+│   │   └── __init__.py
+│   └── __init__.py
+├── backend_function_tests
+│   ├── __pycache__
+│   │   └── __init__.cpython-313.pyc
+│   ├── market_analysis
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── getting_test_market_data.cpython-313.pyc
+│   │   │   ├── test_analysis.cpython-313-pytest-8.3.5.pyc
+│   │   │   ├── test_analysis.cpython-313.pyc
+│   │   │   ├── test_data_access.cpython-313-pytest-8.3.5.pyc
+│   │   │   ├── test_data_access.cpython-313.pyc
+│   │   │   └── TestAnalysisRequest.cpython-313.pyc
+│   │   ├── __init__.py
+│   │   ├── getting_test_market_data.py
+│   │   ├── test_analysis.py
+│   │   ├── test_data_access.py
+│   │   └── TestAnalysisRequest.py
+│   └── __init__.py
+├── claw_backend.egg-info
+│   ├── dependency_links.txt
+│   ├── PKG-INFO
+│   ├── SOURCES.txt
+│   └── top_level.txt
+├── common
+│   ├── __pycache__
+│   │   ├── __init__.cpython-313.pyc
+│   │   └── logger.cpython-313.pyc
+│   ├── config
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   └── cache.cpython-313.pyc
+│   │   └── __init__.py
+│   ├── custom_exceptions
+│   │   ├── __pycache__
+│   │   │   └── data_unavailable_error.cpython-313.pyc
+│   │   ├── data_unavailable_error.py
+│   │   └── data_unavailable_handler.py
+│   ├── monitoring
+│   │   ├── __init__.py
+│   │   └── metrics.py
+│   ├── utils
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── data_processing.cpython-313.pyc
+│   │   │   └── shared_elements.cpython-313.pyc
+│   │   ├── __init__.py
+│   │   ├── data_processing.py
+│   │   ├── shared_elements.py
+│   │   └── test_redis_pubsub.py
+│   ├── __init__.py
+│   └── logger.py
+├── core
+│   ├── __pycache__
+│   │   └── __init__.cpython-313.pyc
+│   ├── domain
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-313.pyc
+│   │   ├── entities
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   ├── CryptoEntity.cpython-313.pyc
+│   │   │   │   ├── MarketDataEntity.cpython-313.pyc
+│   │   │   │   └── UserEntity.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   ├── CryptoEntity.py
+│   │   │   ├── MarketDataEntity.py
+│   │   │   └── PatternAnalysisEntity.py
+│   │   ├── services
+│   │   │   └── __init__.py
+│   │   └── __init__.py
+│   ├── engines
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── chart_engine.cpython-313.pyc
+│   │   │   ├── support_resistance_engine.cpython-313.pyc
+│   │   │   └── trendline_engine.cpython-313.pyc
+│   │   ├── __init__.py
+│   │   ├── chart_engine.py
+│   │   ├── pattern_analysis_engine.py
+│   │   ├── support_resistance_engine.py
+│   │   └── trendline_engine.py
+│   ├── interfaces
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── account_auth_interface.cpython-313.pyc
+│   │   │   ├── AnalysisRequest.cpython-313.pyc
+│   │   │   ├── AnalysisResult.cpython-313.pyc
+│   │   │   ├── auth_repository.cpython-313.pyc
+│   │   │   ├── crypto_repository.cpython-313.pyc
+│   │   │   └── market_data_repository.cpython-313.pyc
+│   │   ├── __init__.py
+│   │   ├── AnalysisRequest.py
+│   │   ├── AnalysisResult.py
+│   │   ├── crypto_repository.py
+│   │   └── market_data_repository.py
+│   ├── services
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── auth_service.cpython-313.pyc
+│   │   │   ├── chart_engine.cpython-313.pyc
+│   │   │   ├── chart_generator.cpython-313.pyc
+│   │   │   ├── crypto_list.cpython-313.pyc
+│   │   │   ├── deepseek_client.cpython-313.pyc
+│   │   │   ├── pattern_analysis_engine.cpython-313.pyc
+│   │   │   ├── pattern_api.cpython-313.pyc
+│   │   │   ├── pattern_engine.cpython-313.pyc
+│   │   │   ├── pattern_matcher_service.cpython-313.pyc
+│   │   │   ├── PatternAPI.cpython-313.pyc
+│   │   │   └── tasks.cpython-313.pyc
+│   │   ├── notifications
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   ├── analysis_service.cpython-313.pyc
+│   │   │   │   ├── analysis_worker.cpython-313.pyc
+│   │   │   │   ├── notification_service.cpython-313.pyc
+│   │   │   │   ├── notification_worker.cpython-313.pyc
+│   │   │   │   └── pattern_formatters.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   ├── analysis_service.py
+│   │   │   └── notification_service.py
+│   │   ├── workers
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── celery_worker.cpython-313.pyc
+│   │   │   ├── alerts
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   └── __init__.cpython-313.pyc
+│   │   │   │   ├── pattern_alerts
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   │   ├── notification_formatters.cpython-313.pyc
+│   │   │   │   │   │   ├── notification_service.cpython-313.pyc
+│   │   │   │   │   │   ├── pattern_alert_worker.cpython-313.pyc
+│   │   │   │   │   │   ├── pattern_formatters.cpython-313.pyc
+│   │   │   │   │   │   ├── pattern_notification_formatters.cpython-313.pyc
+│   │   │   │   │   │   ├── PatternAlertManager.cpython-313.pyc
+│   │   │   │   │   │   └── run_pattern_scanner.cpython-313.pyc
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── notification_formatters.py
+│   │   │   │   │   └── pattern_alert_worker.py
+│   │   │   │   ├── price_alerts
+│   │   │   │   │   ├── __pycache__
+│   │   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   │   └── PriceAlertManager.cpython-313.pyc
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   └── worker.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── __init__.py
+│   │   │   ├── celery_worker.py
+│   │   │   ├── notification_worker.py
+│   │   │   ├── sparkline_service.py
+│   │   │   ├── ticker_service.py
+│   │   │   └── websocket_subscription_manager.py
+│   │   ├── __init__.py
+│   │   ├── crypto_list.py
+│   │   ├── deepseek_client.py
+│   │   ├── market_fetcher.py
+│   │   └── tasks.py
+│   ├── use_cases
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-313.pyc
+│   │   ├── market
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── market_data.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   └── market_data.py
+│   │   ├── market_analysis
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   ├── analysis_pipeline.cpython-313.pyc
+│   │   │   │   ├── candle_confirmer.cpython-313.pyc
+│   │   │   │   ├── data_access.cpython-313.pyc
+│   │   │   │   ├── detect_patterns.cpython-313.pyc
+│   │   │   │   ├── enhanced_pattern_api.cpython-313.pyc
+│   │   │   │   ├── pattern_scanner.cpython-313.pyc
+│   │   │   │   ├── scorer.cpython-313.pyc
+│   │   │   │   ├── trader_aware_analyzer.cpython-313.pyc
+│   │   │   │   ├── trader_aware_config.cpython-313.pyc
+│   │   │   │   ├── trend_detector.cpython-313.pyc
+│   │   │   │   └── zone_detector.cpython-313.pyc
+│   │   │   ├── analysis_structure
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   └── main_analysis_structure.cpython-313.pyc
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── main_analysis_structure.py
+│   │   │   ├── detect_patterns_engine
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   ├── candlestick_patterns.cpython-313.pyc
+│   │   │   │   │   ├── chart_patterns.cpython-313.pyc
+│   │   │   │   │   ├── harmonic_patterns.cpython-313.pyc
+│   │   │   │   │   └── pattern_registry.cpython-313.pyc
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── candlestick_patterns.py
+│   │   │   │   ├── chart_patterns.py
+│   │   │   │   ├── harmonic_patterns.py
+│   │   │   │   └── pattern_registry.py
+│   │   │   ├── __init__.py
+│   │   │   ├── analysis_pipeline.py
+│   │   │   ├── candle_confirmer.py
+│   │   │   ├── data_access.py
+│   │   │   ├── detect_patterns.py
+│   │   │   ├── enhanced_pattern_api.py
+│   │   │   ├── pattern_scanner.py
+│   │   │   ├── scorer.py
+│   │   │   ├── trader_aware_analyzer.py
+│   │   │   ├── trader_aware_config.py
+│   │   │   ├── trend_detector.py
+│   │   │   └── zone_detector.py
+│   │   └── __init__.py
+│   └── __init__.py
+├── infrastructure
+│   ├── data_sources
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-313.pyc
+│   │   ├── binance
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── client.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   └── client.py
+│   │   ├── tradingview
+│   │   │   └── __init__.py
+│   │   ├── yahoofinance
+│   │   │   └── __init__.py
+│   │   └── __init__.py
+│   ├── database
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-313.pyc
+│   │   ├── firebase
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── repository.cpython-313.pyc
+│   │   │   ├── secrets
+│   │   │   │   └── watchers-db-firebase-credentials.json
+│   │   │   ├── __init__.py
+│   │   │   └── repository.py
+│   │   ├── influxdb
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   ├── market_data_repository.cpython-313.pyc
+│   │   │   │   └── market_db.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   └── market_db.py
+│   │   ├── redis
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── cache.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   └── cache.py
+│   │   ├── supabase
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   └── crypto_repository.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   └── crypto_repository.py
+│   │   └── __init__.py
+│   └── external_apis
+│       └── __init__.py
+├── presentation
+│   ├── __pycache__
+│   │   └── __init__.cpython-313.pyc
+│   ├── api
+│   │   ├── __pycache__
+│   │   │   └── __init__.cpython-313.pyc
+│   │   ├── middleware
+│   │   │   ├── __init__.py
+│   │   │   └── security.py
+│   │   ├── routes
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   ├── alerts.cpython-313.pyc
+│   │   │   │   ├── analysis.cpython-313.pyc
+│   │   │   │   ├── auth_routes.cpython-313.pyc
+│   │   │   │   ├── get_symbol_market_data.cpython-313.pyc
+│   │   │   │   ├── market_data.cpython-313.pyc
+│   │   │   │   ├── roomdb_cached_data.cpython-313.pyc
+│   │   │   │   └── user_symbol_watchlist.cpython-313.pyc
+│   │   │   ├── alerts_endpoints
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   ├── pattern_alerts.cpython-313.pyc
+│   │   │   │   │   └── price_alerts.cpython-313.pyc
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── pattern_alerts.py
+│   │   │   │   └── price_alerts.py
+│   │   │   ├── watchlist
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-313.pyc
+│   │   │   │   │   ├── ticker_service.cpython-313.pyc
+│   │   │   │   │   └── user_symbol_watchlist.cpython-313.pyc
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── user_symbol_watchlist.py
+│   │   │   ├── __init__.py
+│   │   │   ├── analysis.py
+│   │   │   ├── get_symbol_market_data.py
+│   │   │   └── roomdb_cached_data.py
+│   │   ├── schemas
+│   │   │   ├── __init__.py
+│   │   │   └── market.py
+│   │   └── __init__.py
+│   ├── web
+│   └── __init__.py
+├── __init__.py
+├── app.py
+└── test.py
+
+
+==================================================
+FOLDER STRUCTURE: telegram_app_handler
+==================================================
+telegram_app_handler/
+├── __pycache__
+│   └── __init__.cpython-313.pyc
+├── src
+│   ├── __pycache__
+│   │   └── __init__.cpython-313.pyc
+│   ├── __init__.py
+│   └── server.py
+└── __init__.py

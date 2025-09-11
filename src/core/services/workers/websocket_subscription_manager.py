@@ -5,10 +5,29 @@ import websockets
 from collections import defaultdict, deque
 import time
 from typing import Dict, Optional, List
+# Fixed path setup
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Get the file's absolute path
+file_path = os.path.abspath(__file__)
+# /app/src/core/services/workers/websocket_subscription_manager.py
+
+# Navigate up to the src directory
+# Go up 4 levels: workers -> services -> core -> src
+src_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(file_path))))
+# /app/src
+
+# Navigate up one more to get the project root
+project_root = os.path.dirname(src_dir)
+# /app
+
+# Add both to Python path
+sys.path.insert(0, src_dir)
+sys.path.insert(0, project_root)
+
+print(f"Added to Python path: {src_dir}")
+print(f"Added to Python path: {project_root}")
 
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger

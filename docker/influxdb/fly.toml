@@ -1,0 +1,31 @@
+# fly.toml app configuration file generated for watchers-data-storage on 2025-09-10T02:18:33+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'watchers-data-storage'
+primary_region = 'iad'
+
+[build]
+  image = 'influxdb:2.7-alpine'
+
+[[mounts]]
+  source = 'influxdb_data'
+  destination = '/var/lib/influxdb2'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8086
+
+  [[services.ports]]
+    port = 8086
+    handlers = ['http']
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

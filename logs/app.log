@@ -43816,3 +43816,181 @@
 2025-09-09 02:34:41,726 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
 2025-09-09 02:34:41,728 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 29
 2025-09-09 02:34:41,730 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s
+2025-09-09 02:34:46,720 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:34:46,722 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:46,724 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:46,725 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:46,727 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -127.1s
+2025-09-09 02:34:46,729 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:46,730 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:46,731 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 1 message loop iteration 30
+2025-09-09 02:34:46,733 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 1: No active streams, sleeping for 5s
+2025-09-09 02:34:46,736 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:34:46,738 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:46,739 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:46,741 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:46,742 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -123.5s
+2025-09-09 02:34:46,744 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:46,746 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:46,747 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 30
+2025-09-09 02:34:46,748 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s
+2025-09-09 02:34:51,752 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:34:51,754 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:51,756 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:51,757 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:51,758 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -132.1s
+2025-09-09 02:34:51,759 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:51,760 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:51,761 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 1 message loop iteration 31
+2025-09-09 02:34:51,762 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 1: No active streams, sleeping for 5s
+2025-09-09 02:34:51,765 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:34:51,767 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:51,772 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:51,773 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:51,775 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -128.5s
+2025-09-09 02:34:51,777 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:51,778 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:51,779 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 31
+2025-09-09 02:34:51,780 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s
+2025-09-09 02:34:56,765 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:34:56,767 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:56,769 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:56,771 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:56,772 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -137.1s
+2025-09-09 02:34:56,773 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:56,774 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:56,775 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 1 message loop iteration 32
+2025-09-09 02:34:56,777 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 1: No active streams, sleeping for 5s
+2025-09-09 02:34:56,791 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:34:56,792 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:56,794 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:56,795 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:56,796 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -133.5s
+2025-09-09 02:34:56,797 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:56,799 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:56,800 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 32
+2025-09-09 02:34:56,803 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s
+2025-09-09 02:34:57,100 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,102 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,104 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,106 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,107 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.9s
+2025-09-09 02:34:57,109 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,111 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,112 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,114 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,115 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,117 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.9s
+2025-09-09 02:34:57,119 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,121 - ClawBackend - INFO - [websocket_subscription_manager.py:601] - Connection 0 is healthy, but its handler task is not running. Starting new task.
+2025-09-09 02:34:57,123 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:34:57,124 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,126 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,127 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,129 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -137.5s
+2025-09-09 02:34:57,131 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:57,132 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:57,133 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:34:57,135 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,137 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,138 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,140 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -137.5s
+2025-09-09 02:34:57,142 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:57,144 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:57,145 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:34:57,146 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,148 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,150 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,152 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -133.9s
+2025-09-09 02:34:57,153 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:57,154 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:57,157 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:34:57,159 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,161 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,162 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,163 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -133.9s
+2025-09-09 02:34:57,165 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:34:57,167 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:34:57,169 - ClawBackend - INFO - [websocket_subscription_manager.py:416] - Starting message handler for connection 0
+2025-09-09 02:34:57,170 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,172 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,173 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,175 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,177 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.9s
+2025-09-09 02:34:57,178 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,180 - ClawBackend - INFO - [websocket_subscription_manager.py:420] - Connection 0 initial health status: True
+2025-09-09 02:34:57,182 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,183 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,185 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,186 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,188 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.8s
+2025-09-09 02:34:57,189 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,190 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 0 message loop iteration 1
+2025-09-09 02:34:57,192 - ClawBackend - INFO - [websocket_subscription_manager.py:438] - Connection 0: Waiting for message (timeout: 30s)
+2025-09-09 02:34:57,194 - ClawBackend - INFO - [websocket_subscription_manager.py:444] - Connection 0: Received message, updated last_message_time
+2025-09-09 02:34:57,196 - ClawBackend - INFO - [websocket_subscription_manager.py:462] - Connection 0: Successfully processed request ID 45
+2025-09-09 02:34:57,197 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,198 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,200 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,201 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,203 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.8s
+2025-09-09 02:34:57,204 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,206 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,207 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,210 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,211 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:34:57,214 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: 29.8s
+2025-09-09 02:34:57,216 - ClawBackend - INFO - [websocket_subscription_manager.py:128] -   - HEALTHY: in grace period
+2025-09-09 02:34:57,217 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 0 message loop iteration 2
+2025-09-09 02:34:57,219 - ClawBackend - INFO - [websocket_subscription_manager.py:438] - Connection 0: Waiting for message (timeout: 30s)
+2025-09-09 02:34:57,221 - ClawBackend - INFO - [websocket_subscription_manager.py:444] - Connection 0: Received message, updated last_message_time
+2025-09-09 02:34:57,224 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,226 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,228 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,229 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: CLOSING
+2025-09-09 02:34:57,231 - ClawBackend - INFO - [websocket_subscription_manager.py:116] -   - UNHEALTHY: websocket is in state 'CLOSING'
+2025-09-09 02:34:57,232 - ClawBackend - WARNING - [websocket_subscription_manager.py:493] - Connection 0 became unhealthy during loop iteration 2
+2025-09-09 02:34:57,233 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 0:
+2025-09-09 02:34:57,234 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:34:57,235 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:34:57,236 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: CLOSING
+2025-09-09 02:34:57,238 - ClawBackend - INFO - [websocket_subscription_manager.py:116] -   - UNHEALTHY: websocket is in state 'CLOSING'
+2025-09-09 02:34:57,239 - ClawBackend - WARNING - [websocket_subscription_manager.py:497] - Message handler for connection 0 exiting after 2 iterations (final health: False)
+2025-09-09 02:34:57,225 - ClawBackend - INFO - [pattern_alert_worker.py:705] - Data is flowing for solusdt@kline_1m. Processing message.
+2025-09-09 02:35:01,780 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:35:01,783 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:35:01,785 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:35:01,787 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:35:01,789 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -142.2s
+2025-09-09 02:35:01,791 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:35:01,793 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:35:01,794 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 1 message loop iteration 33
+2025-09-09 02:35:01,797 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 1: No active streams, sleeping for 5s
+2025-09-09 02:35:01,812 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:35:01,814 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:35:01,816 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:35:01,819 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:35:01,820 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -138.5s
+2025-09-09 02:35:01,823 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:35:01,825 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:35:01,827 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 33
+2025-09-09 02:35:01,828 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s
+2025-09-09 02:35:03,757 - ClawBackend - INFO - [pattern_alert_worker.py:806] - Health check: 3 listeners alive, 0 restarted. Alive: ['BTCUSDT:1m', 'SOLUSDT:1m', 'BNBUSDT:1m']
+2025-09-09 02:35:06,804 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 1:
+2025-09-09 02:35:06,807 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:35:06,811 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:35:06,813 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:35:06,817 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -147.2s
+2025-09-09 02:35:06,819 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:35:06,821 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:35:06,827 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 1 message loop iteration 34
+2025-09-09 02:35:06,831 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 1: No active streams, sleeping for 5s
+2025-09-09 02:35:06,833 - ClawBackend - INFO - [websocket_subscription_manager.py:101] - Health check for connection 2:
+2025-09-09 02:35:06,838 - ClawBackend - INFO - [websocket_subscription_manager.py:102] -   - websocket exists: True
+2025-09-09 02:35:06,842 - ClawBackend - INFO - [websocket_subscription_manager.py:103] -   - is_connected: True
+2025-09-09 02:35:06,845 - ClawBackend - INFO - [websocket_subscription_manager.py:114] -   - websocket.state: OPEN
+2025-09-09 02:35:06,847 - ClawBackend - INFO - [websocket_subscription_manager.py:126] -   - grace period remaining: -143.6s
+2025-09-09 02:35:06,852 - ClawBackend - INFO - [websocket_subscription_manager.py:135] -   - active streams: 0
+2025-09-09 02:35:06,854 - ClawBackend - INFO - [websocket_subscription_manager.py:150] -   - HEALTHY: all checks passed
+2025-09-09 02:35:06,860 - ClawBackend - INFO - [websocket_subscription_manager.py:429] - Connection 2 message loop iteration 34
+2025-09-09 02:35:06,862 - ClawBackend - INFO - [websocket_subscription_manager.py:434] - Connection 2: No active streams, sleeping for 5s

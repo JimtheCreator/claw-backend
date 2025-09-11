@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '/usr/local/lib/python3.13/site-packages')
+
 import asyncio
 from datetime import datetime, timedelta, timezone
 import os

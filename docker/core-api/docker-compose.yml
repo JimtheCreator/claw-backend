@@ -1,0 +1,71 @@
+# This docker-compose file is optimized for LOCAL DEVELOPMENT.
+# It uses 'env_file' to automatically load your .env file
+# and mounts your source code for live-reloading.
+
+name: watchers
+
+services:
+  # The 'core-api' service, which runs all three Python services via Supervisor
+  core-api:
+    build:
+      context: ../../  # Changed to repository root
+      dockerfile: docker/core-api/Dockerfile  # Updated path to Dockerfile
+    # Load .env file from root directory
+    env_file:
+      - ../../.env
+    environment:
+      # Override hostnames for Docker's internal networking
+      - REDIS_HOST=redis
+      - INFLUXDB_URL=http://influxdb:8086
+      # Set the public URL for local testing (e.g., using ngrok)
+      # Use default if URL_ENDPOINT is not set
+      - APP_PUBLIC_URL=${URL_ENDPOINT:-http://localhost:8000}
+    ports:
+      - "8000:8000"  # Main FastAPI
+      - "8001:8001"  # Telegram API
+    volumes:
+      # Mount the source code to enable live-reloading during development.
+      # This is not needed in production.
+      - ../../src:/app/src
+      - ../../telegram:/app/telegram
+      - ../../websocket_subscription_manager.py:/app/websocket_subscription_manager.py
+    depends_on:
+      - redis
+      - influxdb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis service for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # InfluxDB service for time-series data
+  influxdb:
+    image: influxdb:2.7-alpine
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=supersecretpassword
+      - DOCKER_INFLUXDB_INIT_ORG=claworg
+      - DOCKER_INFLUXDB_INIT_BUCKET=clawbucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=clawsupersecrettoken
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+
+# Named volumes to persist data between container restarts
+volumes:
+  redis_data:
+  influxdb_data:

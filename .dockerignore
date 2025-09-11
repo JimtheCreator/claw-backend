@@ -1,0 +1,106 @@
+# ===============================================
+# ROOT .dockerignore for Multi-App Monorepo
+# This file MUST be at repository root to work
+# ===============================================
+
+# Git
+.git/
+.github/
+.gitignore
+README.md
+
+# Python
+.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.egg-info/
+**/*.eggs/
+**/.pytest_cache/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env*
+!.env.example
+
+# =====================================
+# DOCKER INFRASTRUCTURE - HUGE SPACE SAVER
+# =====================================
+# Exclude ALL docker compose files and data
+docker-compose*.yml
+*/docker-compose*.yml
+**/docker-compose*.yml
+
+# CRITICAL: Exclude massive data directories
+docker/influxdb/data/
+docker/redis/redis/
+docker/*/data/
+**/data/
+*.db
+*.sqlite
+
+# =====================================
+# OTHER APPS IN MONOREPO
+# =====================================
+# Add other app directories you don't need in core-api build
+# docker/frontend/
+# docker/worker/
+# docker/analytics/
+
+# =====================================
+# SOURCE CODE EXCLUSIONS
+# =====================================
+# Tests (exclude from production image)
+src/backend_function_tests/
+src/test.py
+**/test_*.py
+**/*_test.py
+**/*_tests.py
+**/tests/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+.DS_Store
+
+# Documentation (usually not needed in container)
+docs/
+documentation/
+examples/
+*.md
+!README.md
+
+# Large media files
+*.zip
+*.tar.gz
+*.pdf
+*.mp4
+*.mov
+*.jpg
+*.png
+*.gif
+*.svg
+
+# Node.js (if any exists in other apps)
+node_modules/
+npm-debug.log
+yarn.lock
+package-lock.json
+
+# =====================================
+# APP-SPECIFIC EXCLUSIONS
+# =====================================
+# Add any other large directories specific to your other apps

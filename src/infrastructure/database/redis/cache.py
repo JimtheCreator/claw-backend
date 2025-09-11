@@ -24,12 +24,26 @@ class RedisCache:
     async def initialize(self):
         if not self._initialized:
             try:
-                self._redis = redis.asyncio.from_url(
-                    f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
-                    encoding="utf-8",
-                    decode_responses=True,
-                    socket_connect_timeout=10
-                )
+                # First try to use REDIS_URL if available (for Upstash)
+                redis_url = os.getenv('REDIS_URL')
+                if redis_url:
+                    self._redis = redis.asyncio.from_url(
+                        redis_url,
+                        encoding="utf-8",
+                        decode_responses=True,
+                        socket_connect_timeout=10
+                    )
+                else:
+                    # Fallback to individual host/port (your current method)
+                    self._redis = redis.asyncio.from_url(
+                        f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
+                        encoding="utf-8",
+                        decode_responses=True,
+                        socket_connect_timeout=10
+                    )
+
+
+
                 if await self._redis.ping():
                     logger.info("✅ Successfully connected to Redis")
                 else:

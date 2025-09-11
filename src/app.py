@@ -5,9 +5,11 @@ import os
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
+# Simple absolute path setup
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /path/to/src
+project_root = os.path.dirname(current_dir)              # /path/to/project
+sys.path.insert(0, current_dir)    # Add src to path
+sys.path.insert(0, project_root)   # Add project root to path
 
 from presentation.api.routes import get_symbol_market_data
 from presentation.api.routes import analysis
@@ -15,14 +17,12 @@ from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
 from infrastructure.database.redis.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool, close_binance_connection_pool
-from backend_function_tests.market_analysis.test_analysis import router
 from stripe_payments.src.paid_plans import router as paid_plans_router
 from stripe_payments.src.prices import router as prices_router
 from presentation.api.routes.watchlist.user_symbol_watchlist import router as watchlist_router
 from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -85,7 +85,6 @@ app.add_middleware(
 # Include all routers
 app.include_router(get_symbol_market_data.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
-app.include_router(router, prefix="/api/v1/test")
 app.include_router(paid_plans_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
 app.include_router(watchlist_router, prefix="/api/v1")
@@ -106,8 +105,9 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
- 
-
 
 # For NGROK TUNNELING USE
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
+
+# fly deploy --config docker/core-api/fly.toml --remote-only
+# fly deploy --config docker/influxdb/fly.toml --remote-only

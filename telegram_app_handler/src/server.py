@@ -2,39 +2,42 @@ import os
 import sys
 import json
 import asyncio
-import time
 from contextlib import asynccontextmanager
 
-# Path setup
+# Path setup (consider structuring as a package to avoid this)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
-grandparent_dir = os.path.dirname(parent_dir)
-sys.path.append(grandparent_dir)
+sys.path.append(parent_dir)
 
+# FIXED: Import from the correct path
 from src.common.logger import logger
 
 # Imports
 from dotenv import load_dotenv
 import redis
-from celery import Celery
 from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from fastapi import FastAPI, Request, HTTPException, APIRouter
 import uvicorn
-import asyncpg
-from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client import Counter, Histogram
 
 # Load environment variables at the very top
 load_dotenv()
 
 # --- Configuration ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WATCHERS_APK_URL = os.getenv("WATCHERS_APK_URL")  # URL to your APK file
+WATCHERS_APK_URL = os.getenv("WATCHERS_APK_URL")
+
+# --- DYNAMIC CONFIGURATION FOR FLY.IO ---
+# FIXED: Consistent webhook endpoint
+APP_BASE_URL = os.getenv("APP_PUBLIC_URL", "https://watchers-core-api.fly.dev")
+WEBHOOK_URL = f"{APP_BASE_URL}/api/v1/watchers-telegram-server/webhook"  # Fixed to match router
+
+# Get the port from an environment variable, defaulting to 8000 for this service
+SERVER_PORT = int(os.getenv("TELEGRAM_PORT", "8001"))  # Different from main API
 
 if not TELEGRAM_BOT_TOKEN:
-    logger.error("❌ TELEGRAM_BOT_TOKEN is not set! The bot will not work.")
+    logger.error("⚠ TELEGRAM_BOT_TOKEN is not set! The bot will not work.")
 
-# Make sure to update your NGROK URL to include the new prefix
-WEBHOOK_URL = "https://stable-wholly-crappie.ngrok-free.app/api/v1/telegram/webhook"
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
@@ -259,30 +262,45 @@ async def process_update(update_data: dict):
         logger.error(f"Error processing update: {e}")
 
 # --- FastAPI Application Setup ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Starting up Telegram bot server...")
+    try:
+        webhook_info_data = await bot.get_webhook_info()
+        logger.info(f"Current webhook URL: {webhook_info_data.url}")
+        logger.info(f"Desired webhook URL: {WEBHOOK_URL}")
+        
+        if webhook_info_data.url != WEBHOOK_URL:
+            logger.warning("Webhook URL mismatch. Setting new webhook...")
+            success = await bot.set_webhook(url=WEBHOOK_URL)
+            if success:
+                logger.info("✅ Webhook set successfully!")
+            else:
+                logger.error("⚠ Failed to set webhook")
+        else:
+            logger.info("✅ Webhook is already set correctly.")
+    except Exception as e:
+        logger.error(f"⚠ Startup error during webhook setup: {e}")
+    yield
+    logger.info("🚪 Shutting down Telegram bot server...")
+
 app = FastAPI(
-    title="Telegram Bot Server", 
+    title="Telegram Bot Server",
     version="1.0.0",
-    description="Handles Telegram bot webhooks and processes messages.",
-    lifespan=lambda app: lifespan(app)
+    lifespan=lifespan
 )
 
-# Create an APIRouter to hold all the telegram-related endpoints
 router = APIRouter()
 
 @router.post("/webhook")
 async def webhook_handler(request: Request):
-    """Webhook handler that processes updates directly."""
     try:
         json_data = await request.json()
-        logger.info(f"🎯 Webhook received data: {json.dumps(json_data, indent=2)}")
-        
-        # Process the update directly instead of queuing
+        logger.info(f"🎯 Webhook received: {len(str(json_data))} chars")
         await process_update(json_data)
-        
         return {"status": "processed"}
-    
     except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
+        logger.error(f"⚠ Webhook error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/webhook-info")
@@ -306,67 +324,34 @@ async def set_webhook_endpoint():
         logger.error(f"Error setting webhook: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Include the router in the main app with the desired prefix
-app.include_router(router, prefix="/api/v1/telegram")
-
 # --- Root and Health Check Endpoints ---
-@app.get("/")
+@router.get("/")
 async def root():
-    """Root health check endpoint."""
     return {"status": "healthy", "message": "Telegram Bot Server is running"}
 
-@app.get("/health")
+@router.get("/health")
 async def health():
-    """Detailed health check."""
-    return {
-        "status": "ok", 
-        "bot_token_set": bool(TELEGRAM_BOT_TOKEN),
-        "apk_url_set": bool(WATCHERS_APK_URL)
-    }
+    return {"status": "ok", "bot_token_set": bool(TELEGRAM_BOT_TOKEN)}
 
-# --- Startup Logic ---
-async def startup_tasks():
-    """Run startup tasks."""
-    logger.info("🚀 Starting up bot server...")
-    try:
-        webhook_info_data = await bot.get_webhook_info()
-        if webhook_info_data.url != WEBHOOK_URL:
-            logger.warning(f"Webhook URL mismatch. Current: {webhook_info_data.url}, Desired: {WEBHOOK_URL}")
-            logger.info("Attempting to set new webhook...")
-            await bot.set_webhook(url=WEBHOOK_URL)
-            logger.info("✅ Webhook set successfully!")
-        else:
-            logger.info("✅ Webhook is already set correctly.")
-    except Exception as e:
-        logger.error(f"❌ Startup error during webhook setup: {e}")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # 🚀 Startup
-    try:
-        await startup_tasks()
-
-    except Exception as e:
-        logger.error(f"Failed to preload tickers: {e}")
-        # In a real-world scenario, you might want to handle this more gracefully
-        # For now, we'll let the application fail to start if critical services are unavailable
-        raise
-
-    yield  # 🧘 Everything after this happens at shutdown
-
+# FIXED: Use consistent prefix
+app.include_router(router, prefix="/api/v1/watchers-telegram-server")
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    print("🤖 Starting Telegram Bot Server...")
-    print(f"🔗 Endpoint Prefix: /api/v1/telegram")
-    print(f"🎯 Full Webhook URL: {WEBHOOK_URL}")
-    print(f"🔑 Bot Token: {'✅ Set' if TELEGRAM_BOT_TOKEN else '❌ Missing!'}")
-    print(f"📦 APK URL: {'✅ Set' if WATCHERS_APK_URL else '❌ Missing!'}")
-    print("🆘 Support: Users will be directed to @KateSolves")
-    
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        log_level="info"
-    )
+    try:
+        print("🤖 Starting Telegram Bot Server for local development...")
+        print(f"🔗 Listening on port: {SERVER_PORT}")
+        print(f"🎯 Full Webhook URL will be set to: {WEBHOOK_URL}")
+        
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=SERVER_PORT,
+            log_level="info"
+        )
+    except Exception as e:
+        print(f"❌ Failed to start telegram server: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
