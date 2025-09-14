@@ -30,18 +30,8 @@ async def lifespan(app: FastAPI):
     try:
         configure_logging()
         logger.info("Starting application...")
-        # Add to startup validation
-        # Validate environment variables
-        required_envs = [
-            "PRODUCTION_STRIPE_API_KEY", "TEST_STRIPE_API_KEY", 
-            "FIREBASE_DATABASE_URL", "SUPABASE_URL", "REDIS_HOST", 
-            "SUPABASE_SERVICE_KEY", "FIREBASE_CREDENTIALS_PATH"
-        ]
         
-        for env in required_envs:
-            if not os.getenv(env):
-                raise RuntimeError(f"Missing required environment variable: {env}")
-            
+        
         await redis_cache.initialize()
         await initialize_binance_connection_pool()
         # await crypto_data.store_all_binance_tickers_in_supabase()

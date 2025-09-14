@@ -1036,3 +1036,39 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Error deleting market analysis record {analysis_id} for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to delete analysis record")
+        
+
+
+    async def get_stale_analyses(self, cutoff_time):
+        """
+        Get analyses that have been stuck in 'processing' state past the cutoff time.
+        """
+        try:
+            response = self.client.table(self.market_analysis_table).select("*").eq("status", "processing").lt("created_at", cutoff_time.isoformat()).execute()
+            logger.info(f"Found {len(response.data)} stale analyses stuck in processing since before {cutoff_time}")
+            return response.data
+        except Exception as e:
+            logger.error(f"Failed to get stale analyses: {e}")
+            return []
+
+    async def cleanup_old_analyses(self, cutoff_time):
+        """
+        Delete old completed/failed analyses older than cutoff_time.
+        Returns the number of deleted records.
+        """
+        try:
+            # Get count first
+            count_response = self.client.table(self.market_analysis_table).select("id", count="exact").in_("status", ["completed", "failed"]).lt("created_at", cutoff_time.isoformat()).execute()
+            count = len(count_response.data) if count_response.data else 0
+            
+            # Delete old records if any exist
+            if count > 0:
+                delete_response = self.client.table(self.market_analysis_table).delete().in_("status", ["completed", "failed"]).lt("created_at", cutoff_time.isoformat()).execute()
+                logger.info(f"Cleaned up {count} old analysis records older than {cutoff_time}")
+            else:
+                logger.info(f"No old analysis records found to clean up (older than {cutoff_time})")
+            
+            return count
+        except Exception as e:
+            logger.error(f"Failed to cleanup old analyses: {e}")
+            return 0

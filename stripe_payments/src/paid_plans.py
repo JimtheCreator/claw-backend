@@ -18,17 +18,17 @@ from stripe_payments.src.plan_limits import PLAN_LIMITS
 router = APIRouter(tags=["Stripe Paid Plans"])
 
 # Environment variables
-STRIPE_PUBLISHABLE_KEY = os.getenv("TEST_STRIPE_PUBLISHABLE_KEY")
-stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
-WEBHOOK_SECRET = os.getenv("TEST_STRIPE_WEBHOOK_SECRET_SNAPSHOT_PAYLOAD_STYLE")
+STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
+stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
+WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
 
 # Define mapping between plan types and Stripe price IDs
 PLAN_PRICE_IDS = {
-    "test_drive": os.getenv("TEST_TEST_DRIVE_PRICE_ID"),
-    "starter_weekly": os.getenv("TEST_STARTER_WEEKLY_PRICE_ID"),
-    "starter_monthly": os.getenv("TEST_STARTER_MONTHLY_PRICE_ID"),
-    "pro_weekly": os.getenv("TEST_PRO_WEEKLY_PRICE_ID"),
-    "pro_monthly": os.getenv("TEST_PRO_MONTHLY_PRICE_ID")
+    "test_drive": os.getenv("PRODUCTION_TEST_DRIVE_PRICE_ID"),
+    "starter_weekly": os.getenv("PRODUCTION_STARTER_WEEKLY_PRICE_ID"),
+    "starter_monthly": os.getenv("PRODUCTION_STARTER_MONTHLY_PRICE_ID"),
+    "pro_weekly": os.getenv("PRODUCTION_PRO_WEEKLY_PRICE_ID"),
+    "pro_monthly": os.getenv("PRODUCTION_PRO_MONTHLY_PRICE_ID")
 }
 
 PLAN_TYPES = {
@@ -122,7 +122,6 @@ async def get_user_details(user_id: str, firebase_repo: FirebaseRepository) -> d
         logger.warning(f"User name not found for user {user_id}")
 
     return {"email": email, "name": name}
-
 
 @router.get("/subscriptions/{user_id}/limits")
 async def get_subscription_limits_and_usage(user_id: str, supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
@@ -227,7 +226,6 @@ async def initiate_payment_intent_or_subscription(
             if selected_amount < current_amount:
                 change_type = "downgrade"
         
-
         # Handle customer
         customer_id = None
         customers_response = stripe.Customer.list(email=email, limit=1)

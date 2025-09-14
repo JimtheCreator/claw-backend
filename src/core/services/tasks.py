@@ -1,14 +1,12 @@
 import sys
-sys.path.insert(0, '/usr/local/lib/python3.13/site-packages')
-
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import os
 import redis
 from telegram import Bot, Update
 from telegram.ext import Application
 
-from .workers.celery_worker import celery_app
+from core.services.workers.celery_worker import celery_app
 from common.logger import logger
 
 from infrastructure.database.redis.cache import redis_cache
@@ -25,14 +23,12 @@ from core.engines.trendline_engine import TrendlineEngine
 from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from pydantic import BaseModel
 from core.engines.support_resistance_engine import SupportResistanceEngine # Add this import
-import json # Add json import
+import json
+from decimal import Decimal
 
 # Environment variables (these are safe to load at module level)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
-REDIS_PORT = os.getenv('REDIS_PORT', '6379')
-REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
-
+REDIS_URL = os.getenv('REDIS_URL')
 
 # ===================================================================
 # === LAZY INITIALIZATION FUNCTIONS ===============================
@@ -115,7 +111,7 @@ async def handle_user_message(update: Update, bot: Bot):
         logger.error(f"❌ FAILED to send message to chat_id {chat_id}. Error: {e}")
         return "error_sending_message"
 
-@celery_app.task(name='telegram_bot.process_update')
+@celery_app.task(name='src.core.services.tasks.telegram_bot.process_telegram_update')
 def process_telegram_update(update_data):
     """Celery task to process Telegram updates asynchronously with proper connection management."""
     try:
@@ -405,35 +401,88 @@ def dispatch_verification_for_interval(interval: str):
         # For each symbol, queue up the existing single-symbol verification task
         verify_single_symbol_task.delay(symbol=symbol, interval=interval)      
 
-
 # ===================================================================
 # === ANALYSIS CELERY TASKS =======================================
 # ===================================================================
 
-# Add this helper function for synchronous Redis publishing
+# Add this helper function to tasks.py after your imports
+def safe_json_serialize(obj):
+    """
+    Helper function to safely serialize objects to JSON, handling common non-serializable types.
+    """
+    def json_serializer(obj):
+        """JSON serializer for objects not serializable by default json code"""
+        if hasattr(obj, 'timestamp') and callable(obj.timestamp):
+            # Handle Timestamp objects (like pandas Timestamp or database timestamps)
+            return obj.timestamp()
+        elif isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        elif isinstance(obj, Decimal):
+            return float(obj)
+        elif hasattr(obj, 'isoformat'):
+            # Handle any object with isoformat method (datetime-like objects)
+            return obj.isoformat()
+        elif hasattr(obj, '__dict__'):
+            # Handle custom objects by converting to dict
+            return obj.__dict__
+        elif hasattr(obj, 'to_dict'):
+            # Handle objects with to_dict method
+            return obj.to_dict()
+        else:
+            # Fallback - convert to string
+            return str(obj)
+    
+    try:
+        return json.dumps(obj, default=json_serializer, ensure_ascii=False)
+    except Exception as e:
+        # If all else fails, create a safe fallback
+        safe_obj = {
+            "error": "Serialization failed",
+            "original_error": str(e),
+            "object_type": str(type(obj)),
+            "timestamp": datetime.now().isoformat()
+        }
+        return json.dumps(safe_obj)
+
+# Update your send_progress_sync function to use safe serialization
 def send_progress_sync(analysis_id: str, step: int, total_steps: int, message: str, extra_data: dict = None):
-    """FIXED: Synchronous Redis publishing that works properly in Celery workers"""
+    """FIXED: Synchronous Redis publishing with safe JSON serialization"""
     progress_data = {
         "analysis_id": analysis_id,
         "status": "processing",
         "progress": message,
         "step": step,
         "total_steps": total_steps,
-        "timestamp": datetime.now().timestamp()
+        "timestamp": datetime.now().timestamp()  # Use timestamp() for consistent float format
     }
     if extra_data:
         progress_data.update(extra_data)
     
-    # Use the direct Redis client - this is more reliable in Celery workers
+    # Use safe JSON serialization instead of json.dumps
     try:
         redis_client = get_redis_client()
-        redis_client.publish(f"analysis:{analysis_id}", json.dumps(progress_data))
-        logger.info(f"[Celery:TrendlineTask:{analysis_id}] Step {step}: {message} - Redis message published")
+        serialized_data = safe_json_serialize(progress_data)
+        redis_client.publish(f"analysis:{analysis_id}", serialized_data)
+        logger.info(f"[Celery:Task:{analysis_id}] Step {step}: {message} - Redis message published")
         
     except Exception as redis_error:
-        logger.error(f"[Celery:TrendlineTask:{analysis_id}] Redis publish error: {redis_error}")
+        logger.error(f"[Celery:Task:{analysis_id}] Redis publish error: {redis_error}")
     
-    logger.info(f"[Celery:TrendlineTask:{analysis_id}] Step {step}: {message}")
+    logger.info(f"[Celery:Task:{analysis_id}] Step {step}: {message}")
+
+# Also update the completion message publishing in both tasks
+# For the trendline task, replace this section:
+def publish_completion_message_safe(analysis_id: str, completion_data: dict):
+    """Safe publication of completion messages"""
+    try:
+        redis_client = get_redis_client()
+        serialized_data = safe_json_serialize(completion_data)
+        redis_client.publish(f"analysis:{analysis_id}", serialized_data)
+        logger.info(f"[Celery:Task:{analysis_id}] Completion message published to Redis")
+        return True
+    except Exception as redis_error:
+        logger.error(f"[Celery:Task:{analysis_id}] Failed to publish completion message: {redis_error}")
+        return False
 
 @celery_app.task(name="src.core.services.tasks.analyze_trendlines_task")
 def analyze_trendlines_task(
@@ -522,7 +571,7 @@ def analyze_trendlines_task(
                 else:
                     raise e
 
-            # FIXED: Send final completion message using direct Redis client
+            # FIXED: Send final completion message using safe serialization
             completion_data = {
                 "analysis_id": analysis_id,
                 "status": "completed",
@@ -542,15 +591,10 @@ def analyze_trendlines_task(
                 "timestamp": datetime.now().timestamp()
             }
             
-            # Use direct Redis client for final message
-            try:
-                redis_client = get_redis_client()
-                redis_client.publish(f"analysis:{analysis_id}", json.dumps(completion_data))
-                logger.info(f"[Celery:TrendlineTask:{analysis_id}] Final completion message published to Redis channel analysis:{analysis_id}")
-            except Exception as redis_error:
-                logger.error(f"[Celery:TrendlineTask:{analysis_id}] Failed to publish completion message: {redis_error}")
-            
+            # Use the safe publication function
+            publish_completion_message_safe(analysis_id, completion_data)
             logger.info(f"[Celery:TrendlineTask:{analysis_id}] Analysis completed successfully")
+        
 
         except Exception as e:
             logger.error(f"[Celery:TrendlineTask:{analysis_id}] Analysis failed: {e}", exc_info=True)
@@ -562,7 +606,7 @@ def analyze_trendlines_task(
             }
             await repo.update_analysis_record(analysis_id, error_updates)
             
-            # Send error message using direct Redis client
+            # Send error message using safe serialization
             error_data = {
                 "analysis_id": analysis_id,
                 "status": "failed",
@@ -577,17 +621,13 @@ def analyze_trendlines_task(
                 "timestamp": datetime.now().timestamp()
             }
             
-            try:
-                redis_client = get_redis_client()
-                redis_client.publish(f"analysis:{analysis_id}", json.dumps(error_data))
-                logger.info(f"[Celery:TrendlineTask:{analysis_id}] Error message published to Redis")
-            except Exception as redis_error:
-                logger.error(f"[Celery:TrendlineTask:{analysis_id}] Failed to publish error message: {redis_error}")
-            
+            publish_completion_message_safe(analysis_id, error_data)
             raise
     
     # Use asyncio.run() instead of loop.run_until_complete()
     return asyncio.run(_run_analysis()) 
+
+
 
 @celery_app.task(name="src.core.services.tasks.analyze_sr_task")
 def analyze_sr_task(

@@ -1,0 +1,187 @@
+Nice — here's a polished, production-ready prompt you can paste into another LLM (or your own assistant) to generate the code and artifacts for this Telegram-as-PlayStore pipeline.
+
+I've bundled everything you told me (tech stack, schema, filename rules, behavior, constraints) so the LLM has a single complete specification to work from.
+
+---
+
+**Prompt — Paste this into an LLM (e.g., Code LLM)**
+
+````
+You are a senior Python backend engineer. Implement a production-ready Telegram distribution pipeline that turns our Telegram bot into a one-time APK distribution channel and a mass-notify channel for new releases.
+
+Project context & stack (use these):
+- Backend framework: FastAPI (project already exists).
+- Async job queue: Celery (Redis broker).
+- DB: Postgres / Supabase (project already uses Supabase).
+- Telegram library: python-telegram-bot (use the modern async v20 API unless the repo uses an older version — if so adapt).
+- Files: We will NOT re-upload APKs repeatedly. We'll only store the Telegram `file_id` permanently.
+
+**DB schema (use this exact SQL so the code integrates well):**
+```sql
+-- APK RELEASE REGISTRY
+create table if not exists apk_releases (
+    id uuid primary key default gen_random_uuid(),
+    version text not null,              -- e.g. "1.0.0" or "1.2.3-beta"
+    file_id text not null,              -- Telegram file_id of the APK
+    uploaded_at timestamptz default now(),
+    changelog text,                     -- optional: notes for this release
+    is_latest boolean default false     -- only one row should be true
+);
+
+-- TELEGRAM BOT SUBSCRIBERS
+create table if not exists telegram_subscribers (
+    chat_id bigint primary key,        -- Telegram chat_id (unique per user)
+    username text,                     -- Optional: Telegram username
+    first_name text,
+    last_name text,
+    subscribed_at timestamptz default now(),
+    active boolean default true        -- in case they block the bot or opt-out
+);
+
+-- ENFORCE SINGLE LATEST RELEASE
+create or replace function ensure_single_latest()
+returns trigger as $$
+begin
+    if new.is_latest then
+        update apk_releases set is_latest = false where id <> new.id;
+    end if;
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_single_latest
+before insert or update on apk_releases
+for each row execute procedure ensure_single_latest();
+````
+
+**Functional requirements (exact behaviour):**
+
+1. When *you* (the release uploader) send an APK file to the bot:
+
+   * The bot must verify the uploader by parsing the APK filename `appName-password-versionName.apk`.
+
+     * Parsing rule: split on `-` from the end: `versionName` = last part (strip `.apk`), `password` = second to last part, `appName` = everything before that (join with `-`).
+     * Compare `password` (extracted) against allowed upload password(s) stored securely (e.g., `APK_UPLOAD_PASSWORD` env var or comma-separated `APK_UPLOAD_PASSWORDS`).
+     * If password mismatch → reject and send a private message to uploader explaining failure. Do not proceed.
+   * Capture `document.file_id`, version (from filename or caption), and `caption` (use as changelog). If caption is blank, store `"No changelog provided"`.
+   * Insert a new row into `apk_releases` with `is_latest = true`. (DB trigger will clear other rows.)
+   * Only after DB insertion succeeds, enqueue a Celery task to broadcast release notifications to subscribers.
+
+2. Broadcast behaviour:
+
+   * The broadcast message **must not** attach/send the APK file. Instead the message should contain:
+
+     * Title: `New Watchers update: v{version}`
+     * Short changelog (excerpt if long)
+     * Instruction: `To download, open the bot and press /download`
+   * Only subscribers that have ever clicked `/start` and have `active = true` in `telegram_subscribers` should be messaged.
+   * Respect Telegram rate limits by default. Make the rate-limits configurable via env vars:
+
+     * `MESSAGES_PER_SECOND` (default: conservative value, e.g., 20)
+     * `BATCH_SIZE` (how many chat\_ids each Celery subtask handles — default e.g., 200)
+     * Implement per-message delay `sleep(1 / MESSAGES_PER_SECOND)` or equivalent.
+   * Implement robust error handling:
+
+     * On `Forbidden`/`Bot blocked` errors, mark subscriber `active = false`.
+     * On transient network/API errors, retry with exponential backoff (configurable max retries).
+   * Support `dry_run` mode (env var `BROADCAST_DRY_RUN=true`) where messages are not actually sent — useful for testing.
+
+3. `/download` command:
+
+   * When any user runs `/download`, the bot fetches the row `apk_releases WHERE is_latest = true` and sends the APK using the stored `file_id` (via `bot.send_document(chat_id, file_id, caption=...)`) along with the version and changelog.
+   * If no release exists → reply politely "No release available".
+
+4. `/start` handler:
+
+   * Capture `chat_id` and subscriber metadata (username, first\_name, last\_name) into `telegram_subscribers`. If already present, update `active = true`.
+   * A friendly welcome message should be sent, explaining `/download` and that they can get release notifications.
+
+5. Security & validation:
+
+   * Validate uploaded file is `.apk` and mimetype/document size doesn't exceed acceptable limits (configurable).
+   * Validate the filename parsing; if poorly formatted, ask uploader to follow `appName-password-versionName.apk`.
+
+**Non-functional & infra requirements:**
+
+* Use environment variables for all secrets and configuration:
+
+  * `TELEGRAM_BOT_TOKEN`, `DATABASE_URL` (or Supabase keys), `REDIS_URL`, `APK_UPLOAD_PASSWORDS`, `MESSAGES_PER_SECOND`, `BATCH_SIZE`, `BROADCAST_DRY_RUN`, `ADMIN_CHAT_ID` (optional, for logs).
+* The code must be well-commented, modular, and easy to drop into an existing FastAPI + Celery codebase.
+* Provide clear integration notes: where to register new handlers, how to run Celery worker, how to run a broadcast dry-run, and how to test in dev.
+* Provide a migration SQL file or confirm the schema already exists (include the schema in the output so maintainers can review).
+
+**Deliverables (what I expect you to output):**
+
+1. `bot/handlers/apk_release.py` (or similarly named):
+
+   * Handler for receiving `Message` with `document`.
+   * Password verification.
+   * DB insert logic (or a thin adapter call to `db.insert_release(...)`).
+   * Enqueue Celery task to broadcast.
+
+2. `tasks/broadcast_release.py` (Celery task):
+
+   * `broadcast_release(release_id)` that fetches active subscribers, and sends messages in rate-limited batches.
+   * Support for splitting into subtasks (e.g., `broadcast_chunk`) for parallelism.
+   * Retries, marking inactive subscribers when blocked.
+
+3. `bot/commands/download.py`:
+
+   * `/download` command implementation that sends the stored `file_id`.
+
+4. Database adapter abstraction:
+
+   * A small module `db/release_store.py` with functions:
+
+     * `insert_release(version, file_id, changelog, is_latest=True)` -> returns release\_id
+     * `get_latest_release()` -> release row
+     * `get_active_subscribers()` -> list of chat\_ids and metadata
+     * `mark_subscriber_inactive(chat_id)`
+     * `upsert_subscriber(chat_id, username, first_name, last_name)`
+   * Provide two example implementations:
+     a) A supabase/python example using existing Supabase client (if repo uses it).
+     b) If not present, a fully working example using `asyncpg` and raw SQL (with `DATABASE_URL`).
+
+5. Tests:
+
+   * Unit tests for filename parsing and password verification.
+   * Integration-style test that simulates a broadcast `dry_run` and asserts the correct subscriber list is selected.
+   * Provide example pytest test files.
+
+6. Example `.env.example` and README integration steps.
+
+**Implementation constraints & assumptions for the LLM (be explicit):**
+
+* Use `python-telegram-bot` async (v20+) where possible. If the repo uses a sync version, provide a note and a small snippet to adapt.
+* Celery tasks are normal synchronous Python functions. If using async bot calls inside Celery, call them via `asyncio.run()` or create synchronous wrappers — explain tradeoffs.
+* The LLM must not output chain-of-thought. Instead produce code and short rationales for main design choices (e.g., "we chose conservative MPS=20 to avoid hitting Telegram limits; make configurable").
+* The message content for broadcast must NOT attach the APK file. It must instruct users to press `/download`.
+
+**Edge cases & extras (must implement or document):**
+
+* Duplicate uploads: if the same `version` or `file_id` already exists, the bot should handle gracefully (skip insert or update changelog) and *not* broadcast as a new release unless `force=true`.
+* Provide an optional admin-only command `/force_broadcast <version>` to re-broadcast a given release (only usable by `ADMIN_CHAT_ID` or owner).
+* Logging and metrics: add logging for success/fail counts, time taken, and number of inactive subscribers found during broadcast.
+* Provide an example of a Celery chord/chain to parallelize work safely (e.g., split subscriber list into chunks and dispatch a subtask per chunk). Each chunk must still apply per-worker rate-limiting.
+
+**Output format instructions (how to respond back to me):**
+
+* Produce code in separate files wrapped in triple-backticks with file path titles (e.g., `python:bot/handlers/apk_release.py`). Keep file headers and comments clear.
+* Provide an integration checklist at the end: where to place files, what env vars to add, how to run locally (start FastAPI, start worker, test dry-run).
+* Provide at least one example test file and a `.env.example`.
+* Keep code ready-to-run, but if a section requires adapting to the repo (DB client), include a small, fully working `asyncpg` example and a note on integrating to Supabase client.
+
+**Think deeply** about concurrency, Telegram limits, reliability (retries/backoff), idempotency, and security (uploader verification). After the code, give a short (3–6 lines) explanation of the main design decisions.
+
+Begin.
+
+```
+
+---
+
+If you want, I can now:
+- generate the code (handlers + Celery tasks + db adapter example using `asyncpg`) from that prompt, or
+- tweak the prompt for a specific LLM (e.g., ask for shorter output or to target python-telegram-bot v13 sync API instead).
+
+Which do you want next?
+```

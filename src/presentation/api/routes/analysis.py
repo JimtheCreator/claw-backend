@@ -21,6 +21,7 @@ from core.services.tasks import (
     analyze_trendlines_task,
     analyze_sr_task
 )
+
 # Import existing Redis cache
 from infrastructure.database.redis.cache import redis_cache
 
@@ -29,7 +30,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Initialize FastAPI router
 router = APIRouter(tags=["Market Analysis"])
-
 
 # Global connection manager for WebSocket connections
 class ConnectionManager:
@@ -199,7 +199,6 @@ class SSEConnectionManager:
                     self.remove_stream(stream_id)
 
 sse_manager = SSEConnectionManager()
-
 
 class AnalysisRequest(BaseModel):
     user_id: str
@@ -428,7 +427,7 @@ async def start_trendlines_analysis(
         "analysis_id": analysis_id
     }
 
-    
+
 # --- Updated S/R analysis endpoint (now uses Celery) ---
 @router.post("/analyze/sr", summary="Get support/resistance levels using Celery workers")
 async def get_support_resistance(
@@ -461,19 +460,6 @@ async def get_support_resistance(
         try:
             result = await asyncio.to_thread(task_result.get, timeout=60)
             logger.info(f"[API] S/R analysis completed for {request.symbol}")
-            
-            # Generate chart image for immediate response
-            ohlcv = await get_ohlcv_from_db(request.symbol, request.interval, request.timeframe)
-            chart = ChartEngine(ohlcv_data=ohlcv, analysis_data=result)
-            image_bytes = chart.create_chart(output_type="image")
-            
-            if isinstance(image_bytes, str):
-                image_bytes = image_bytes.encode('utf-8')
-            
-            # Save chart locally for debugging
-            with open("sr-chart.png", "wb") as f:
-                f.write(image_bytes)
-            logger.info(f"[API] S/R chart saved as sr-chart.png")
 
             return result
             

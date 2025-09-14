@@ -1,5 +1,4 @@
 # File: src/core/services/workers/celery_worker.py
-
 import os
 import sys
 from celery import Celery
@@ -12,9 +11,8 @@ sys.path.append(project_root)
 
 load_dotenv()
 
-REDIS_URL = f"redis://{os.getenv('REDIS_HOST')}:{os.getenv('REDIS_PORT')}/0"
 
-celery_app = Celery("tasks", broker=REDIS_URL, backend=REDIS_URL)
+celery_app = Celery("tasks", broker=os.getenv('REDIS_URL'), backend=os.getenv('REDIS_URL'))
 
 celery_app.conf.update(
     task_serializer='json',
@@ -22,10 +20,13 @@ celery_app.conf.update(
     result_serializer='json',
     timezone='UTC',
     enable_utc=True,
-    include=['src.core.services.tasks'],
+    include=[
+        'src.core.services.tasks',
+        'src.core.services.broadcast_task' # Add this line
+    ],
     task_routes={
         # Telegram tasks - lightweight, use default queue
-        'telegram_bot.process_update': {'queue': 'telegram'},
+        'src.core.services.tasks.process_telegram_update': {'queue': 'telegram'},
         
         # Data fetching tasks - I/O bound, use default queue
         'src.core.services.tasks.save_market_data_task': {'queue': 'default'},
@@ -34,10 +35,14 @@ celery_app.conf.update(
         'src.core.services.tasks.dispatch_verification_for_interval': {'queue': 'default'},
         
         # Analysis tasks - CPU intensive, use dedicated queue
-        'src.core.services.tasks.analyze_trendlines_task': {'queue': 'analysis'},
+        'src.core.services.tasks.analyze_trendlines_task': {'queue': 'analysis'},   
         'src.core.services.tasks.analyze_sr_task': {'queue': 'analysis'},
-        'src.core.services.tasks.analyze_sr_trendlines_combined_task': {'queue': 'analysis'},
+
+        # Broadcast tasks - I/O bound, high volume, dedicated queue
+        'src.core.services.broadcast_task.dispatch_release_notifications': {'queue': 'broadcasts'},
+        'src.core.services.broadcast_task.broadcast_chunk': {'queue': 'broadcasts'}
     },
+
     worker_prefetch_multiplier=1,
     task_acks_late=True,
     worker_max_tasks_per_child=50,  # Reduced for memory-heavy analysis tasks
@@ -56,12 +61,9 @@ celery_app.conf.update(
             'time_limit': 300,  # 5 minutes for S/R analysis
             'soft_time_limit': 240,  # 4 minutes soft limit
         },
-        'src.core.services.tasks.analyze_sr_trendlines_combined_task': {
-            'time_limit': 600,  # 10 minutes for combined analysis
-            'soft_time_limit': 480,  # 8 minutes soft limit
-        },
     }
 )
+
 
 # Commands to run workers:
 
@@ -79,3 +81,6 @@ celery_app.conf.update(
 
 # Monitor tasks:
 # celery -A src.core.services.workers.celery_worker flower
+
+# For broadcast tasks (can handle high I/O):
+# celery -A src.core.services.workers.celery_worker worker --pool=threads --concurrency=10 --loglevel=info --queues=broadcasts

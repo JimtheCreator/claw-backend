@@ -1,6 +1,6 @@
 FOLDER STRUCTURE REPORT
 Generated on: D:\ClawInc\Claw-Backend
-Ignored folders: .pytest_cache, .vscode, .github, .venv
+Ignored folders: .venv, .pytest_cache, .vscode, .github
 Skip contents folders: docker/influxdb/data
 
 ==================================================
@@ -199,6 +199,7 @@ src/
 │   │   │   ├── ticker_service.py
 │   │   │   └── websocket_subscription_manager.py
 │   │   ├── __init__.py
+│   │   ├── broadcast_task.py
 │   │   ├── crypto_list.py
 │   │   ├── deepseek_client.py
 │   │   ├── market_fetcher.py
@@ -302,7 +303,8 @@ src/
 │   │   │   │   ├── __init__.cpython-313.pyc
 │   │   │   │   └── crypto_repository.cpython-313.pyc
 │   │   │   ├── __init__.py
-│   │   │   └── crypto_repository.py
+│   │   │   ├── crypto_repository.py
+│   │   │   └── release_store.py
 │   │   └── __init__.py
 │   └── external_apis
 │       └── __init__.py
@@ -364,6 +366,10 @@ telegram_app_handler/
 ├── src
 │   ├── __pycache__
 │   │   └── __init__.cpython-313.pyc
+│   ├── handlers
+│   │   ├── __init__.py
+│   │   └── app_handler.py
 │   ├── __init__.py
+│   ├── release_pipeline.py
 │   └── server.py
 └── __init__.py

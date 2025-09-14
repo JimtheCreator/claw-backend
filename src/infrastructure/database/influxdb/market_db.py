@@ -14,46 +14,73 @@ from datetime import datetime, timezone, timedelta
 from pydantic import ValidationError
 
 class InfluxDBMarketDataRepository(MarketDataRepository):
+    # Updated connection method for production resilience
     def __init__(self):
-        # Improved connection configuration with timeout settings
-        self.client = InfluxDBClient(
-            url=os.getenv("INFLUXDB_URL"),
-            token=os.getenv("INFLUXDB_TOKEN"),
-            org=os.getenv("INFLUXDB_ORG"),
-            timeout=120_000  # 2 minutes timeout
-        )
+        # Improved connection configuration with better error handling
+        self.url = os.getenv("INFLUXDB_URL")
+        self.token = os.getenv("INFLUXDB_TOKEN") 
+        self.org = os.getenv("INFLUXDB_ORG")
         self.bucket = os.getenv("INFLUXDB_BUCKET")
+        
+        # Validate environment variables
+        if not all([self.url, self.token, self.org, self.bucket]):
+            missing = [name for name, value in [
+                ("INFLUXDB_URL", self.url),
+                ("INFLUXDB_TOKEN", self.token), 
+                ("INFLUXDB_ORG", self.org),
+                ("INFLUXDB_BUCKET", self.bucket)
+            ] if not value]
+            raise ValueError(f"Missing environment variables: {missing}")
+        
+        logger.info(f"Connecting to InfluxDB at: {self.url}")
+        
+        self.client = InfluxDBClient(
+            url=self.url,
+            token=self.token,
+            org=self.org,
+            timeout=60_000,  # Reduced timeout
+            retries=3,       # Add retries
+            enable_gzip=True # Enable compression
+        )
+        
         self._verify_connection()
-        
-        # --- FIX: Add this line to initialize the query_api ---
         self.query_api = self.client.query_api()
-        
-        # Cache to store minimum timestamps per symbol+interval
         self._min_timestamps_cache: Dict[Tuple[str, str], datetime] = {}
 
     def _verify_connection(self):
-        """Verify InfluxDB connection on initialization with retry logic"""
-        max_retries = 3
+        """Verify InfluxDB connection with better error reporting"""
+        max_retries = 5
         retry_count = 0
+        
         while retry_count < max_retries:
             try:
-                if self.client.ping():
-                    logger.info("Successfully connected to InfluxDB")
+                logger.info(f"Attempting InfluxDB connection (attempt {retry_count + 1}/{max_retries})")
+                
+                # Test the connection
+                health = self.client.health()
+                if health and health.status == "pass":
+                    logger.info("✅ Successfully connected to InfluxDB")
                     return
                 else:
-                    retry_count += 1
-                    logger.warning(f"InfluxDB connection verification failed (attempt {retry_count}/{max_retries})")
-                    time.sleep(1)
-            except InfluxDBError as e:
+                    logger.warning(f"InfluxDB health check failed: {health}")
+                    
+            except Exception as e:
                 retry_count += 1
-                if (retry_count >= max_retries):
-                    logger.critical(f"Critical InfluxDB connection failure: {str(e)}")
-                    raise
-                logger.warning(f"InfluxDB connection error (attempt {retry_count}/{max_retries}): {str(e)}")
-                time.sleep(1)
+                logger.error(f"InfluxDB connection error (attempt {retry_count}/{max_retries}): {str(e)}")
+                
+                if retry_count >= max_retries:
+                    logger.critical(f"CRITICAL: InfluxDB connection failed after {max_retries} attempts")
+                    logger.critical(f"URL: {self.url}")
+                    logger.critical(f"Org: {self.org}")
+                    logger.critical(f"Token: {'***' + self.token[-4:] if self.token else 'None'}")
+                    raise InfluxDBError(f"Failed to connect to InfluxDB after {max_retries} attempts: {str(e)}")
+                
+                # Exponential backoff
+                wait_time = 2 ** retry_count
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
         
-        logger.critical("Critical InfluxDB connection failure after retries")
-        raise InfluxDBError("Failed to connect to InfluxDB after multiple attempts")
+        raise InfluxDBError("Failed to connect to InfluxDB after retries")
 
     @staticmethod
     def parse_flux_record(record) -> Optional[dict]:

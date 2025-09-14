@@ -6,12 +6,39 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies, ADDING NGINX
+# Install system dependencies INCLUDING Chrome for Plotly/Kaleido
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     supervisor \
     nginx \
+    # Chrome dependencies for Plotly/Kaleido
+    wget \
+    gnupg \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libdrm2 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libwayland-client0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -59,7 +86,7 @@ autostart=true
 autorestart=true
 stderr_logfile=/var/log/supervisor/main_api_err.log
 stdout_logfile=/var/log/supervisor/main_api_out.log
-environment=PYTHONPATH="/app"
+environment=PYTHONPATH="/app:/app/src"
 
 [program:telegram_api]
 command=python telegram_app_handler/src/server.py
@@ -68,7 +95,7 @@ autostart=true
 autorestart=true
 stderr_logfile=/var/log/supervisor/telegram_err.log
 stdout_logfile=/var/log/supervisor/telegram_out.log
-environment=PYTHONPATH="/app"
+environment=PYTHONPATH="/app:/app/src"
 
 [program:websocket_manager]
 command=python src/core/services/workers/websocket_subscription_manager.py
@@ -77,7 +104,7 @@ autostart=true
 autorestart=true
 stderr_logfile=/var/log/supervisor/websocket_err.log
 stdout_logfile=/var/log/supervisor/websocket_out.log
-environment=PYTHONPATH="/app"
+environment=PYTHONPATH="/app:/app/src"
 EOF
 
 # Expose the NGINX port now, not the app ports

@@ -1,7 +1,5 @@
 import os
 import sys
-import json
-import asyncio
 from contextlib import asynccontextmanager
 
 # Path setup (consider structuring as a package to avoid this)
@@ -11,6 +9,13 @@ sys.path.append(parent_dir)
 
 # FIXED: Import from the correct path
 from src.common.logger import logger
+from telegram.ext import CallbackContext
+from release_pipeline import (
+    handle_start_command, 
+    handle_download_command, 
+    handle_apk_upload,
+    handle_force_broadcast_command
+)
 
 # Imports
 from dotenv import load_dotenv
@@ -42,14 +47,6 @@ REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
 
-# --- Bot Messages & Content ---
-GREETING_MESSAGE = """
-Hey there! 👋 I'm **Frontman**, your guide to the **Watchers** app.
-
-Watchers is a powerful Android app that helps traders like you by automatically detecting chart patterns, candlestick formations, and harmonic patterns. Think of it as your personal trading assistant.
-
-What would you like to do?
-"""
 
 HELP_MESSAGE = """
 I'm here to help! Here's what you can ask me to do:
@@ -67,20 +64,33 @@ You can also just chat with me using the menu buttons!
 PLANS_MESSAGE = """
 We have a few options to get you started with Watchers:
 
-**1. Free Plan**
-- Access to basic pattern recognition.
-- A great way to see how the app works.
+**1. Test Drive Plan (£1.99)**
+- A one-time purchase.
+- Unlocks ALL features with limited usage.
+- Perfect for experiencing the full power of Watchers before subscribing.
 
-**2. Test Drive Plan (£1.99)**
-- A one-time purchase to unlock all premium features for a limited time.
-- Perfect for seeing the full power of Watchers before committing.
+**2. Subscription Plans**
+- Choose between Starter and Pro:
 
-**3. Subscription Plans**
-- Unlock all features, including advanced harmonic patterns and real-time alerts.
-- Billed monthly or annually for a discount.
+- **Starter Plan**
+  • £4.99 weekly or £17.99 monthly  
+  • Unlocks core tools with higher limits:  
+    - Price alerts  
+    - Pattern alerts (chart, candlestick, harmonic)  
+    - Watchlists  
+    - Support/Resistance analysis  
+    - Trendline analysis  
 
-Ready to get started? Download the app and check out the plans inside!
+- **Pro Plan**
+  • £9.99 weekly or £31.99 monthly  
+  • Unlimited everything:  
+    - Watchlists, Price & Pattern alerts, 
+    - Support/Resistance & trendline analysis  
+    • Plus early access to upcoming features: Journaling & Video Downloads (coming soon)  
+
+Ready to get started? Download the app and pick the plan that fits you best!
 """
+
 
 DOWNLOAD_GUIDE = """
 Here is the latest version of the **Watchers** app.
@@ -97,11 +107,11 @@ Enjoy! Let me know if you run into any trouble.
 SUPPORT_MESSAGE = """
 Need help? I'd love to assist you! 🤝
 
-For the best support experience, please reach out to our dedicated support specialist:
+For the best support experience, please reach out to our dedicated support specialist Florence Kate:
 
-👤 **@KateSolves**
+👤 **@WatchersAssistant**
 
-Kate is our expert support agent who can help you with:
+She's our expert support agent who can help you with:
 - Technical issues with the Watchers app
 - Account and subscription questions
 - Trading guidance and app features
@@ -119,23 +129,6 @@ message_counter = Counter('telegram_messages_total', 'Total messages processed')
 response_time = Histogram('telegram_response_seconds', 'Response time')
 
 # --- Bot Command Handlers ---
-async def handle_start_command(chat_id: int, message_id: int = None):
-    """Handle /start command with inline keyboard."""
-    keyboard = [
-        [InlineKeyboardButton("📲 Download App", callback_data="download")],
-        [InlineKeyboardButton("📊 View Plans", callback_data="plans")],
-        [InlineKeyboardButton("❓ Get Help", callback_data="help")],
-        [InlineKeyboardButton("🆘 Support", callback_data="support")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await bot.send_message(
-        chat_id=chat_id,
-        text=GREETING_MESSAGE,
-        reply_markup=reply_markup,
-        parse_mode='Markdown'
-    )
-
 async def handle_help_command(chat_id: int):
     """Handle /help command."""
     await bot.send_message(
@@ -151,35 +144,6 @@ async def handle_plans_command(chat_id: int):
         text=PLANS_MESSAGE,
         parse_mode='Markdown'
     )
-
-async def handle_download_command(chat_id: int):
-    """Handle /download command."""
-    if not WATCHERS_APK_URL:
-        await bot.send_message(
-            chat_id=chat_id,
-            text="Sorry, the download link isn't configured right now. Please check back later or contact @KateSolves for support."
-        )
-        return
-
-    await bot.send_message(
-        chat_id=chat_id,
-        text="Great! I'm fetching the latest version for you now..."
-    )
-    
-    try:
-        await bot.send_document(
-            chat_id=chat_id,
-            document=WATCHERS_APK_URL,
-            filename="Watchers-latest.apk",
-            caption=DOWNLOAD_GUIDE,
-            parse_mode='Markdown'
-        )
-    except Exception as e:
-        logger.error(f"Failed to send APK file: {e}")
-        await bot.send_message(
-            chat_id=chat_id,
-            text=f"I couldn't send the file directly. Here is the download link instead:\n{WATCHERS_APK_URL}"
-        )
 
 async def handle_support_command(chat_id: int):
     """Handle /support command - direct to @KateSolves."""
@@ -198,13 +162,57 @@ async def handle_callback_query(callback_query):
     await bot.answer_callback_query(callback_query.id)
     
     if data == "download":
-        await handle_download_command(chat_id)
+        # Create a mock update object for the download handler
+        class MockUpdate:
+            def __init__(self, chat_id):
+                self.effective_chat = type('Chat', (), {'id': chat_id})()
+                self.message = type('Message', (), {'reply_text': self._reply_text})()
+                self._chat_id = chat_id
+            
+            async def _reply_text(self, text, parse_mode=None):
+                await bot.send_message(
+                    chat_id=self._chat_id,
+                    text=text,
+                    parse_mode=parse_mode
+                )
+        
+        # Create a simple context object
+        class SimpleContext:
+            def __init__(self, bot_instance):
+                self.bot = bot_instance
+                self.args = []
+
+        mock_update = MockUpdate(chat_id)
+        context = SimpleContext(bot)
+        
+        await handle_download_command(mock_update, context)
     elif data == "plans":
         await handle_plans_command(chat_id)
     elif data == "help":
         await handle_help_command(chat_id)
     elif data == "support":
         await handle_support_command(chat_id)
+    elif data == "start":
+        # Handle the "Main Menu" callback - create a mock update for the start command
+        class MockUpdate:
+            def __init__(self, chat_id):
+                self.effective_chat = type('Chat', (), {'id': chat_id})()
+                self.effective_user = type('User', (), {
+                    'id': chat_id,
+                    'username': None,
+                    'first_name': 'User',
+                    'last_name': None
+                })()
+        
+        class SimpleContext:
+            def __init__(self, bot_instance):
+                self.bot = bot_instance
+                self.args = []
+
+        mock_update = MockUpdate(chat_id)
+        context = SimpleContext(bot)
+        
+        await handle_start_command(mock_update, bot, context, chat_id)
 
 async def handle_unknown_command(chat_id: int):
     """Handle unknown commands or messages."""
@@ -216,50 +224,78 @@ async def handle_unknown_command(chat_id: int):
     
     await bot.send_message(
         chat_id=chat_id,
-        text="I'm not sure how to help with that. You can use the menu below or contact @KateSolves for support.",
+        text="I'm not sure how to help with that. You can use the menu below or contact @WatchersAssistant for support.",
         reply_markup=reply_markup
     )
 
 async def process_update(update_data: dict):
     """Process a Telegram update."""
     try:
+        # Create update object first
         update = Update.de_json(update_data, bot)
+
+        # Create a simple context object that has the attributes we need
+        class SimpleContext:
+            def __init__(self, bot_instance):
+                self.bot = bot_instance
+                self.args = []
+
+        context = SimpleContext(bot)
+        
         if not update:
             logger.warning("Received invalid update data")
             return
 
         message_counter.inc()
         
+        # --- Route to new handlers first ---
+
         # Handle callback queries (inline button presses)
         if update.callback_query:
             await handle_callback_query(update.callback_query)
             return
 
-        # Handle regular messages
+        # Handle messages
         if update.message:
             chat_id = update.message.chat.id
             text = update.message.text
             
+            # A. Handle Document Uploads (APK)
+            if update.message.document and update.message.document.file_name.lower().endswith('.apk'):
+                await handle_apk_upload(update, context)
+                return
+
             if not text:
                 return
             
-            # Handle commands
-            if text.startswith('/start'):
-                await handle_start_command(chat_id, update.message.message_id)
-            elif text.startswith('/help'):
+            # B. Handle Commands
+            # Note: This is a simple router. For complex bots, telegram.ext.Application is better.
+            command_parts = text.split()
+            command = command_parts[0]
+            context.args = command_parts[1:] # Store args for handlers like /force_broadcast
+
+            if command == '/start':
+                # Use the new handler from release_pipeline
+                await handle_start_command(update, bot, context, chat_id)
+            elif command == '/download':
+                # Use the new handler from release_pipeline
+                await handle_download_command(update, context)
+            elif command == '/force_broadcast':
+                # Use the new admin command handler
+                await handle_force_broadcast_command(update, context)
+            elif command == '/help':
                 await handle_help_command(chat_id)
-            elif text.startswith('/plans'):
+            elif command == '/plans':
                 await handle_plans_command(chat_id)
-            elif text.startswith('/download'):
-                await handle_download_command(chat_id)
-            elif text.startswith('/support'):
+            elif command == '/support':
                 await handle_support_command(chat_id)
             else:
                 # Handle any other text as unknown
                 await handle_unknown_command(chat_id)
                 
     except Exception as e:
-        logger.error(f"Error processing update: {e}")
+        logger.error(f"Error processing update: {e}", exc_info=True)
+
 
 # --- FastAPI Application Setup ---
 @asynccontextmanager
