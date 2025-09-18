@@ -706,15 +706,18 @@ async def stripe_webhook(
 
     try:
         event_object = event.data.object if hasattr(event, 'data') and hasattr(event.data, 'object') else None
+        
         if not event_object:
             logger.error(f"Invalid event structure: {event}")
             return {"status": "error", "message": "Invalid event structure"}
 
         logger.info(f"Processing webhook event: {event.type}")
 
+        # In paid_plans.py - Updated webhook handlers with correct userPaid logic
+
         if event.type == "payment_intent.succeeded":
-            payment_intent = event_object #
-            user_id = payment_intent.metadata.get("user_id") #
+            payment_intent = event_object
+            user_id = payment_intent.metadata.get("user_id")
             action = payment_intent.metadata.get("action")
 
             if action == "pending_subscription_upgrade":
@@ -727,8 +730,6 @@ async def stripe_webhook(
                     try:
                         logger.info(f"Payment succeeded for pending upgrade. Modifying subscription {subscription_id_to_update} for user {user_id} to price {new_price_id}.")
                         
-                        # Check for and cancel any existing subscription schedules before applying the paid upgrade
-                        # This is important if a downgrade was scheduled, then user decided to upgrade instead.
                         sub_to_update_details = stripe.Subscription.retrieve(subscription_id_to_update)
                         schedules_response = stripe.SubscriptionSchedule.list(customer=sub_to_update_details.customer, limit=10)
                         for schedule in schedules_response.data:
@@ -743,47 +744,61 @@ async def stripe_webhook(
                             cancel_at_period_end=False,
                             metadata={"user_id": user_id, "plan_type": selected_plan_for_upgrade}
                         )
-                        await firebase_repo.update_subscription(user_id, selected_plan_for_upgrade) #
-                        await supabase_repo.update_subscription(user_id, selected_plan_for_upgrade, PLAN_LIMITS) #
+                        # ✅ This is a SUCCESSFUL payment - sets userPaid=True
+                        await firebase_repo.update_subscription(user_id, selected_plan_for_upgrade)
+                        await supabase_repo.update_subscription(user_id, selected_plan_for_upgrade, PLAN_LIMITS)
                         logger.info(f"Subscription {subscription_id_to_update} successfully upgraded to {selected_plan_for_upgrade} for user {user_id} after payment.")
                         
-                    except stripe.error.StripeError as e:
-                        logger.error(f"Stripe error during final upgrade for sub {subscription_id_to_update} after payment: {str(e)}. User: {user_id}. PI: {payment_intent.id}")
-                        # CRITICAL: Payment was taken, but upgrade failed.
-                        # Implement alerting/manual review. Consider refunding or setting a specific 'upgrade_failed_post_payment' status.
-                        
-                        await firebase_repo.update_subscription(user_id, "free")
-
-                        await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
                     except Exception as e:
-                        logger.error(f"Generic error during final upgrade for sub {subscription_id_to_update}: {str(e)}. User: {user_id}. PI: {payment_intent.id}")
-                        
-                        await firebase_repo.update_subscription(user_id, "free")
-
+                        logger.error(f"Error during final upgrade for sub {subscription_id_to_update}: {str(e)}. User: {user_id}. PI: {payment_intent.id}")
+                        # ✅ This is a FAILURE - preserve userPaid status
+                        await firebase_repo.handle_payment_failure(user_id)
                         await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
                 else:
                     logger.warning(f"Missing metadata in payment_intent.succeeded for pending_subscription_upgrade. PI: {payment_intent.id}")
             
-            elif user_id and payment_intent.metadata.get("plan_type"): # Existing one-time payment logic
-                plan_type = payment_intent.metadata.get("plan_type") #
-                logger.info(f"Processing successful one-time payment for user {user_id}, plan {plan_type}") #
-                await firebase_repo.update_subscription(user_id, plan_type) #
-                await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS) #
+            elif user_id and payment_intent.metadata.get("plan_type"):
+                plan_type = payment_intent.metadata.get("plan_type")
+                logger.info(f"Processing successful one-time payment for user {user_id}, plan {plan_type}")
+                # ✅ This is a SUCCESSFUL payment - sets userPaid=True
+                await firebase_repo.update_subscription(user_id, plan_type)
+                await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
             else:
                 logger.warning(f"Missing metadata in payment_intent.succeeded event. PI: {payment_intent.id}")
 
         elif event.type == "payment_intent.payment_failed":
-            # Handle one-time payment failure
             payment_intent = event_object
             user_id = payment_intent.metadata.get("user_id")
-            if user_id:
-                logger.error(f"Payment intent failed for user {user_id}: {payment_intent.last_payment_error.message if payment_intent.last_payment_error else 'Unknown error'}")
-                
-                await firebase_repo.update_subscription(user_id, "free")
+            action = payment_intent.metadata.get("action")
 
-                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
+            if user_id:
+                # Check if this failed payment was for an upgrade attempt
+                if action == "pending_subscription_upgrade":
+                    # If an upgrade payment fails, DO NOTHING to the user's current plan.
+                    # Their original subscription remains active. Just log it.
+                    logger.warning(
+                        f"Payment intent for an upgrade failed for user {user_id}. "
+                        f"Their existing subscription is unaffected. PI: {payment_intent.id}"
+                    )
+                else:
+                    # This was a failure for a new subscription or one-time payment.
+                    # In this case, reverting to 'free' is the correct action.
+                    error_message = (
+                        payment_intent.last_payment_error.message
+                        if payment_intent.last_payment_error
+                        else "Unknown error"
+                    )
+                    logger.error(
+                        f"Payment intent for a new plan failed for user {user_id}: {error_message}"
+                    )
+                    # ✅ Preserve userPaid status, revert to free
+                    await firebase_repo.handle_payment_failure(user_id)
+                    await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
             else:
-                logger.warning("Could not determine user_id for payment_intent.payment_failed event")
+                logger.warning(
+                    "Could not determine user_id for payment_intent.payment_failed event. "
+                    f"PI: {payment_intent.id}"
+                )
 
         elif event.type == "checkout.session.completed":
             session = event_object
@@ -793,6 +808,7 @@ async def stripe_webhook(
             mode = session.get("mode")
             if mode == "payment" and payment_status == "paid" and user_id and plan_type:
                 logger.info(f"Processing checkout.session.completed for user {user_id}, plan {plan_type}")
+                # ✅ This is a SUCCESSFUL payment - sets userPaid=True
                 await firebase_repo.update_subscription(user_id, plan_type)
                 await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
 
@@ -802,9 +818,8 @@ async def stripe_webhook(
             user_id = session.metadata.get("user_id")
             if user_id:
                 logger.error(f"Checkout session failed for user {user_id}, event: {event.type}")
-                
-                await firebase_repo.update_subscription(user_id, "free")
-
+                # ✅ This is a FAILURE - preserve userPaid status
+                await firebase_repo.handle_payment_failure(user_id)
                 await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
             else:
                 logger.warning(f"Could not determine user_id for {event.type} event")
@@ -825,12 +840,85 @@ async def stripe_webhook(
                             user_id = customer.metadata.get("user_id")
                     if user_id and plan_type and invoice.get("paid"):
                         logger.info(f"Processing paid invoice for subscription {subscription_id}, user {user_id}, plan {plan_type}")
+                        # ✅ This is a SUCCESSFUL payment - sets userPaid=True
                         await firebase_repo.update_subscription(user_id, plan_type)
                         await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
                     else:
                         logger.warning(f"Cannot update subscription {subscription_id}: user_id={user_id}, plan_type={plan_type}, paid={invoice.get('paid')}")
                 except Exception as e:
                     logger.error(f"Error processing invoice payment succeeded event: {str(e)}")
+
+        elif event.type == "setup_intent.setup_failed":
+            # Handle setup intent failure
+            setup_intent = event_object
+            user_id = setup_intent.metadata.get("user_id")
+            if user_id:
+                logger.error(f"Setup intent failed for user {user_id}: {setup_intent.last_setup_error.message if setup_intent.last_setup_error else 'Unknown error'}")
+                # ✅ This is a FAILURE - preserve userPaid status
+                await firebase_repo.handle_payment_failure(user_id)
+                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
+            else:
+                logger.warning("Could not determine user_id for setup_intent.setup_failed event")
+
+        elif event.type == "invoice.payment_failed":
+            invoice = event_object
+            subscription_id = invoice.get("subscription")
+            if subscription_id:
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                user_id = subscription.metadata.get("user_id")
+                plan_type = subscription.metadata.get("plan_type")
+                error_message = invoice.get("last_payment_error", {}).get("message", "Unknown error")
+                logger.error(f"Invoice payment failed for subscription {subscription_id}, user {user_id}: {error_message}")
+                
+                if user_id and plan_type:
+                    # ✅ This is a FAILURE - preserve userPaid status
+                    await firebase_repo.handle_payment_failure(user_id)
+                    await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
+
+        elif event.type == "customer.subscription.updated":
+            subscription = event_object
+            current_status = subscription.get("status")
+            previous_status = event.data.get("previous_attributes", {}).get("status")
+            if current_status == "active":
+                user_id = subscription.metadata.get("user_id")
+                plan_type = subscription.metadata.get("plan_type")
+                if not plan_type and subscription.items.data:
+                    plan_type = get_plan_type_from_price_id(subscription.items.data[0].price.id)
+                if user_id and plan_type:
+                    logger.info(f"Processing subscription status change to active for user {user_id}, plan {plan_type}")
+                    # ✅ Active subscription is SUCCESSFUL - sets userPaid=True
+                    await firebase_repo.update_subscription(user_id, plan_type)
+                    await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
+                else:
+                    logger.warning(f"Cannot update subscription that changed to active: user_id={user_id}, plan_type={plan_type}")
+            elif current_status in ["past_due", "unpaid", "incomplete_expired"]:
+                # Handle subscription status changes that indicate payment problems
+                user_id = subscription.metadata.get("user_id")
+                if not user_id:
+                    customer = stripe.Customer.retrieve(subscription.get("customer"))
+                    user_id = customer.metadata.get("user_id")
+                if user_id:
+                    logger.error(f"Subscription status changed to {current_status} for user {user_id}")
+                    # ✅ This is a FAILURE - preserve userPaid status
+                    await firebase_repo.handle_payment_failure(user_id)
+                    await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
+                else:
+                    logger.warning(f"Could not determine user_id for subscription status change to {current_status}")
+
+        elif event.type == "customer.subscription.deleted":
+            subscription = event_object
+            user_id = subscription.metadata.get("user_id")
+            if not user_id:
+                customer = stripe.Customer.retrieve(subscription.get("customer"))
+                user_id = customer.metadata.get("user_id")
+            if user_id:
+                logger.info(f"Processing subscription deletion for user {user_id}")
+                # ✅ Subscription cancelled/deleted - user goes to free but keeps userPaid=true
+                await firebase_repo.revert_to_free_plan(user_id)
+                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
+            else:
+                logger.warning("Could not determine user_id for subscription deletion event")
+
 
         elif event.type == "setup_intent.succeeded":
             setup_intent = event_object
@@ -866,75 +954,7 @@ async def stripe_webhook(
                     await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
                     raise HTTPException(status_code=500, detail=str(e))
         
-        elif event.type == "setup_intent.setup_failed":
-            # Handle setup intent failure
-            setup_intent = event_object
-            user_id = setup_intent.metadata.get("user_id")
-            if user_id:
-                logger.error(f"Setup intent failed for user {user_id}: {setup_intent.last_setup_error.message if setup_intent.last_setup_error else 'Unknown error'}")
-                
-                await firebase_repo.update_subscription(user_id, "free")
-
-                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
-            else:
-                logger.warning("Could not determine user_id for setup_intent.setup_failed event")
-
-        elif event.type == "invoice.payment_failed":
-            invoice = event_object
-            subscription_id = invoice.get("subscription")
-            if subscription_id:
-                subscription = stripe.Subscription.retrieve(subscription_id)
-                user_id = subscription.metadata.get("user_id")
-                plan_type = subscription.metadata.get("plan_type")
-                error_message = invoice.get("last_payment_error", {}).get("message", "Unknown error")
-                logger.error(f"Invoice payment failed for subscription {subscription_id}, user {user_id}: {error_message}")
-                
-                # Notify user or update database as needed
-                if user_id and plan_type:
-                    await firebase_repo.update_subscription(user_id, "free")
-                    await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
-
-        elif event.type == "customer.subscription.updated":
-            subscription = event_object
-            current_status = subscription.get("status")
-            previous_status = event.data.get("previous_attributes", {}).get("status")
-            if current_status == "active":
-                user_id = subscription.metadata.get("user_id")
-                plan_type = subscription.metadata.get("plan_type")
-                if not plan_type and subscription.items.data:
-                    plan_type = get_plan_type_from_price_id(subscription.items.data[0].price.id)
-                if user_id and plan_type:
-                    logger.info(f"Processing subscription status change to active for user {user_id}, plan {plan_type}")
-                    await firebase_repo.update_subscription(user_id, plan_type)
-                    await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
-                else:
-                    logger.warning(f"Cannot update subscription that changed to active: user_id={user_id}, plan_type={plan_type}")
-            elif current_status in ["past_due", "unpaid", "incomplete_expired"]:
-                # Handle subscription status changes that indicate payment problems
-                user_id = subscription.metadata.get("user_id")
-                if not user_id:
-                    customer = stripe.Customer.retrieve(subscription.get("customer"))
-                    user_id = customer.metadata.get("user_id")
-                if user_id:
-                    logger.error(f"Subscription status changed to {current_status} for user {user_id}")
-                    await firebase_repo.update_subscription(user_id, "free")
-
-                    await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
-                else:
-                    logger.warning(f"Could not determine user_id for subscription status change to {current_status}")
-
-        elif event.type == "customer.subscription.deleted":
-            subscription = event_object
-            user_id = subscription.metadata.get("user_id")
-            if not user_id:
-                customer = stripe.Customer.retrieve(subscription.get("customer"))
-                user_id = customer.metadata.get("user_id")
-            if user_id:
-                logger.info(f"Processing subscription deletion for user {user_id}")
-                await firebase_repo.update_subscription(user_id, "free")
-                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
-            else:
-                logger.warning("Could not determine user_id for subscription deletion event")
+      
 
         elif event.type == 'subscription_schedule.updated':
             schedule = event_object

@@ -279,7 +279,6 @@ async def fetch_single_timeframe(binance, symbol, interval, start_ms, end_ms):
     
     return []
 
-
 # ===================================================================
 # === VERIFICATION AND BACKFILL TASKS ============================
 # ===================================================================

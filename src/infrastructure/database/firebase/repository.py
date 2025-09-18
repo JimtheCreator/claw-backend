@@ -49,21 +49,76 @@ class FirebaseRepository:
             logger.error(f"Firebase error: {str(e)}")
             raise HTTPException(500, "Database access failed")
     
+    # In repository.py - Corrected approach for userPaid flag
     async def update_subscription(self, user_id: str, plan_type: str) -> bool:
+        """Update subscription for successful payments - sets userPaid=True permanently"""
         try:
             updates = {
                 'subscriptionType': plan_type,
                 'usingTestDrive': plan_type == "test_drive",
                 'updatedAt': datetime.now(timezone.utc).isoformat(),
-                'userPaid': True,
+                'userPaid': True,  # ✅ This should ONLY be called for successful payments
             }
             
-            # Secure write operation with validation
             self.db.child(user_id).update(updates)
-            logger.info(f"Firebase updated for {user_id}")
+            logger.info(f"Firebase updated for {user_id}: plan={plan_type}, userPaid=True (payment successful)")
             return True
         except Exception as e:
             logger.error(f"Firebase error: {str(e)}")
+            raise HTTPException(500, "Database update failed")
+
+    async def handle_payment_failure(self, user_id: str) -> bool:
+        """Handle payment failures - does NOT modify userPaid flag"""
+        try:
+            # Get current user data first to preserve userPaid status
+            user_ref = self.db.child(user_id).get()
+            if hasattr(user_ref, 'val'):
+                user_data = user_ref.val()
+            else:
+                user_data = user_ref
+                
+            current_user_paid = user_data.get('userPaid', False) if user_data else False
+            
+            updates = {
+                'subscriptionType': 'free',
+                'usingTestDrive': False,
+                'updatedAt': datetime.now(timezone.utc).isoformat(),
+                # ✅ Preserve the existing userPaid value - don't change it
+                'userPaid': current_user_paid,
+            }
+            
+            self.db.child(user_id).update(updates)
+            logger.info(f"Payment failure handled for {user_id}: set to free plan, userPaid preserved as {current_user_paid}")
+            return True
+        except Exception as e:
+            logger.error(f"Firebase error handling payment failure: {str(e)}")
+            raise HTTPException(500, "Database update failed")
+
+    async def revert_to_free_plan(self, user_id: str) -> bool:
+        """Revert user to free plan (for subscription cancellations, etc.) - preserves userPaid"""
+        try:
+            # Get current user data to preserve userPaid status
+            user_ref = self.db.child(user_id).get()
+            if hasattr(user_ref, 'val'):
+                user_data = user_ref.val()
+            else:
+                user_data = user_ref
+                
+            current_user_paid = user_data.get('userPaid', False) if user_data else False
+            
+            updates = {
+                'subscriptionType': 'free',
+                'usingTestDrive': False,
+                'updatedAt': datetime.now(timezone.utc).isoformat(),
+                # ✅ Preserve existing userPaid - once someone has paid successfully, they never see test-drive again
+                'userPaid': current_user_paid,
+            }
+            
+            self.db.child(user_id).update(updates)
+            logger.info(f"User {user_id} reverted to free plan, userPaid preserved as {current_user_paid}")
+            return True
+        except Exception as e:
+            logger.error(f"Firebase error reverting to free plan: {str(e)}")
             raise HTTPException(500, "Database update failed")
         
     async def get_user_subscription(self, user_id: str) -> str:

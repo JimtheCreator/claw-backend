@@ -359,7 +359,8 @@ class EnhancedSubscriptionManager:
         try:
             await redis_cache.initialize()
             pubsub = await redis_cache.subscribe(CONTROL_CHANNEL)
-            logger.info(f"Listening for control messages on '{CONTROL_CHANNEL}'")
+            
+            logger.info(f"✅ Manager is now listening for commands on Redis channel: '{CONTROL_CHANNEL}'")
 
             subscribe_queue = set()
             unsubscribe_queue = set()
@@ -373,8 +374,12 @@ class EnhancedSubscriptionManager:
                     if message and message.get("type") == "message":
                         try:
                             data = message['data']
+                            
                             if isinstance(data, bytes):
                                 data = data.decode('utf-8')
+                            
+                            # ADD THIS LINE to see any received message
+                            logger.info(f"📬 Received command from Redis: {data}")
                             
                             command, stream_name = data.split(":", 1)
                             
@@ -465,6 +470,16 @@ class EnhancedSubscriptionManager:
                 if 'stream' in data and 'data' in data:
                     stream_name = data['stream']
                     stream_data = data['data']
+
+                    # ==================== TEMPORARY DEBUG LOGGING ====================
+                    # Log the raw data for specific symbols before any checks
+                    if 'solusdt' in stream_name:
+                        logger.info(f"RAW SOLUSDT DATA for '{stream_name}': {stream_data}")
+                    
+                    # ADDED THIS BLOCK FOR BTCUSDT
+                    if 'btcusdt' in stream_name:
+                        logger.info(f"RAW BTCUSDT DATA for '{stream_name}': {stream_data}")
+                    # =================================================================
                     
                     self.last_data_time[stream_name] = time.time()
                     
