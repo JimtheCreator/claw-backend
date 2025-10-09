@@ -120,7 +120,6 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Supabase update error for user {user_id}: {str(e)}")
             raise
 
-    # --- NEW METHOD TO CHECK AND INCREMENT USAGE ---
     async def check_and_increment_analysis_usage(
         self,
         user_id: str,
@@ -561,7 +560,6 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Failed to create pattern match history: {e}")
 
-    
     async def get_fcm_tokens_for_users(self, user_ids: list[str]) -> dict:
         """
         Acts as a bridge to fetch FCM tokens from the Firebase repository.
@@ -1037,8 +1035,6 @@ class SupabaseCryptoRepository(CryptoRepository):
             logger.error(f"Error deleting market analysis record {analysis_id} for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to delete analysis record")
         
-
-
     async def get_stale_analyses(self, cutoff_time):
         """
         Get analyses that have been stuck in 'processing' state past the cutoff time.

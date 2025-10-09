@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.common.logger import logger
 from fastapi import APIRouter
-from models.requests import SubscribeRequest, CancelSubscriptionRequest
+from models.requests import CancelSubscriptionRequest
 from models.response import NativeCheckoutResponseSchema, CancellationResponseSchema
 from src.infrastructure.database.firebase.repository import FirebaseRepository
 from src.infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
@@ -14,6 +14,9 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from stripe_payments.src.plan_limits import PLAN_LIMITS
+# Add these to your imports
+from pydantic import BaseModel
+from typing import Optional, List
 
 router = APIRouter(tags=["Stripe Paid Plans"])
 
@@ -21,6 +24,24 @@ router = APIRouter(tags=["Stripe Paid Plans"])
 STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
 stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
 WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
+
+# Define new Pydantic models for the promo code validation
+class PromoCodeRequest(BaseModel):
+    promo_code: str
+
+class PromoCodeResponse(BaseModel):
+    id: str
+    code: str
+    coupon_id: str
+    percent_off: Optional[float] = None
+    amount_off: Optional[int] = None
+    currency: Optional[str] = None
+    applies_to_products: Optional[List[str]] = [] # Products coupon is valid for
+    
+class SubscribeRequest(BaseModel):
+    user_id: str
+    plan_id: str
+    promotion_code_id: Optional[str] = None # <-- Add this line
 
 # Define mapping between plan types and Stripe price IDs
 PLAN_PRICE_IDS = {
@@ -171,6 +192,78 @@ async def get_subscription_limits_and_usage(user_id: str, supabase_repo: Supabas
         logger.error(f"Error fetching subscription limits and usage for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching subscription details: {str(e)}")
     
+@router.post("/stripe/validate-promo-code", response_model=PromoCodeResponse)
+async def validate_promo_code(request: PromoCodeRequest):
+    """Validates a Stripe promotion code and returns its discount details."""
+    try:
+        # 1. List active promotion codes to find the ID.
+        promo_codes = stripe.PromotionCode.list(
+            code=request.promo_code.strip(),
+            active=True,
+            limit=1
+        )
+
+        if not promo_codes.data:
+            raise HTTPException(status_code=404, detail="Invalid or expired promotion code.")
+
+        promo_code_summary = promo_codes.data[0]
+
+        # 2. Retrieve the full promotion code object with coupon.applies_to expanded
+        promo_code_full = stripe.PromotionCode.retrieve(
+            promo_code_summary.id,
+            expand=["coupon.applies_to"]
+        )
+
+        # 3. Get the coupon ID from promotion.coupon (it's a string ID, not the full object)
+        coupon_id = None
+        if hasattr(promo_code_full, 'promotion') and promo_code_full.promotion:
+            promotion = promo_code_full.promotion
+            if hasattr(promotion, 'coupon'):
+                coupon_id = promotion.coupon
+            elif isinstance(promotion, dict) and 'coupon' in promotion:
+                coupon_id = promotion['coupon']
+        
+        if not coupon_id:
+            logger.error(f"No coupon ID found in promotion code {promo_code_full.id}")
+            raise HTTPException(status_code=500, detail="Could not validate code due to an issue with its data structure.")
+        
+        # 4. Retrieve the full coupon object with applies_to expanded
+        coupon = stripe.Coupon.retrieve(coupon_id, expand=["applies_to"])
+
+        if not getattr(coupon, 'valid', False):
+            raise HTTPException(status_code=400, detail="This promotion code's coupon is no longer valid.")
+
+        logger.info(f"Successfully validated promo code '{request.promo_code.strip()}'")
+
+        # 4. Extract applies_to_products from the coupon
+        applies_to_products = []
+        if hasattr(coupon, 'applies_to') and coupon.applies_to:
+            if hasattr(coupon.applies_to, 'products'):
+                applies_to_products = coupon.applies_to.products or []
+            elif isinstance(coupon.applies_to, dict) and 'products' in coupon.applies_to:
+                applies_to_products = coupon.applies_to.get('products', [])
+        
+        # 5. Return the detailed response.
+        return PromoCodeResponse(
+            id=promo_code_full.id,
+            code=promo_code_full.code,
+            coupon_id=coupon.id,
+            percent_off=coupon.percent_off,
+            amount_off=coupon.amount_off,
+            currency=coupon.currency,
+            applies_to_products=applies_to_products
+        )
+
+    except HTTPException:
+        raise
+    except stripe.StripeError as e:
+        logger.error(f"Stripe error validating promo code '{request.promo_code}': {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error validating promo code '{request.promo_code}': {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {str(e)}")
+    
+    
 @router.post("/stripe/initiate-payment", response_model=NativeCheckoutResponseSchema)
 async def initiate_payment_intent_or_subscription(
     request: SubscribeRequest,
@@ -189,11 +282,87 @@ async def initiate_payment_intent_or_subscription(
         selected_plan = get_plan_type_from_price_id(price_id)
         current_plan = await firebase_repo.get_user_subscription(request.user_id)
 
-        stripe_price_object = stripe.Price.retrieve(price_id)
+        # ✅ FIX 1: Expand the product when retrieving the price
+        stripe_price_object = stripe.Price.retrieve(price_id, expand=['product'])
         amount = stripe_price_object.unit_amount
         currency = stripe_price_object.currency
+        
+        # ✅ FIX 2: Now product is an object, not a string
+        product_id = stripe_price_object.product.id if hasattr(stripe_price_object.product, 'id') else stripe_price_object.product
+        
         is_sub_plan = is_subscription_plan(selected_plan)
         mode = "subscription" if is_sub_plan else "payment"
+
+        # --- PROMO CODE HANDLING START ---
+        final_amount = amount
+        discounts_for_subscription = []
+        is_100_percent_off = False
+        
+        if request.promotion_code_id:
+            try:
+                # Retrieve the promotion code
+                promo_code_obj = stripe.PromotionCode.retrieve(request.promotion_code_id)
+                
+                if not promo_code_obj.active:
+                    raise HTTPException(status_code=400, detail="The provided promotion code has expired.")
+
+                # Get the coupon ID from the promotion code structure
+                coupon_id = None
+                if hasattr(promo_code_obj, 'promotion') and promo_code_obj.promotion:
+                    if isinstance(promo_code_obj.promotion, dict):
+                        coupon_id = promo_code_obj.promotion.get('coupon')
+                    elif hasattr(promo_code_obj.promotion, 'coupon'):
+                        coupon_id = promo_code_obj.promotion.coupon
+                
+                if not coupon_id:
+                    logger.error(f"No coupon ID found in promotion code {request.promotion_code_id}")
+                    raise HTTPException(status_code=400, detail="Invalid promotion code structure.")
+                
+                # Retrieve the actual coupon with expanded applies_to
+                coupon = stripe.Coupon.retrieve(coupon_id, expand=["applies_to"])
+                
+                # Check if coupon applies to the selected product
+                applies_to_products = []
+                if hasattr(coupon, 'applies_to') and coupon.applies_to:
+                    if hasattr(coupon.applies_to, 'products'):
+                        applies_to_products = coupon.applies_to.products or []
+                    elif isinstance(coupon.applies_to, dict):
+                        applies_to_products = coupon.applies_to.get('products', [])
+                
+                is_coupon_applicable = not applies_to_products or product_id in applies_to_products
+
+                if is_coupon_applicable:
+                    logger.info(f"Coupon {request.promotion_code_id} is valid for product {product_id}. Applying discount.")
+                    # Apply discount for subscriptions
+                    if is_sub_plan:
+                        discounts_for_subscription = [{"promotion_code": request.promotion_code_id}]
+                    
+                    # Calculate final amount
+                    if coupon.percent_off:
+                        if coupon.percent_off == 100.0:
+                            is_100_percent_off = True
+                        discount = final_amount * (coupon.percent_off / 100)
+                        final_amount = round(final_amount - discount)
+                        logger.info(f"Applied {coupon.percent_off}% discount. Original: {amount}, Final: {final_amount}")
+                    elif coupon.amount_off:
+                        final_amount = max(0, final_amount - coupon.amount_off)
+                        logger.info(f"Applied {coupon.amount_off} amount off. Original: {amount}, Final: {final_amount}")
+                
+                else:
+                    # The coupon is not valid for this product. Log it and do nothing.
+                    # `final_amount` remains the full price and `discounts_for_subscription` is empty.
+                    logger.warning(f"Coupon {request.promotion_code_id} is NOT valid for product {product_id}. Proceeding with full price.")
+
+            
+            except stripe.StripeError as e:
+                logger.error(f"Stripe error validating promo code {request.promotion_code_id}: {str(e)}")
+                raise HTTPException(status_code=400, detail="The provided promotion code is invalid.")
+            except HTTPException:
+                raise  # Re-raise HTTP exceptions
+            except Exception as e:
+                logger.error(f"Unexpected error validating promo code: {str(e)}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Error validating promotion code: {str(e)}")
+        # --- PROMO CODE HANDLING END ---
 
         # Get price details for both plans
         current_price_id = PLAN_PRICE_IDS.get(current_plan)
@@ -240,22 +409,69 @@ async def initiate_payment_intent_or_subscription(
             customer = stripe.Customer.create(**customer_data)
             customer_id = customer.id
         
-
         ephemeral_key = stripe.EphemeralKey.create(customer=customer_id, stripe_version="2023-10-16")
         ephemeral_key_secret = ephemeral_key.secret
 
-        if not is_sub_plan:  # One-time payment (e.g., test_drive)
-            payment_intent = stripe.PaymentIntent.create(
-                amount=amount, currency=currency, customer=customer_id,
-                payment_method_types=["card"], metadata={"user_id": request.user_id, "plan_type": selected_plan, "price_id": price_id}
-            )
+        # Handle 100% discount (no payment needed)
+        if final_amount == 0 and is_100_percent_off:
+            logger.info(f"Processing 100% discount for user {request.user_id} on plan {selected_plan}")
+            if is_sub_plan:
+                stripe.Subscription.create(
+                    customer=customer_id,
+                    items=[{"price": price_id}],
+                    coupon=promo_code_obj.coupon.id,
+                    metadata={"user_id": request.user_id, "plan_type": selected_plan}
+                )
+            
+            # Update databases immediately
+            await firebase_repo.update_subscription(request.user_id, selected_plan)
+            await supabase_repo.update_subscription(request.user_id, selected_plan, PLAN_LIMITS)
+            
             return NativeCheckoutResponseSchema(
-                client_secret=payment_intent.client_secret, publishable_key=STRIPE_PUBLISHABLE_KEY,
-                intent_type="payment_intent", customer_id=customer_id, ephemeral_key_secret=ephemeral_key_secret,
-                payment_intent_id=payment_intent.id, plan_type=selected_plan, mode=mode
+                publishable_key=STRIPE_PUBLISHABLE_KEY,
+                customer_id=customer_id,
+                ephemeral_key_secret=ephemeral_key.secret,
+                plan_type=selected_plan,
+                mode=mode,
+                payment_required=False,
+                message="Subscription activated with 100% discount!"
+            )
+
+        # ✅ FIX 5: One-time payment with proper promo code support
+        if not is_sub_plan:  # One-time payment (e.g., test_drive)
+            payment_intent_params = {
+                "amount": final_amount,
+                "currency": currency,
+                "customer": customer_id,
+                "payment_method_types": ["card"],
+                "metadata": {
+                    "user_id": request.user_id,
+                    "plan_type": selected_plan,
+                    "price_id": price_id
+                }
+            }
+            
+            # Add promo code metadata if applied
+            if request.promotion_code_id:
+                payment_intent_params["metadata"]["promo_code_applied"] = request.promotion_code_id
+                if is_100_percent_off:
+                    payment_intent_params["metadata"]["discount_applied"] = "100_percent"
+            
+            payment_intent = stripe.PaymentIntent.create(**payment_intent_params)
+            
+            return NativeCheckoutResponseSchema(
+                client_secret=payment_intent.client_secret,
+                publishable_key=STRIPE_PUBLISHABLE_KEY,
+                intent_type="payment_intent",
+                customer_id=customer_id,
+                ephemeral_key_secret=ephemeral_key_secret,
+                payment_intent_id=payment_intent.id,
+                plan_type=selected_plan,
+                mode=mode,
+                payment_required=(final_amount > 0)
             )
         else:
-              # Subscription plans
+            # Subscription plans (rest of your existing code remains the same)
             subscriptions_response = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
             subscriptions = subscriptions_response.data
 
@@ -288,6 +504,7 @@ async def initiate_payment_intent_or_subscription(
                     item_id = sub_items[0].id
                 
 
+                # In paid_plans.py - CORRECTED upgrade section
                 if change_type == "upgrade":
                     logger.info(f"Attempting to upgrade subscription {subscription.id} to price_id {price_id}")
                     
@@ -304,77 +521,86 @@ async def initiate_payment_intent_or_subscription(
                         # Preview the invoice for the upgrade
                         upcoming_invoice = stripe.Invoice.create_preview(
                             customer=customer_id,
-                            subscription=subscription.id, # Keep the existing subscription ID
-                            subscription_details={ # Use subscription_details
+                            subscription=subscription.id,
+                            subscription_details={
                                 'items': [{
-                                    'id': item_id, # ID of the subscription item to update
-                                    'price': price_id, # The new price_id for the upgrade
-                                    # 'quantity': 1 # Optional, if you manage quantity
+                                    'id': item_id,
+                                    'price': price_id,
                                 }],
                                 'proration_behavior': "create_prorations"
                             }
                         )
                         amount_due_for_upgrade = upcoming_invoice.amount_due
                         currency_for_upgrade = upcoming_invoice.currency
-                    except stripe.error.StripeError as e:
-                        # Handle cases where preview might fail or indicate no charge
-                        # (e.g., invoice_upcoming_nothing_to_invoice or similar if the code changed)
+                    except stripe.StripeError as e:
                         if hasattr(e, 'code') and (e.code == 'invoice_nothing_to_invoice' or e.code == 'invoice_upcoming_nothing_to_invoice'):
                             amount_due_for_upgrade = 0
-                            currency_for_upgrade = currency # Fallback to default currency
+                            currency_for_upgrade = currency
                         else:
                             logger.error(f"Stripe error previewing invoice for upgrade: {str(e)}")
                             raise HTTPException(status_code=400, detail=f"Stripe error previewing upgrade: {str(e)}")
 
-                    if amount_due_for_upgrade > 0:
-                        logger.info(f"Upgrade requires payment of {amount_due_for_upgrade} {currency_for_upgrade}. Creating PaymentIntent before modifying subscription.")
-                        payment_intent = stripe.PaymentIntent.create(
-                            amount=amount_due_for_upgrade,
-                            currency=currency_for_upgrade,
-                            customer=customer_id,
-                            payment_method_types=["card"],
-                            metadata={
-                                "user_id": request.user_id,
-                                "action": "pending_subscription_upgrade",
-                                "subscription_id_to_update": subscription.id,
-                                "subscription_item_id_to_update": item_id,
-                                "new_price_id": price_id,
-                                "selected_plan_for_upgrade": selected_plan,
-                                "original_plan_type": current_plan # Good to have for rollbacks or logging
-                            }
-                        )
-                        return NativeCheckoutResponseSchema(
-                            client_secret=payment_intent.client_secret,
-                            publishable_key=STRIPE_PUBLISHABLE_KEY,
-                            intent_type="payment_intent",
-                            customer_id=customer_id,
-                            ephemeral_key_secret=ephemeral_key_secret,
-                            payment_intent_id=payment_intent.id,
-                            plan_type=selected_plan, # Target plan
-                            mode="payment",
-                            payment_required=True,
-                            message="Payment required to complete upgrade."
-                        )
-                    else:
-                        # No immediate payment required (or credit)
-                        logger.info(f"No immediate payment required for upgrade. Modifying subscription {subscription.id} to price_id {price_id}")
-                        # SOLUTION: Check for and cancel any existing subscription schedules before upgrading
-                        schedules_response = stripe.SubscriptionSchedule.list(customer=customer_id, limit=10) #
-                        for schedule in schedules_response.data: #
-                            if schedule.subscription == subscription.id and schedule.status == "active": #
-                                logger.info(f"Canceling existing subscription schedule {schedule.id} before $0 upgrade") #
-                                stripe.SubscriptionSchedule.release(schedule.id) #
+                    # Apply coupon discount to upgrade amount
+                    discounted_amount = amount_due_for_upgrade
+                    if amount_due_for_upgrade > 0 and request.promotion_code_id:
+                        try:
+                            promo_code_obj = stripe.PromotionCode.retrieve(request.promotion_code_id)
+                            coupon_id = None
+                            if hasattr(promo_code_obj, 'promotion') and promo_code_obj.promotion:
+                                if isinstance(promo_code_obj.promotion, dict):
+                                    coupon_id = promo_code_obj.promotion.get('coupon')
+                                elif hasattr(promo_code_obj.promotion, 'coupon'):
+                                    coupon_id = promo_code_obj.promotion.coupon
+                            
+                            if coupon_id:
+                                coupon = stripe.Coupon.retrieve(coupon_id, expand=["applies_to"])
+                                
+                                # Check if coupon applies to this product
+                                applies_to_products = []
+                                if hasattr(coupon, 'applies_to') and coupon.applies_to:
+                                    if hasattr(coupon.applies_to, 'products'):
+                                        applies_to_products = coupon.applies_to.products or []
+                                    elif isinstance(coupon.applies_to, dict):
+                                        applies_to_products = coupon.applies_to.get('products', [])
+                                
+                                is_coupon_applicable = not applies_to_products or product_id in applies_to_products
+                                
+                                if is_coupon_applicable:
+                                    if coupon.percent_off:
+                                        discount = amount_due_for_upgrade * (coupon.percent_off / 100)
+                                        discounted_amount = round(amount_due_for_upgrade - discount)
+                                        logger.info(f"Applied {coupon.percent_off}% coupon to upgrade. Original: {amount_due_for_upgrade}, After discount: {discounted_amount}")
+                                    elif coupon.amount_off:
+                                        discounted_amount = max(0, amount_due_for_upgrade - coupon.amount_off)
+                                        logger.info(f"Applied coupon amount off. Original: {amount_due_for_upgrade}, After discount: {discounted_amount}")
+                        except Exception as e:
+                            logger.warning(f"Could not apply coupon to upgrade payment: {str(e)}")
+
+                    # If discounted amount is $0, apply upgrade immediately without payment
+                    if discounted_amount == 0:
+                        logger.info(f"Upgrade is free after discount. Modifying subscription {subscription.id} directly.")
+                        schedules_response = stripe.SubscriptionSchedule.list(customer=customer_id, limit=10)
+                        for schedule in schedules_response.data:
+                            if schedule.subscription == subscription.id and schedule.status == "active":
+                                logger.info(f"Canceling existing subscription schedule {schedule.id} before free upgrade")
+                                stripe.SubscriptionSchedule.release(schedule.id)
                         
-                        stripe.Subscription.modify(
-                            subscription.id,
-                            items=[{"id": item_id, "price": price_id}],
-                            proration_behavior="create_prorations", # Let Stripe handle generating a $0 invoice or credit note
-                            cancel_at_period_end=False # Ensure any pending cancellation on the subscription itself is cleared
-                        )
-
+                        # Apply upgrade with coupon if it exists
+                        update_params = {
+                            "items": [{"id": item_id, "price": price_id}],
+                            "proration_behavior": "create_prorations",
+                            "cancel_at_period_end": False
+                        }
+                        
+                        if request.promotion_code_id and discounts_for_subscription:
+                            update_params["discounts"] = discounts_for_subscription
+                        
+                        stripe.Subscription.modify(subscription.id, **update_params)
+                        
+                        # Update user in databases
                         await firebase_repo.update_subscription(request.user_id, selected_plan)
-                        await supabase_repo.update_subscription(request.user_id, selected_plan, PLAN_LIMITS) # <<< ADD THIS LINE
-
+                        await supabase_repo.update_subscription(request.user_id, selected_plan, PLAN_LIMITS)
+                        
                         return NativeCheckoutResponseSchema(
                             publishable_key=STRIPE_PUBLISHABLE_KEY,
                             customer_id=customer_id,
@@ -382,32 +608,64 @@ async def initiate_payment_intent_or_subscription(
                             plan_type=selected_plan,
                             mode="subscription",
                             payment_required=False,
-                            message="Subscription upgraded successfully."
+                            message="Subscription upgraded successfully with coupon!"
+                        )
+                    
+                    # If there's still an amount due, create PaymentIntent
+                    else:
+                        logger.info(f"Upgrade requires payment of {discounted_amount}. Creating PaymentIntent.")
+                        
+                        metadata = {
+                            "user_id": request.user_id,
+                            "action": "pending_subscription_upgrade",
+                            "subscription_id_to_update": subscription.id,
+                            "subscription_item_id_to_update": item_id,
+                            "new_price_id": price_id,
+                            "selected_plan_for_upgrade": selected_plan,
+                            "original_plan_type": current_plan
+                        }
+                        
+                        if request.promotion_code_id:
+                            metadata["promo_code_applied"] = request.promotion_code_id
+                        
+                        payment_intent = stripe.PaymentIntent.create(
+                            amount=discounted_amount,
+                            currency=currency_for_upgrade,
+                            customer=customer_id,
+                            payment_method_types=["card"],
+                            metadata=metadata
+                        )
+                        
+                        return NativeCheckoutResponseSchema(
+                            client_secret=payment_intent.client_secret,
+                            publishable_key=STRIPE_PUBLISHABLE_KEY,
+                            intent_type="payment_intent",
+                            customer_id=customer_id,
+                            ephemeral_key_secret=ephemeral_key_secret,
+                            payment_intent_id=payment_intent.id,
+                            plan_type=selected_plan,
+                            mode="payment",
+                            payment_required=True,
+                            message="Payment required to complete upgrade."
                         )
 
-                
                 elif change_type == "downgrade":
                     logger.info(f"Downgrading subscription {subscription.id} to plan {selected_plan}")
                     
-                    # Retrieve subscription details
                     sub_details = stripe.Subscription.retrieve(subscription.id)
                     logger.info(f"Subscription status: {sub_details.status}")
                     
-                    # Check if subscription has items
                     if not sub_details['items']['data']:
                         raise HTTPException(status_code=500, detail="Subscription has no items")
                     
-                    # Extract current period details
                     current_period_start = sub_details['items']['data'][0]['current_period_start']
                     current_period_end = sub_details['items']['data'][0]['current_period_end']
                     current_price_id = sub_details['items']['data'][0]['price']['id']
                     
-                    # Validate period_end
                     if current_period_end is None:
                         logger.error(f"Subscription {subscription.id} missing current_period_end. Sub details: {sub_details}")
                         raise HTTPException(status_code=500, detail="Subscription data incomplete; contact support.")
                     
-                    # SOLUTION: Check for existing subscription schedules first
                     schedules_response = stripe.SubscriptionSchedule.list(
                         customer=customer_id,
                         limit=10
@@ -420,7 +678,6 @@ async def initiate_payment_intent_or_subscription(
                             break
                     
                     if existing_schedule:
-                        # Update the existing schedule instead of creating a new one
                         logger.info(f"Updating existing subscription schedule {existing_schedule.id} for downgrade")
                         
                         stripe.SubscriptionSchedule.modify(
@@ -438,7 +695,6 @@ async def initiate_payment_intent_or_subscription(
                             ],
                         )
                     else:
-                        # Create new schedule as before
                         schedule = stripe.SubscriptionSchedule.create(
                             from_subscription=subscription.id,
                         )
@@ -458,7 +714,6 @@ async def initiate_payment_intent_or_subscription(
                             ],
                         )
                     
-                    # Return success response
                     return NativeCheckoutResponseSchema(
                         publishable_key=STRIPE_PUBLISHABLE_KEY,
                         customer_id=customer_id,
@@ -476,7 +731,8 @@ async def initiate_payment_intent_or_subscription(
                     payment_behavior="default_incomplete",
                     payment_settings={"save_default_payment_method": "on_subscription"},
                     expand=["latest_invoice.confirmation_secret"],
-                    metadata={"user_id": request.user_id, "plan_type": selected_plan, "price_id": price_id}
+                    metadata={"user_id": request.user_id, "plan_type": selected_plan, "price_id": price_id},
+                    discounts=discounts_for_subscription
                 )
 
                 confirmation_secret = subscription.latest_invoice.confirmation_secret.client_secret
@@ -493,12 +749,16 @@ async def initiate_payment_intent_or_subscription(
                     mode="payment",
                     payment_required=True
                 )
-    except stripe.error.StripeError as e:
+    # ✅ FIX 6: Correct exception handling
+    except stripe.StripeError as e:
         logger.error(f"Stripe error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Unexpected error in initiate_payment: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    
      
 @router.post("/stripe/cancel-subscription", response_model=CancellationResponseSchema)
 async def cancel_subscription(
@@ -1112,4 +1372,4 @@ async def stripe_webhook(
         logger.error(f"Webhook processing error: {str(e)}", exc_info=True)
         return {"status": "error", "message": f"Internal error: {str(e)}"}
     
-    
+  

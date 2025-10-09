@@ -12,7 +12,6 @@ from models.response import PriceResponse
 
 router = APIRouter(tags=["Stripe Plan Prices"])
 
-# API Endpoints
 @router.get("/stripe/prices", response_model=List[PriceResponse])
 async def get_subscription_prices():
     """Fetch available subscription plans from Stripe"""
@@ -20,14 +19,11 @@ async def get_subscription_prices():
         # Environment variables
         STRIPE_API_KEY = os.getenv("PRODUCTION_STRIPE_API_KEY")
 
-        # Check if Stripe API key is set
         if not STRIPE_API_KEY:
             logger.error("Stripe API key is not set")
             raise HTTPException(status_code=500, detail="Stripe API key is not set")
         
-        # Initialize Stripe
         stripe.api_key = STRIPE_API_KEY
-        # Check if Stripe is initialized
         if not stripe.api_key:
             logger.error("Stripe API key is not set")
             raise HTTPException(status_code=500, detail="Stripe API key is not set")
@@ -37,7 +33,7 @@ async def get_subscription_prices():
         if not prices.data:
             logger.error("No active prices found in Stripe")
             raise HTTPException(status_code=404, detail="No active prices found")
-        # Format response
+
         formatted_prices = []
         for price in prices.data:
             product = price.product
@@ -56,8 +52,15 @@ async def get_subscription_prices():
             elif product.description:
                 features = [line.strip() for line in product.description.split(",")]
             
+            # Ensure product_id is always a string
+            if hasattr(product, 'id'):
+                product_id = product.id
+            else:
+                product_id = str(product)
+
             formatted_price = PriceResponse(
                 id=price.id,
+                product_id=product_id,
                 type=product.metadata.get("plan_type", "unknown"),
                 billing_period=interval,
                 amount=price.unit_amount,
@@ -66,6 +69,9 @@ async def get_subscription_prices():
                 description=product.description,
                 features=features
             )
+            
+            # Debug logging
+            logger.info(f"Price {price.id}: product_id={formatted_price.product_id}, type={formatted_price.type}")
             
             formatted_prices.append(formatted_price)
         

@@ -170,7 +170,7 @@ class BinanceConnection:
         return True
 
 
-class EnhancedSubscriptionManager:
+class WebsocketSubscriptionManager:
     def __init__(self):
         # Connection pool management
         self.connections: List[BinanceConnection] = []
@@ -712,5 +712,5 @@ class EnhancedSubscriptionManager:
                 await connection.disconnect()
 
 if __name__ == "__main__":
-    manager = EnhancedSubscriptionManager()
+    manager = WebsocketSubscriptionManager()
     asyncio.run(manager.run())

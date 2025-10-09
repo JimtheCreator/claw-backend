@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 class PriceResponse(BaseModel):
     id: str
+    product_id: str
     type: str
     billing_period: str
     amount: int
