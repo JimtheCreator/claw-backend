@@ -18,12 +18,38 @@ from stripe_payments.src.plan_limits import PLAN_LIMITS
 from pydantic import BaseModel
 from typing import Optional, List
 
+
 router = APIRouter(tags=["Stripe Paid Plans"])
 
-# Environment variables
-STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
-stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
-WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
+
+# PRODUCTION STRIPE KEYS
+# STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
+# stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
+# WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
+
+# # Define mapping between plan types and Stripe price IDs
+# PLAN_PRICE_IDS = {
+#     "test_drive": os.getenv("PRODUCTION_TEST_DRIVE_PRICE_ID"),
+#     "starter_weekly": os.getenv("PRODUCTION_STARTER_WEEKLY_PRICE_ID"),
+#     "starter_monthly": os.getenv("PRODUCTION_STARTER_MONTHLY_PRICE_ID"),
+#     "pro_weekly": os.getenv("PRODUCTION_PRO_WEEKLY_PRICE_ID"),
+#     "pro_monthly": os.getenv("PRODUCTION_PRO_MONTHLY_PRICE_ID")
+# }
+
+
+# TEST STRIPE KEYS
+STRIPE_PUBLISHABLE_KEY = os.getenv("TEST_STRIPE_PUBLISHABLE_KEY")
+stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
+WEBHOOK_SECRET = os.getenv("TEST_STRIPE_WEBHOOK_SECRET_SNAPSHOT_PAYLOAD_STYLE")
+
+# Define mapping between plan types and Stripe price IDs
+PLAN_PRICE_IDS = {
+    "test_drive": os.getenv("TEST_TEST_DRIVE_PRICE_ID"),
+    "starter_weekly": os.getenv("TEST_STARTER_WEEKLY_PRICE_ID"),
+    "starter_monthly": os.getenv("TEST_STARTER_MONTHLY_PRICE_ID"),
+    "pro_weekly": os.getenv("TEST_PRO_WEEKLY_PRICE_ID"),
+    "pro_monthly": os.getenv("TEST_PRO_MONTHLY_PRICE_ID")
+}
 
 # Define new Pydantic models for the promo code validation
 class PromoCodeRequest(BaseModel):
@@ -43,14 +69,6 @@ class SubscribeRequest(BaseModel):
     plan_id: str
     promotion_code_id: Optional[str] = None # <-- Add this line
 
-# Define mapping between plan types and Stripe price IDs
-PLAN_PRICE_IDS = {
-    "test_drive": os.getenv("PRODUCTION_TEST_DRIVE_PRICE_ID"),
-    "starter_weekly": os.getenv("PRODUCTION_STARTER_WEEKLY_PRICE_ID"),
-    "starter_monthly": os.getenv("PRODUCTION_STARTER_MONTHLY_PRICE_ID"),
-    "pro_weekly": os.getenv("PRODUCTION_PRO_WEEKLY_PRICE_ID"),
-    "pro_monthly": os.getenv("PRODUCTION_PRO_MONTHLY_PRICE_ID")
-}
 
 PLAN_TYPES = {
     "test_drive": "one_time",
@@ -416,12 +434,30 @@ async def initiate_payment_intent_or_subscription(
         if final_amount == 0 and is_100_percent_off:
             logger.info(f"Processing 100% discount for user {request.user_id} on plan {selected_plan}")
             if is_sub_plan:
-                stripe.Subscription.create(
-                    customer=customer_id,
-                    items=[{"price": price_id}],
-                    coupon=promo_code_obj.coupon.id,
-                    metadata={"user_id": request.user_id, "plan_type": selected_plan}
-                )
+                # Extract coupon ID correctly
+                coupon_id = None
+                if hasattr(promo_code_obj, 'promotion') and promo_code_obj.promotion:
+                    if isinstance(promo_code_obj.promotion, dict):
+                        coupon_id = promo_code_obj.promotion.get('coupon')
+                    elif hasattr(promo_code_obj.promotion, 'coupon'):
+                        coupon_id = promo_code_obj.promotion.coupon
+                
+                if coupon_id:
+                    logger.info(f"Creating subscription with coupon {coupon_id}")
+                    stripe.Subscription.create(
+                        customer=customer_id,
+                        items=[{"price": price_id}],
+                        discounts=[{"coupon": coupon_id}],
+                        metadata={"user_id": request.user_id, "plan_type": selected_plan}
+                    )
+                else:
+                    logger.warning(f"Could not extract coupon ID for 100% discount, creating subscription without coupon")
+                    # Fallback: create subscription without coupon (won't apply discount)
+                    stripe.Subscription.create(
+                        customer=customer_id,
+                        items=[{"price": price_id}],
+                        metadata={"user_id": request.user_id, "plan_type": selected_plan}
+                    )
             
             # Update databases immediately
             await firebase_repo.update_subscription(request.user_id, selected_plan)
@@ -503,7 +539,6 @@ async def initiate_payment_intent_or_subscription(
                 else:
                     item_id = sub_items[0].id
                 
-
                 # In paid_plans.py - CORRECTED upgrade section
                 if change_type == "upgrade":
                     logger.info(f"Attempting to upgrade subscription {subscription.id} to price_id {price_id}")
@@ -827,7 +862,7 @@ async def cancel_subscription(
                 subscription_id = subscriptions[0].id
                 logger.info(f"Found subscription {subscription_id} for user {user_id}")
                 
-            except stripe.error.StripeError as e:
+            except stripe.StripeError as e:
                 logger.error(f"Stripe error looking up subscription: {str(e)}")
                 raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
         
@@ -842,7 +877,7 @@ async def cancel_subscription(
                     cancellation_date=datetime.fromtimestamp(current_subscription.cancel_at).isoformat(),
                     message=f"Subscription was already scheduled to cancel at the end of the billing period ({datetime.fromtimestamp(current_subscription.cancel_at).isoformat()})"
                 )
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"Stripe error retrieving subscription {subscription_id}: {str(e)}")
             raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
         
@@ -933,7 +968,7 @@ async def cancel_subscription(
                         f"Subscription will be canceled at the end of the billing period ({cancellation_date.isoformat()})"
             )
             
-        except stripe.error.StripeError as e:
+        except stripe.StripeError as e:
             logger.error(f"Stripe error canceling subscription {subscription_id}: {str(e)}")
             raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
             
@@ -957,8 +992,9 @@ async def stripe_webhook(
         event = stripe.Webhook.construct_event(
             payload, sig_header, WEBHOOK_SECRET
         )
-    except stripe.error.SignatureVerificationError as e:
-        logger.error("Webhook signature verification failed")
+    except stripe.SignatureVerificationError as e:
+        logger.error(f"❌ Webhook signature verification failed: {str(e)}")
+        logger.error(f"   Secret used: {WEBHOOK_SECRET[:20] if WEBHOOK_SECRET else 'NONE'}...")
         raise HTTPException(status_code=400, detail="Invalid signature")
     except Exception as e:
         logger.error(f"Failed to parse webhook event: {str(e)}")
@@ -978,7 +1014,40 @@ async def stripe_webhook(
         if event.type == "payment_intent.succeeded":
             payment_intent = event_object
             user_id = payment_intent.metadata.get("user_id")
+            plan_type = payment_intent.metadata.get("plan_type")  # Initialize here
             action = payment_intent.metadata.get("action")
+
+            # --- START: MORE ROBUST FALLBACK LOGIC ---
+            if not user_id or not plan_type:
+                logger.info(f"PI {payment_intent.id} is missing direct metadata. Checking associated invoice/subscription...")
+                invoice_id = payment_intent.get("invoice")
+                if invoice_id:
+                    try:
+                        invoice = stripe.Invoice.retrieve(invoice_id)
+                        subscription_id = invoice.get("subscription")
+                        if subscription_id:
+                            subscription = stripe.Subscription.retrieve(subscription_id, expand=['customer'])
+                            
+                            # First, try getting metadata from the subscription
+                            user_id = subscription.metadata.get("user_id")
+                            plan_type = subscription.metadata.get("plan_type")
+
+                            # If that fails, derive it from other objects
+                            if not user_id and subscription.customer:
+                                user_id = subscription.customer.metadata.get("user_id")
+                            
+                            if not plan_type and subscription.items.data:
+                                price_id = subscription.items.data[0].price.id
+                                plan_type = get_plan_type_from_price_id(price_id)
+
+                            if user_id and plan_type:
+                                logger.info(f"Successfully found user_id '{user_id}' and plan '{plan_type}' via fallback for PI {payment_intent.id}")
+                            
+                    except stripe.StripeError as e:
+                        logger.error(f"Stripe error during fallback lookup for PI {payment_intent.id}: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Unexpected error during fallback lookup for PI {payment_intent.id}: {str(e)}")
+            # --- END: MORE ROBUST FALLBACK LOGIC ---
 
             if action == "pending_subscription_upgrade":
                 subscription_id_to_update = payment_intent.metadata.get("subscription_id_to_update")
@@ -1004,28 +1073,26 @@ async def stripe_webhook(
                             cancel_at_period_end=False,
                             metadata={"user_id": user_id, "plan_type": selected_plan_for_upgrade}
                         )
-                        # ✅ This is a SUCCESSFUL payment - sets userPaid=True
                         await firebase_repo.update_subscription(user_id, selected_plan_for_upgrade)
                         await supabase_repo.update_subscription(user_id, selected_plan_for_upgrade, PLAN_LIMITS)
                         logger.info(f"Subscription {subscription_id_to_update} successfully upgraded to {selected_plan_for_upgrade} for user {user_id} after payment.")
                         
                     except Exception as e:
                         logger.error(f"Error during final upgrade for sub {subscription_id_to_update}: {str(e)}. User: {user_id}. PI: {payment_intent.id}")
-                        # ✅ This is a FAILURE - preserve userPaid status
                         await firebase_repo.handle_payment_failure(user_id)
                         await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
                 else:
                     logger.warning(f"Missing metadata in payment_intent.succeeded for pending_subscription_upgrade. PI: {payment_intent.id}")
             
-            elif user_id and payment_intent.metadata.get("plan_type"):
-                plan_type = payment_intent.metadata.get("plan_type")
+            elif user_id and plan_type:
                 logger.info(f"Processing successful one-time payment for user {user_id}, plan {plan_type}")
-                # ✅ This is a SUCCESSFUL payment - sets userPaid=True
                 await firebase_repo.update_subscription(user_id, plan_type)
                 await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
             else:
                 logger.warning(f"Missing metadata in payment_intent.succeeded event. PI: {payment_intent.id}")
-
+        
+        
+        
         elif event.type == "payment_intent.payment_failed":
             payment_intent = event_object
             user_id = payment_intent.metadata.get("user_id")
@@ -1060,54 +1127,135 @@ async def stripe_webhook(
                     f"PI: {payment_intent.id}"
                 )
 
-        elif event.type == "checkout.session.completed":
-            session = event_object
-            user_id = session.metadata.get("user_id")
-            plan_type = session.metadata.get("plan_type")
-            payment_status = session.get("payment_status")
-            mode = session.get("mode")
-            if mode == "payment" and payment_status == "paid" and user_id and plan_type:
-                logger.info(f"Processing checkout.session.completed for user {user_id}, plan {plan_type}")
-                # ✅ This is a SUCCESSFUL payment - sets userPaid=True
-                await firebase_repo.update_subscription(user_id, plan_type)
-                await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
-
-        elif event.type == "checkout.session.async_payment_failed" or event.type == "checkout.session.expired":
-            # Handle checkout session payment failure
-            session = event_object
-            user_id = session.metadata.get("user_id")
-            if user_id:
-                logger.error(f"Checkout session failed for user {user_id}, event: {event.type}")
-                # ✅ This is a FAILURE - preserve userPaid status
-                await firebase_repo.handle_payment_failure(user_id)
-                await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
-            else:
-                logger.warning(f"Could not determine user_id for {event.type} event")
-
-        elif event.type == "invoice.payment_succeeded":
+        elif event.type == "invoice.paid":
+            # Handle invoice.paid (fires when invoice is marked as paid)
             invoice = event_object
             subscription_id = invoice.get("subscription")
+            
+            logger.info(f"DEBUG invoice.paid: subscription_id={subscription_id}, invoice_id={invoice.get('id')}, paid={invoice.get('paid')}, customer={invoice.get('customer')}")
+            
+            # If subscription_id is None, try to find it via the payment intent
+            if not subscription_id:
+                payment_intent_id = invoice.get("payment_intent")
+                if payment_intent_id:
+                    try:
+                        pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+                        subscription_id = pi.metadata.get("subscription_id_to_update") or pi.metadata.get("subscription_id")
+                        logger.info(f"DEBUG: Found subscription_id from PaymentIntent metadata: {subscription_id}")
+                    except Exception as e:
+                        logger.warning(f"Could not retrieve PaymentIntent {payment_intent_id}: {str(e)}")
+            
+            # Last resort: list subscriptions for this customer
+            if not subscription_id:
+                customer_id = invoice.get("customer")
+                if customer_id:
+                    try:
+                        subs_response = stripe.Subscription.list(customer=customer_id, limit=1)
+                        if subs_response.data:
+                            subscription_id = subs_response.data[0].id
+                            logger.info(f"DEBUG: Found subscription_id from customer's subscriptions: {subscription_id}")
+                    except Exception as e:
+                        logger.warning(f"Could not list subscriptions for customer {customer_id}: {str(e)}")
+            
             if subscription_id:
                 try:
                     subscription = stripe.Subscription.retrieve(subscription_id)
                     user_id = subscription.metadata.get("user_id")
                     plan_type = subscription.metadata.get("plan_type")
+
+                    logger.info(f"DEBUG: Retrieved subscription {subscription_id}. user_id={user_id}, plan_type={plan_type}, metadata={subscription.metadata}")
+                    
+                    # Fallback: derive from price_id or customer
                     if not user_id or not plan_type:
-                        price_id = subscription.items.data[0].price.id if subscription.items.data else None
-                        if price_id:
+                        logger.info(f"DEBUG: Attempting fallback...")
+                        if not plan_type and subscription.items.data:
+                            price_id = subscription.items.data[0].price.id
                             plan_type = get_plan_type_from_price_id(price_id)
+                            logger.info(f"DEBUG: Derived plan_type from price_id: {plan_type}")
+                        
+                        if not user_id:
                             customer = stripe.Customer.retrieve(subscription.customer)
                             user_id = customer.metadata.get("user_id")
-                    if user_id and plan_type and invoice.get("paid"):
+                            logger.info(f"DEBUG: Derived user_id from customer metadata: {user_id}")
+                    
+                    if user_id and plan_type:
                         logger.info(f"Processing paid invoice for subscription {subscription_id}, user {user_id}, plan {plan_type}")
                         # ✅ This is a SUCCESSFUL payment - sets userPaid=True
                         await firebase_repo.update_subscription(user_id, plan_type)
                         await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
+                        logger.info(f"✅ Successfully updated subscription for user {user_id} to plan {plan_type}")
                     else:
-                        logger.warning(f"Cannot update subscription {subscription_id}: user_id={user_id}, plan_type={plan_type}, paid={invoice.get('paid')}")
+                        logger.warning(f"Cannot update subscription {subscription_id}: user_id={user_id}, plan_type={plan_type}")
                 except Exception as e:
-                    logger.error(f"Error processing invoice payment succeeded event: {str(e)}")
+                    logger.error(f"Error processing invoice.paid event: {str(e)}", exc_info=True)
+            else:
+                logger.warning(f"invoice.paid: Could not determine subscription_id for invoice {invoice.get('id')}")
 
+        elif event.type == "invoice.payment_succeeded":
+            # This may also fire, use same logic as invoice.paid
+            invoice = event_object
+            subscription_id = invoice.get("subscription")
+            
+            logger.info(f"DEBUG invoice.payment_succeeded: subscription_id={subscription_id}, invoice_id={invoice.get('id')}, customer={invoice.get('customer')}")
+            
+            # If subscription_id is None, try to find it via the payment intent
+            if not subscription_id:
+                payment_intent_id = invoice.get("payment_intent")
+                if payment_intent_id:
+                    try:
+                        pi = stripe.PaymentIntent.retrieve(payment_intent_id)
+                        subscription_id = pi.metadata.get("subscription_id_to_update") or pi.metadata.get("subscription_id")
+                        logger.info(f"DEBUG: Found subscription_id from PaymentIntent metadata: {subscription_id}")
+                    except Exception as e:
+                        logger.warning(f"Could not retrieve PaymentIntent {payment_intent_id}: {str(e)}")
+            
+            # Last resort: list subscriptions for this customer
+            if not subscription_id:
+                customer_id = invoice.get("customer")
+                if customer_id:
+                    try:
+                        subs_response = stripe.Subscription.list(customer=customer_id, limit=1)
+                        if subs_response.data:
+                            subscription_id = subs_response.data[0].id
+                            logger.info(f"DEBUG: Found subscription_id from customer's subscriptions: {subscription_id}")
+                    except Exception as e:
+                        logger.warning(f"Could not list subscriptions for customer {customer_id}: {str(e)}")
+            
+            if subscription_id:
+                try:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    user_id = subscription.metadata.get("user_id")
+                    plan_type = subscription.metadata.get("plan_type")
+
+                    logger.info(f"DEBUG: Retrieved subscription {subscription_id}. user_id={user_id}, plan_type={plan_type}, metadata={subscription.metadata}")
+                    
+                    # Fallback: derive from price_id or customer
+                    if not user_id or not plan_type:
+                        logger.info(f"DEBUG: Attempting fallback...")
+                        if not plan_type and subscription.items.data:
+                            price_id = subscription.items.data[0].price.id
+                            plan_type = get_plan_type_from_price_id(price_id)
+                            logger.info(f"DEBUG: Derived plan_type from price_id: {plan_type}")
+                        
+                        if not user_id:
+                            customer = stripe.Customer.retrieve(subscription.customer)
+                            user_id = customer.metadata.get("user_id")
+                            logger.info(f"DEBUG: Derived user_id from customer metadata: {user_id}")
+                    
+                    if user_id and plan_type:
+                        logger.info(f"Processing paid invoice for subscription {subscription_id}, user {user_id}, plan {plan_type}")
+                        # ✅ This is a SUCCESSFUL payment - sets userPaid=True
+                        await firebase_repo.update_subscription(user_id, plan_type)
+                        await supabase_repo.update_subscription(user_id, plan_type, PLAN_LIMITS)
+                        logger.info(f"✅ Successfully updated subscription for user {user_id} to plan {plan_type}")
+                    else:
+                        logger.warning(f"Cannot update subscription {subscription_id}: user_id={user_id}, plan_type={plan_type}")
+                except Exception as e:
+                    logger.error(f"Error processing invoice.payment_succeeded event: {str(e)}", exc_info=True)
+            else:
+                logger.warning(f"invoice.payment_succeeded: Could not determine subscription_id for invoice {invoice.get('id')}")
+        
+        
         elif event.type == "setup_intent.setup_failed":
             # Handle setup intent failure
             setup_intent = event_object
@@ -1198,7 +1346,7 @@ async def stripe_webhook(
                         try:
                             invoice = stripe.Invoice.pay(subscription.get("latest_invoice"))
                             logger.info(f"Paid invoice {subscription.get('latest_invoice')} for subscription {subscription_id}")
-                        except stripe.error.StripeError as e:
+                        except stripe.StripeError as e:
                             logger.error(f"Failed to pay invoice for subscription {subscription_id}: {str(e)}")
                             
                             await firebase_repo.update_subscription(user_id, "free")
@@ -1361,7 +1509,7 @@ async def stripe_webhook(
 
                 await firebase_repo.db.child("subscription_status").child(user_id).update(firebase_update_payload)
                     
-            except stripe.error.StripeError as e_stripe_sched:
+            except stripe.StripeError as e_stripe_sched:
                 logger.error(f"Webhook {event.type}: Stripe error processing schedule {schedule.id if schedule else 'N/A'}: {e_stripe_sched}. Event ID: {event.id if event else 'N/A'}", exc_info=True)
             except Exception as e:
                 logger.error(f"Webhook {event.type}: Error processing subscription schedule update for schedule {schedule.id if schedule else 'N/A'}: {str(e)}. Event ID: {event.id if event else 'N/A'}", exc_info=True)

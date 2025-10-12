@@ -17,7 +17,7 @@ async def get_subscription_prices():
     """Fetch available subscription plans from Stripe"""
     try:
         # Environment variables
-        STRIPE_API_KEY = os.getenv("PRODUCTION_STRIPE_API_KEY")
+        STRIPE_API_KEY = os.getenv("TEST_STRIPE_API_KEY")
 
         if not STRIPE_API_KEY:
             logger.error("Stripe API key is not set")
