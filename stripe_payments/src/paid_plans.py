@@ -1017,38 +1017,6 @@ async def stripe_webhook(
             plan_type = payment_intent.metadata.get("plan_type")  # Initialize here
             action = payment_intent.metadata.get("action")
 
-            # --- START: MORE ROBUST FALLBACK LOGIC ---
-            if not user_id or not plan_type:
-                logger.info(f"PI {payment_intent.id} is missing direct metadata. Checking associated invoice/subscription...")
-                invoice_id = payment_intent.get("invoice")
-                if invoice_id:
-                    try:
-                        invoice = stripe.Invoice.retrieve(invoice_id)
-                        subscription_id = invoice.get("subscription")
-                        if subscription_id:
-                            subscription = stripe.Subscription.retrieve(subscription_id, expand=['customer'])
-                            
-                            # First, try getting metadata from the subscription
-                            user_id = subscription.metadata.get("user_id")
-                            plan_type = subscription.metadata.get("plan_type")
-
-                            # If that fails, derive it from other objects
-                            if not user_id and subscription.customer:
-                                user_id = subscription.customer.metadata.get("user_id")
-                            
-                            if not plan_type and subscription.items.data:
-                                price_id = subscription.items.data[0].price.id
-                                plan_type = get_plan_type_from_price_id(price_id)
-
-                            if user_id and plan_type:
-                                logger.info(f"Successfully found user_id '{user_id}' and plan '{plan_type}' via fallback for PI {payment_intent.id}")
-                            
-                    except stripe.StripeError as e:
-                        logger.error(f"Stripe error during fallback lookup for PI {payment_intent.id}: {str(e)}")
-                    except Exception as e:
-                        logger.error(f"Unexpected error during fallback lookup for PI {payment_intent.id}: {str(e)}")
-            # --- END: MORE ROBUST FALLBACK LOGIC ---
-
             if action == "pending_subscription_upgrade":
                 subscription_id_to_update = payment_intent.metadata.get("subscription_id_to_update")
                 item_id_to_update = payment_intent.metadata.get("subscription_item_id_to_update")
@@ -1327,7 +1295,6 @@ async def stripe_webhook(
             else:
                 logger.warning("Could not determine user_id for subscription deletion event")
 
-
         elif event.type == "setup_intent.succeeded":
             setup_intent = event_object
             user_id = setup_intent.metadata.get("user_id")
@@ -1362,8 +1329,6 @@ async def stripe_webhook(
                     await supabase_repo.update_subscription(user_id, "free", PLAN_LIMITS)
                     raise HTTPException(status_code=500, detail=str(e))
         
-      
-
         elif event.type == 'subscription_schedule.updated':
             schedule = event_object
             current_time = int(time.time())
