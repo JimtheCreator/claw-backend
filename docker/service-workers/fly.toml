@@ -1,5 +1,5 @@
 # fly.toml for watchers-data-workers
-app = "watchers-data-workers"
+app = "data-workers"
 primary_region = "sin"
 
 [build]

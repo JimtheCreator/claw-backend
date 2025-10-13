@@ -36,7 +36,7 @@ class GlobalRateLimiter:
             self.second_window = deque()
             self.request_lock = asyncio.Lock()
             self._initialized = True
-            logger.info("Global rate limiter initialized")
+            logger.info("Global rate limiter initialized (SINGLETON)")
     
     async def acquire(self, weight: int = 1):
         """Acquire permission to make API request with given weight"""
@@ -130,6 +130,9 @@ class BinanceMarketData:
         'get_all_tickers': 40,
     }
     
+    # CLASS-LEVEL SINGLETON: All instances share the same limiter
+    _global_limiter = None
+    
     def __init__(self):
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_API_SECRET")
@@ -144,8 +147,11 @@ class BinanceMarketData:
         self._pool_lock = asyncio.Lock()
         self._init_task = None
         
-        # Rate limiting and circuit breaker
-        self.global_limiter = GlobalRateLimiter()
+        # Rate limiting and circuit breaker - USE SINGLETON
+        if BinanceMarketData._global_limiter is None:
+            BinanceMarketData._global_limiter = GlobalRateLimiter()
+        self.global_limiter = BinanceMarketData._global_limiter
+        
         self.circuit_breaker = CircuitBreaker()
         
         # WebSocket management
@@ -218,9 +224,7 @@ class BinanceMarketData:
         except Exception as e:
             logger.error(f"Error fetching all tickers: {e}")
             return []
-
-
-                
+           
     async def get_pooled_client(self):
         """Get a client from the pool"""
         if not self._connection_pool:
@@ -418,6 +422,76 @@ class BinanceMarketData:
                 "priceChangePercent": "0",
                 "quoteVolume": "0"
             }
+        
+    # In client.py - REMOVE the old get_websocket_connection_managed and 
+# get_websocket_connection methods, and replace with this:
+
+    async def get_websocket_connection_managed(self, stream_key: str, socket_url: str):
+        """
+        Get or create a WebSocket connection with unified abuse prevention.
+        This method ensures all WebSocket connections go through the same safeguards.
+        
+        NOTE: This is specifically for the WebSocket subscription manager.
+        Do NOT use this during client initialization.
+        """
+        async with self._websocket_lock:
+            # Check if connection already exists and is valid
+            if stream_key in self._websocket_connections:
+                ws = self._websocket_connections[stream_key]
+                try:
+                    # Try to verify it's still alive
+                    if ws and hasattr(ws, 'close') and not getattr(ws, 'closed', False):
+                        logger.info(f"Reusing existing WebSocket connection: {stream_key}")
+                        return ws
+                except:
+                    pass
+                # Remove dead connection
+                self._websocket_connections.pop(stream_key, None)
+            
+            # Check connection limit
+            active_connections = sum(
+                1 for ws in self._websocket_connections.values() 
+                if ws and not getattr(ws, 'closed', True)
+            )
+            
+            if active_connections >= self._max_websocket_connections:
+                # Close oldest connection
+                oldest_key = next(iter(self._websocket_connections), None)
+                if oldest_key:
+                    oldest_ws = self._websocket_connections.pop(oldest_key)
+                    if oldest_ws and hasattr(oldest_ws, 'close'):
+                        try:
+                            await oldest_ws.close()
+                        except:
+                            pass
+                    logger.info(f"Closed oldest WebSocket connection: {oldest_key}")
+            
+            # Create new connection
+            try:
+                logger.info(f"Creating new WebSocket connection: {stream_key} to {socket_url}")
+                websocket = await websockets.connect(
+                    socket_url,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    close_timeout=10
+                )
+                self._websocket_connections[stream_key] = websocket
+                logger.info(f"Created WebSocket connection: {stream_key}")
+                return websocket
+            except Exception as e:
+                logger.error(f"Failed to create WebSocket connection {stream_key}: {e}")
+                raise
+
+    async def remove_websocket_connection(self, stream_key: str):
+        """Remove a WebSocket connection from tracking"""
+        async with self._websocket_lock:
+            ws = self._websocket_connections.pop(stream_key, None)
+            if ws and hasattr(ws, 'close'):
+                try:
+                    await ws.close()
+                    logger.info(f"Closed WebSocket connection: {stream_key}")
+                except Exception as e:
+                    logger.error(f"Error closing WebSocket {stream_key}: {e}")
 
     async def get_tickers_batch(
         self, 
@@ -683,3 +757,17 @@ class BinanceMarketData:
         """Deprecated: Use search_symbols or get_tickers_batch instead"""
         logger.warning("get_ticker_data() is deprecated - use search_symbols() or get_tickers_batch()")
         return []
+    
+
+# ===================================================================
+# === GLOBAL RATE LIMITER INITIALIZATION ===========================
+# ===================================================================
+# Initialize the singleton global rate limiter with conservative defaults
+# shared across ALL BinanceMarketData instances in the entire application
+_global_rate_limiter = GlobalRateLimiter()
+_global_rate_limiter.max_requests_per_minute = 800   # Safe shared limit (Binance allows 1200)
+_global_rate_limiter.max_requests_per_second = 12    # Safe shared limit (Binance allows 20)
+
+logger.info("✅ Global rate limiter initialized with shared limits:")
+logger.info(f"   - {_global_rate_limiter.max_requests_per_minute} requests per minute")
+logger.info(f"   - {_global_rate_limiter.max_requests_per_second} requests per second")

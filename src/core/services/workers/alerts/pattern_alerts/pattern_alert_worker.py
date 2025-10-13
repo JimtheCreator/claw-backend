@@ -48,7 +48,6 @@ class PatternAlertWorker:
     def __init__(self, config: Optional[dict] = None):
         self.config = config or self._default_config()
         self.repo = SupabaseCryptoRepository()
-        self.binance_client = BinanceMarketData()
         self.pattern_detector = PatternDetector()
         self.redis_cache = redis_cache
         self._running_tasks: Dict[str, asyncio.Task] = {}

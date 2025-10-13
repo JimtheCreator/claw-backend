@@ -120,10 +120,6 @@ class StandaloneSparklineService:
             # Initialize Binance client with conservative settings
             self.binance_client = BinanceMarketData()
             
-            # Override with more conservative rate limits
-            self.binance_client.global_limiter.max_requests_per_minute = 600
-            self.binance_client.global_limiter.max_requests_per_second = 8
-            
             await self.binance_client.connect()
             logger.info("✅ Binance API connection established")
             

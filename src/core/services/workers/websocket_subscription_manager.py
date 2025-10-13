@@ -31,6 +31,7 @@ print(f"Added to Python path: {project_root}")
 
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
+from infrastructure.data_sources.binance.client import BinanceMarketData  # ADD THIS LINE
 
 # Configuration - Conservative Binance limits
 BINANCE_STREAM_URL = "wss://stream.binance.com:9443/stream"
@@ -45,18 +46,21 @@ MAX_SUBSCRIPTION_REQUESTS_PER_SECOND = 5  # Binance allows 10, we use 5
 MAX_SUBSCRIPTION_REQUESTS_PER_CONNECTION = 100  # Per hour, we track this
 
 class BinanceConnection:
-    """Represents a single WebSocket connection to Binance with its streams"""
+    """Represents a managed WebSocket connection via BinanceMarketData"""
     
-    def __init__(self, connection_id: int):
+    def __init__(self, connection_id: int, binance_client: BinanceMarketData):
         self.connection_id = connection_id
+        self.binance_client = binance_client  # Reference to managed client
+        self.stream_key = f"manager_conn_{connection_id}"
+        self.socket_url = BINANCE_STREAM_URL
         self.websocket = None
         self.active_streams = set()
         self.request_id = 1
         self.subscription_requests_count = 0
         self.last_hour_reset = time.time()
         self.is_connected = False
-        self.last_message_time = None  # Changed: Initialize as None
-        self.connection_time = None    # Added: Track when connection was established
+        self.last_message_time = None
+        self.connection_time = None
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 10
         
@@ -80,20 +84,17 @@ class BinanceConnection:
         self.subscription_requests_count += 1
         
     async def connect(self):
-        """Establish WebSocket connection"""
+        """Establish WebSocket connection via managed BinanceMarketData client"""
         try:
             logger.info(f"Connecting to Binance WebSocket (Connection {self.connection_id})...")
-            self.websocket = await websockets.connect(
-                BINANCE_STREAM_URL,
-                ping_interval=20,
-                ping_timeout=10,
-                close_timeout=10,
-                max_size=10**7,
-                compression=None
+            # Use the managed connection method instead of creating directly
+            self.websocket = await self.binance_client.get_websocket_connection_managed(
+                self.stream_key, 
+                self.socket_url
             )
             self.is_connected = True
-            self.connection_time = time.time()  # Track connection time
-            self.last_message_time = self.connection_time  # Initialize message time to connection time
+            self.connection_time = time.time()
+            self.last_message_time = self.connection_time
             self.reconnect_attempts = 0
             logger.info(f"Connection {self.connection_id} established successfully")
             
@@ -111,6 +112,8 @@ class BinanceConnection:
             except Exception as e:
                 logger.error(f"Error closing connection {self.connection_id}: {e}")
             finally:
+                # Remove from managed client's tracking
+                await self.binance_client.remove_websocket_connection(self.stream_key)
                 self.websocket = None
                 self.is_connected = False
                 self.active_streams.clear()
@@ -123,17 +126,24 @@ class BinanceConnection:
         
         if not self.websocket or not self.is_connected:
             logger.info(f"  - UNHEALTHY: websocket or connection missing")
+            self.is_connected = False  # Sync state
             return False
         
         try:
-            # FIX: Since `.open` and `.closed` attributes are missing, we'll use the
-            # more fundamental `.state` property. A connection is healthy only if its
-            # state is OPEN. We check the string name of the state enum member.
-            state_name = self.websocket.state.name
-            logger.info(f"  - websocket.state: {state_name}")
-            if state_name != 'OPEN':
+            # Check websocket state - handle both websockets lib and binance client
+            state_name = None
+            try:
+                state_name = self.websocket.state.name
+            except AttributeError:
+                # Binance client connection might not have .state
+                # In that case, trust self.is_connected flag
+                logger.info(f"  - websocket.state not available, relying on is_connected flag")
+                pass
+            
+            if state_name and state_name != 'OPEN':
                 logger.info(f"  - UNHEALTHY: websocket is in state '{state_name}'")
                 return False
+                
         except Exception as e:
             logger.info(f"  - UNHEALTHY: error checking websocket status: {e}")
             return False
@@ -157,7 +167,6 @@ class BinanceConnection:
             if self.last_message_time:
                 time_since_last_message = now - self.last_message_time
                 logger.info(f"  - time since last message: {time_since_last_message:.1f}s")
-                # Check if we haven't received messages for too long (5 minutes)
                 if time_since_last_message > 300:
                     logger.warning(f"Connection {self.connection_id}: No messages received for {time_since_last_message:.0f} seconds with {active_stream_count} active streams")
                     logger.info(f"  - UNHEALTHY: no messages for too long")
@@ -165,17 +174,20 @@ class BinanceConnection:
             else:
                 logger.info(f"  - last_message_time is None (streams exist but no messages yet)")
         
-        # If no active streams, connection is healthy as long as websocket is open
         logger.info(f"  - HEALTHY: all checks passed")
         return True
 
 
+
 class WebsocketSubscriptionManager:
     def __init__(self):
-        # Connection pool management
+        # Initialize the Binance client for centralized rate limiting and connection management
+        self.binance_client = BinanceMarketData()
+        
+        # Connection pool management (now using managed connections)
         self.connections: List[BinanceConnection] = []
         self.active_streams = set()
-        self.stream_to_connection = {}  # Track which connection handles which stream
+        self.stream_to_connection = {}
         
         # Request rate limiting (global across all connections)
         self.request_times = deque(maxlen=100)
@@ -192,40 +204,42 @@ class WebsocketSubscriptionManager:
         self.control_task = None
         self.health_task = None
         self.subscription_processor_task = None
-
-
         self.message_handler_tasks: Dict[int, asyncio.Task] = {}
+
+
+
         
     async def initialize(self):
-        """Initialize the connection pool"""
+        """Initialize the connection pool with managed BinanceMarketData client"""
         logger.info(f"Initializing {MAX_CONNECTIONS} Binance WebSocket connections...")
         
+        # Connect the Binance client to ensure rate limiter and connection management ready
+        await self.binance_client.connect()
+        await self.binance_client.init_connection_pool()
+        logger.info("Binance client connected and pool initialized")
+        
+        # Create BinanceConnection objects, but don't connect them yet
+        # They'll establish WebSocket connections on-demand when needed
         for i in range(MAX_CONNECTIONS):
-            connection = BinanceConnection(i)
-            await connection.connect()
+            connection = BinanceConnection(i, self.binance_client)
             self.connections.append(connection)
-            
-        logger.info(f"Successfully initialized {len(self.connections)} connections")
+            logger.info(f"Created BinanceConnection {i} (not yet connected)")
+        
+        logger.info(f"Created {len(self.connections)} connection objects (connecting on-demand)")
         
         # Give connections a moment to stabilize
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
+
+    async def _rate_limit_subscription_request(self):
+        """
+        Use the shared global rate limiter from BinanceMarketData.
+        Subscription requests use minimal weight, so we use weight=1.
+        """
+        # WebSocket subscription requests have minimal impact, but we still track them
+        # to prevent abuse. Binance allows 10 subscription requests per second globally.
+        await self.binance_client.global_limiter.acquire(weight=1)
     
-    def _can_make_global_request(self) -> bool:
-        """Global rate limiting check"""
-        now = time.time()
-        
-        # Reset per-second counter
-        if now - self.last_second_reset >= 1.0:
-            self.global_request_count = 0
-            self.last_second_reset = now
-        
-        return self.global_request_count < MAX_SUBSCRIPTION_REQUESTS_PER_SECOND
-    
-    def _record_global_request(self):
-        """Record a global subscription request"""
-        self.global_request_count += 1
-        self.request_times.append(time.time())
-    
+
     def _find_best_connection_for_streams(self, streams: List[str]) -> Optional[BinanceConnection]:
         """Find the best connection to handle new streams"""
         # First, try to find a connection that can handle all streams
@@ -248,7 +262,14 @@ class WebsocketSubscriptionManager:
     
     async def _send_subscription_request(self, connection: BinanceConnection, method: str, streams: List[str]) -> bool:
         """Send subscription/unsubscription request to a specific connection"""
-        if not connection.is_healthy() or not connection.can_make_request() or not self._can_make_global_request():
+        if not connection.is_healthy() or not connection.can_make_request():
+            return False
+        
+        # ADD: Use shared rate limiter before sending
+        try:
+            await self._rate_limit_subscription_request()
+        except Exception as e:
+            logger.error(f"Rate limit check failed: {e}")
             return False
         
         try:
@@ -262,7 +283,7 @@ class WebsocketSubscriptionManager:
             
             connection.request_id += 1
             connection.record_request()
-            self._record_global_request()
+            # REMOVE: self._record_global_request()  # No longer needed
             
             logger.info(f"Sent {method} for {len(streams)} streams on connection {connection.connection_id}")
             return True
@@ -674,7 +695,6 @@ class WebsocketSubscriptionManager:
             await redis_cache.initialize()
             await self.initialize()
             
-            
             # Start background tasks
             background_tasks = [
                 asyncio.create_task(self._handle_control_messages()),
@@ -710,6 +730,10 @@ class WebsocketSubscriptionManager:
             # Clean shutdown
             for connection in self.connections:
                 await connection.disconnect()
+            
+            # ADD: Disconnect the Binance client
+            await self.binance_client.disconnect()
+            logger.info("Binance client disconnected")
 
 if __name__ == "__main__":
     manager = WebsocketSubscriptionManager()

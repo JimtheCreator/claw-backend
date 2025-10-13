@@ -1,5 +1,5 @@
 # fly.toml for watchers-core-api
-app = "watchers-core-api"
+app = "prod-core-api"
 primary_region = "sin"
 
 [build]

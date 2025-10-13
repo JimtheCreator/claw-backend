@@ -50,6 +50,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY stripe_payments/ ./stripe_payments/
 
+# Copy Firebase credentials
+COPY src/infrastructure/database/firebase/secrets/watchers-db-firebase-credentials.json /app/src/infrastructure/database/firebase/secrets/watchers-db-firebase-credentials.json
+
 # Create supervisor directories
 RUN mkdir -p /var/log/supervisor
 

@@ -4,6 +4,10 @@ import sys
 import os
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 # Simple absolute path setup
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /path/to/src
@@ -24,9 +28,19 @@ from presentation.api.routes.alerts_endpoints.price_alerts import router as pric
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
+async def _rate_limit_handler(request, exc):
+    """Handle rate limit exceeded errors"""
+    return JSONResponse(
+        status_code=429,
+        content={"error": "Rate limit exceeded", "detail": str(exc.detail)}
+    )
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 🚀 Startup
+    # Startup
     try:
         configure_logging()
         logger.info("Starting application...")
@@ -39,12 +53,12 @@ async def lifespan(app: FastAPI):
         # REMOVED: PriceAlertManager startup logic
 
     except Exception as e:
-        logger.error(f"Failed to preload tickers: {e}")
+        logger.error(f"Failed to initialize services: {e}")
         # In a real-world scenario, you might want to handle this more gracefully
         # For now, we'll let the application fail to start if critical services are unavailable
         raise
 
-    yield  # 🧘 Everything after this happens at shutdown
+    yield  # Everything after this happens at shutdown
     
     # REMOVED: Graceful shutdown for PriceAlertManager
 
@@ -52,14 +66,18 @@ async def lifespan(app: FastAPI):
     logger.info("Binance connection pool closed.")
     await redis_cache.close()
     logger.info("Redis cache connection closed.")
-    # 🚪 Shutdown
+    # Shutdown
     logger.info("Shutting down application...")
 
 app = FastAPI(
     title="Claw-Backend",
-    version="0.2.0-realtime", # New version!
+    version="0.2.0-realtime",
     lifespan=lifespan
 )
+
+# Attach rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 # Add CORS middleware
 app.add_middleware(

@@ -1,6 +1,8 @@
 # src/presentation/api/routes/market_data.py
-from fastapi import WebSocket, WebSocketDisconnect
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -341,10 +343,22 @@ async def delete_all_market_data_endpoint(
         
     return result
 
+
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return {"error": "Too many requests", "detail": str(exc.detail)}
+
+
 @router.get("/cryptos/search")
-async def search_crypto_pairs(query: str, limit: int = 20):
+@limiter.limit("10/minute")  # Max 10 searches per IP per minute
+async def search_crypto_pairs(request: Request, query: str, limit: int = 20):
     """
-    Search for cryptocurrency pairs by name or symbol
+    Search for cryptocurrency pairs by name or symbol.
+    Rate limited to 10 requests per minute per IP.
     """
     try:
         if not query or len(query) < 2:

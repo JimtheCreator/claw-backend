@@ -82,12 +82,11 @@ class SupabaseCryptoRepository(CryptoRepository):
 
             await self.insert_subscription(user_id, plan_type, PLAN_LIMITS)
 
-    async def update_subscription(self, user_id: str, plan_type: str, PLAN_LIMITS: dict) -> bool:
+    async def update_subscription(self, user_id: str, plan_type: str, PLAN_LIMITS: dict) -> tuple:
         """Update or insert user subscription data in Supabase"""
         try:
             limits = PLAN_LIMITS.get(plan_type, PLAN_LIMITS["test_drive"])
-            # When a plan is updated, we reset the usage counts.
-            # You might want to adjust this logic based on your business rules.
+            
             subscription_data = {
                 "user_id": user_id,
                 "plan_type": plan_type,
@@ -95,27 +94,25 @@ class SupabaseCryptoRepository(CryptoRepository):
                 "pattern_detection_limit": limits["pattern_detection_limit"],
                 "watchlist_limit": limits["watchlist_limit"],
                 "market_analysis_limit": limits["market_analysis_limit"],
-                "trendline_analysis_limit": limits["trendline_analysis_limit"], # New
-                "sr_analysis_limit": limits["sr_analysis_limit"],             # New
-                "trendline_analysis_count": 0, # Reset count on update
-                "sr_analysis_count": 0,        # Reset count on update
+                "trendline_analysis_limit": limits["trendline_analysis_limit"],
+                "sr_analysis_limit": limits["sr_analysis_limit"],
+                "trendline_analysis_count": 0,
+                "sr_analysis_count": 0,
                 "journaling_enabled": limits["journaling_enabled"],
                 "video_download_limit": limits["video_download_limit"],
-                "updated_at": datetime.now().isoformat()
+                "updated_at": datetime.now().isoformat(),
+                "created_at": datetime.now().isoformat()  # Will only be used on insert
             }
-            result = self.client.table(self.subscription_table).select("*").eq("user_id", user_id).execute()
-            if hasattr(result, 'error') and result.error:
-                logger.error(f"Supabase query error: {result.error}")
-                raise HTTPException(status_code=500, detail="Database access failed")
-
-            if len(result.data) > 0:
-                self.client.table("subscriptions").update(subscription_data).eq("user_id", user_id).execute()
-            else:
-                subscription_data["created_at"] = datetime.now().isoformat()
-                self.client.table("subscriptions").insert(subscription_data).execute()
+            
+            # Upsert handles both insert and update atomically
+            self.client.table("subscriptions").upsert(
+                subscription_data,
+                on_conflict="user_id"
+            ).execute()
 
             logger.info(f"Supabase subscription updated for user {user_id}: {plan_type}")
             return True, limits
+            
         except Exception as e:
             logger.error(f"Supabase update error for user {user_id}: {str(e)}")
             raise

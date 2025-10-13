@@ -1,13 +1,11 @@
-# fly.toml app configuration file generated for watchers-data-storage on 2025-09-10T02:18:33+03:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'watchers-data-storage'
+app = 'data-storage'
 primary_region = "sin"
 
 [build]
   image = 'influxdb:2.7-alpine'
+
+[env]
+  INFLUXDB_HTTP_BIND_ADDRESS = "0.0.0.0:8086"
 
 [[mounts]]
   source = 'influxdb_data'
