@@ -21,35 +21,34 @@ from typing import Optional, List
 
 router = APIRouter(tags=["Stripe Paid Plans"])
 
-
 # PRODUCTION STRIPE KEYS
-# STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
-# stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
-# WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
-
-# # Define mapping between plan types and Stripe price IDs
-# PLAN_PRICE_IDS = {
-#     "test_drive": os.getenv("PRODUCTION_TEST_DRIVE_PRICE_ID"),
-#     "starter_weekly": os.getenv("PRODUCTION_STARTER_WEEKLY_PRICE_ID"),
-#     "starter_monthly": os.getenv("PRODUCTION_STARTER_MONTHLY_PRICE_ID"),
-#     "pro_weekly": os.getenv("PRODUCTION_PRO_WEEKLY_PRICE_ID"),
-#     "pro_monthly": os.getenv("PRODUCTION_PRO_MONTHLY_PRICE_ID")
-# }
-
-
-# TEST STRIPE KEYS
-STRIPE_PUBLISHABLE_KEY = os.getenv("TEST_STRIPE_PUBLISHABLE_KEY")
-stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
-WEBHOOK_SECRET = os.getenv("TEST_STRIPE_WEBHOOK_SECRET_SNAPSHOT_PAYLOAD_STYLE")
+STRIPE_PUBLISHABLE_KEY = os.getenv("PRODUCTION_STRIPE_PUBLISHABLE_KEY")
+stripe.api_key = os.getenv("PRODUCTION_STRIPE_API_KEY")
+WEBHOOK_SECRET = os.getenv("PRODUCTION_STRIPE_WEBHOOK_SECRET")
 
 # Define mapping between plan types and Stripe price IDs
 PLAN_PRICE_IDS = {
-    "test_drive": os.getenv("TEST_TEST_DRIVE_PRICE_ID"),
-    "starter_weekly": os.getenv("TEST_STARTER_WEEKLY_PRICE_ID"),
-    "starter_monthly": os.getenv("TEST_STARTER_MONTHLY_PRICE_ID"),
-    "pro_weekly": os.getenv("TEST_PRO_WEEKLY_PRICE_ID"),
-    "pro_monthly": os.getenv("TEST_PRO_MONTHLY_PRICE_ID")
+    "test_drive": os.getenv("PRODUCTION_TEST_DRIVE_PRICE_ID"),
+    "starter_weekly": os.getenv("PRODUCTION_STARTER_WEEKLY_PRICE_ID"),
+    "starter_monthly": os.getenv("PRODUCTION_STARTER_MONTHLY_PRICE_ID"),
+    "pro_weekly": os.getenv("PRODUCTION_PRO_WEEKLY_PRICE_ID"),
+    "pro_monthly": os.getenv("PRODUCTION_PRO_MONTHLY_PRICE_ID")
 }
+
+
+# TEST STRIPE KEYS
+# STRIPE_PUBLISHABLE_KEY = os.getenv("TEST_STRIPE_PUBLISHABLE_KEY")
+# stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
+# WEBHOOK_SECRET = os.getenv("TEST_STRIPE_WEBHOOK_SECRET_SNAPSHOT_PAYLOAD_STYLE")
+
+# # Define mapping between plan types and Stripe price IDs
+# PLAN_PRICE_IDS = {
+#     "test_drive": os.getenv("TEST_TEST_DRIVE_PRICE_ID"),
+#     "starter_weekly": os.getenv("TEST_STARTER_WEEKLY_PRICE_ID"),
+#     "starter_monthly": os.getenv("TEST_STARTER_MONTHLY_PRICE_ID"),
+#     "pro_weekly": os.getenv("TEST_PRO_WEEKLY_PRICE_ID"),
+#     "pro_monthly": os.getenv("TEST_PRO_MONTHLY_PRICE_ID")
+# }
 
 # Define new Pydantic models for the promo code validation
 class PromoCodeRequest(BaseModel):
