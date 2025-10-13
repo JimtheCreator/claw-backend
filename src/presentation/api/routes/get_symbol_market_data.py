@@ -200,18 +200,12 @@ async def websocket_stream_market_data(
             else:
                 logger.warning(f"Could not retrieve initial candles for {symbol}")
 
-        # --- The rest of the function remains exactly the same ---
-        # (Subscription, message forwarding, and cleanup logic)
-
+        # === MODIFICATION START ===
+        # Unconditionally publish subscribe requests. The manager will handle deduplication.
         for stream in streams_to_subscribe:
-            subscribers_key = f"subscribers:{stream}"
-            current_subs = await redis_cache.incr(subscribers_key)
-            logger.info(f"Stream {stream} now has {current_subs} subscribers")
-            if current_subs == 1:
-                await redis_cache.publish(CONTROL_CHANNEL, f"subscribe:{stream}")
-                logger.info(f"Published SUBSCRIBE command for new stream: {stream}")
-            else:
-                logger.info(f"Stream {stream} already active with {current_subs} subscribers")
+            await redis_cache.publish(CONTROL_CHANNEL, f"subscribe:{stream}")
+            logger.info(f"Published SUBSCRIBE request for stream: {stream}")
+        # === MODIFICATION END ===
 
         data_channels = [f"{DATA_CHANNEL_PREFIX}{s}" for s in streams_to_subscribe]
         logger.info(f"Subscribing to Redis channels: {data_channels}")
@@ -257,34 +251,31 @@ async def websocket_stream_market_data(
                     last_ping = current_time
             except asyncio.TimeoutError:
                 continue
-            # MODIFICATION HERE: Catch RuntimeError alongside WebSocketDisconnect
             except (WebSocketDisconnect, RuntimeError) as e:
                 logger.info(f"Client {client_id} disconnected for {symbol}. Reason: {type(e).__name__}")
                 break
             except json.JSONDecodeError as e:
-                # Keep this specific exception for bad data from Redis
                 logger.error(f"Failed to parse Redis message: {e}")
-                continue # Continue to the next message
+                continue 
             except Exception as e:
                 logger.error(f"An unexpected error occurred in the WebSocket message loop: {e}")
-                break # Break on other unexpected errors
+                break 
     except WebSocketDisconnect:
         logger.info(f"Client {client_id} disconnected for {symbol}")
     except Exception as e:
         logger.error(f"WebSocket error for {symbol}: {str(e)}")
     finally:
         logger.info(f"Cleaning up resources for {client_id}")
+        # === MODIFICATION START ===
+        # Unconditionally publish unsubscribe requests. The manager handles the logic.
         for stream in streams_to_subscribe:
             try:
-                subscribers_key = f"subscribers:{stream}"
-                remaining_subs = await redis_cache.decr(subscribers_key)
-                logger.info(f"Stream {stream} now has {remaining_subs} subscribers after cleanup")
-                if remaining_subs <= 0:
-                    await redis_cache.publish(CONTROL_CHANNEL, f"unsubscribe:{stream}")
-                    logger.info(f"Published UNSUBSCRIBE command for idle stream: {stream}")
-                    await redis_cache.delete_key(subscribers_key)
+                await redis_cache.publish(CONTROL_CHANNEL, f"unsubscribe:{stream}")
+                logger.info(f"Published UNSUBSCRIBE request for stream: {stream}")
             except Exception as e:
                 logger.error(f"Error during cleanup for stream {stream}: {e}")
+        # === MODIFICATION END ===
+
         if redis_pubsub:
             try:
                 await redis_pubsub.unsubscribe()
@@ -348,10 +339,8 @@ async def delete_all_market_data_endpoint(
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return {"error": "Too many requests", "detail": str(exc.detail)}
-
 
 @router.get("/cryptos/search")
 @limiter.limit("10/minute")  # Max 10 searches per IP per minute
