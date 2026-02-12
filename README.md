@@ -1,101 +1,166 @@
-# Claw Backend
+# Claw Backend (Watchers)
 
-## Overview
-**Claw Backend** is a **FastAPI-based** system for market trend analysis and trading pattern detection. It powers Claw’s AI-driven insights, tracking candlesticks, trends, and breakouts for real-time predictions. Uses **Redis** for caching, **PostgreSQL** for storage, **Celery** for task processing, and **InfluxDB** for time-series data. **Nginx** handles routing, with **Docker** orchestrating deployment. 🚀
+Claw Backend is a high-performance, distributed financial intelligence platform designed for real-time market analysis and algorithmic pattern detection.
 
----
-
-## ⚙️ Tech Stack & Architecture
-
-| Component        | Technology Used  | Purpose |
-|-----------------|-----------------|---------|
-| **Backend**     | FastAPI          | High-performance API framework |
-| **Database**    | PostgreSQL, InfluxDB | Stores relational and time-series data |
-| **Caching**     | Redis            | Caching & task queuing |
-| **Deployment**  | Docker            | Containerization for deployment |
-| **Task Queue**  | Celery           | Asynchronous processing |
-| **Data Science**| Pandas, NumPy, TA-Lib | Market analytics |
-| **Security**    | Nginx, JWT Authentication (Planned) | User authentication & access control Reverse proxy and load balancing |
-| **Monitoring**  | Prometheus       | Performance monitoring & logging |
+Unlike traditional monolithic screeners, Claw operates as a mesh of microservices, utilizing an event-driven architecture to ingest high-frequency market data, process complex quantitative models, and deliver actionable "Trader-Aware" insights via API and Telegram.
 
 ---
 
+## 🏗 System Architecture
 
+The system is architected as a distributed cluster of services, ensuring that heavy data science computations do not block the responsiveness of the core API.
 
-## Project Structure
-```plaintext
+---
+
+## 🔌 Core Microservices
+
+**Core API (core-api):** A FastAPI gateway that handles client connections, WebSocket streaming, and orchestrates user requests. It serves as the "brain" for routing but delegates heavy lifting.
+
+**Data Workers (data-workers):** A scalable fleet of Celery workers. These nodes perform the CPU-intensive tasks:
+- Ingesting real-time crypto/stock data.
+- Running the Trader-Aware Analysis engine.
+- Calculating Swing Highs/Lows, ATR, and other technical indicators.
+
+**Notification Engine:** Decoupled handlers for delivering alerts via Telegram and Firebase, ensuring signals are pushed instantly upon pattern confirmation.
+
+---
+
+## 🧠 Data Science & ML-Hybrid Engine
+
+Claw goes beyond simple if/else indicators by implementing a Trader-Aware Scoring System—a hybrid of quantitative analysis and heuristic modeling:
+
+- **Contextual Pattern Detection:** Patterns (Harmonic, Chart, Candlestick) are not just "found"; they are validated against support/resistance zones and trend direction.
+- **Multi-Factor Scoring:** Every setup is graded (0-100%) based on Trend Alignment, Zone Relevance, and Candle Confirmation using weighted algorithms.
+- **Zone Clustering:** Uses statistical clustering (via scikit-learn logic) to identify high-probability Supply/Demand zones dynamically.
+
+---
+
+## ⚙️ Tech Stack
+
+### Backend & Infrastructure
+
+| Component | Technology | Role |
+|---|---:|---|
+| API Framework | FastAPI | Async REST & WebSocket endpoints |
+| Task Queue | Celery / message broker | Distributed background processing |
+| Message Broker | Redis / PubSub | Pub/Sub, Caching, and Task Brokerage |
+| Containerization | Docker / Docker Compose | Service orchestration (core-api vs workers) |
+| Reverse Proxy | Nginx / Traefik | Load balancing and routing |
+
+### Data Persistence
+
+| Component | Technology | Role |
+|---|---:|---|
+| Time Series | InfluxDB / Timescale | Storing OHLCV and high-frequency metric data |
+| Relational | Postgres / Supabase | User data, payments, and configuration |
+
+### Data Science & Analytics
+
+| Component | Technology | Role |
+|---|---:|---|
+| Quant Analysis | Pandas, NumPy, SciPy | Vectorized market data manipulation |
+| Indicators | TA-Lib | Technical analysis primitives |
+| ML / Clustering | Scikit-Learn | Adaptive thresholding and zone clustering |
+
+---
+
+## 📂 Project Structure
+
+```
 Claw/
-├── docker-compose.yml       # Service orchestration (Postgres, Redis, etc.)
-├── Makefile                 # Useful CLI shortcuts
-├── requirements.txt         # Dependencies
+├── docker/                  # Docker contexts for specific microservices
+│   ├── core-api/            # API Gateway container config
+│   ├── service-workers/     # Background worker container config
+│   ├── influxdb/            # Time-series DB setup
+│   └── redis/               # Broker setup
 │
-├── src/                     # Core application logic
-│   ├── app.py               # FastAPI application entry point
-│   ├── common/              # Utilities, logging, and shared functions
-│   ├── core/                # Business logic, pattern detection
-│   ├── infrastructure/      # Database, APIs, and external integrations
-│   ├── presentation/        # API routes, middleware, and schemas
+├── src/
+│   ├── core/
+│   │   ├── engines/         # The heavy lifters (PatternEngine, ChartEngine)
+│   │   ├── services/        # Business logic (Signals, Notifications)
+│   │   └── use_cases/       # Domain logic (Trader-Aware Analysis Pipeline)
+│   │       ├── trend_detector.py    # Market structure identification
+│   │       ├── scorer.py            # The "ML-ish" weighted scoring logic
+│   │       └── pattern_scanner.py   # Distributed scanning logic
+│   │
+│   ├── presentation/        # API Routes (REST + WebSockets)
+│   └── infrastructure/      # DB adapters (Supabase, Influx, Redis)
 │
-├── tests/                   # Test suite
-│   ├── unit/                # Unit tests
-│   ├── integration/         # Integration tests
-│
-├── scripts/                 # Utility scripts
-│   ├── data/                # Data ingestion and processing
-│   ├── db/                  # Database migrations and management
-│
-├── docker/                  # Docker configurations
-│   ├── nginx.conf           # Reverse proxy settings
-│   ├── postgres/            # Database setup
-│   ├── redis/               # Redis setup
-│
-├── docs/                    # Documentation
-│   ├── API.md               # API endpoints and usage
-│   ├── trading_patterns.md  # Market strategies and insights
-│
-├── telegram/                # Telegram bot integration
-├── payments/                # Payment processing logic
-└── .github/                 # CI/CD workflows
+├── telegram/                # Telegram Bot service (standalone capability)
+└── requirements.txt         # Production dependencies
 ```
 
-## Installation & Setup
-### 1. Clone the Repository
-```sh
-git clone https://github.com/yourusername/Claw-Backend.git
-cd Claw-Backend
-```
+---
 
-### 2. Create a Virtual Environment
-```sh
-python -m venv .venv
-source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-```
+## 🚀 Getting Started
 
-### 3. Install Dependencies
-```sh
-pip install -r requirements.txt
-```
+Because this is a distributed system, you are spinning up a mesh of containers rather than a single script.
 
-### 4. Set Up Environment Variables
-Copy the `.env.example` file and configure necessary settings:
-```sh
+### 1. Prerequisites
+
+- Docker & Docker Compose
+- Python 3.10+ (for local debugging)
+- External API Keys (Binance, Telegram, Stripe)
+
+### 2. Environment Configuration
+
+Create a `.env` file from the example:
+
+```bash
 cp .env.example .env
 ```
 
-### 5. Run the Application with Docker
-```sh
-docker-compose up --build
+Ensure you populate `REDIS_HOST`, `INFLUXDB_URL`, and your market data provider keys.
+
+### 3. Launching the Cluster
+
+Use Docker Compose to spin up the entire stack (API, Workers, DBs, Cache):
+
+```bash
+# Build and start all services in detached mode
+docker-compose up --build -d
 ```
 
-## Deployment
-To deploy to production, ensure you configure Nginx and database settings properly before running:
-```sh
-docker-compose -f docker-compose.prod.yml up -d
+**Services created:**
+- `core-api`: Accessible at http://localhost:8000
+- `data-workers`: Background logs available via `docker logs -f watchers-data-workers-1`
+- `redis`: Port 6379
+- `influxdb`: Port 8086
+
+### 4. Running Locally (Development)
+
+If you need to debug the Data Science logic without the full Docker overhead, you can run the analyzer directly:
+
+```bash
+# Install specific DS dependencies
+pip install pandas numpy scikit-learn ta-lib
+
+# Run the analysis test suite
+python tests/integration/test_pattern_detection_workflow.py
 ```
 
-## Contributing
-1. Fork the repository
-2. Create a new branch (`feature/my-feature`)
-3. Commit your changes (`git commit -m "Add new feature"`)
-4. Push the branch (`git push origin feature/my-feature`)
-5. Open a Pull Request
+---
+
+## 📊 The "Trader-Aware" Engine
+
+This backend features a dedicated system for Trader-Aware Analysis, documented in detail in `TRADER_AWARE_ANALYSIS_README.md`.
+
+**Key Capabilities:**
+- **Trend & Swing Analysis:** Auto-detection of HH/HL (Higher Highs/Lows) market structure.
+- **Adaptive Scoring:** A setup is only flagged if it meets a dynamic confidence threshold derived from multiple data points.
+- **Conflict Resolution:** A hierarchical priority system (Harmonic > Chart > Candlestick) ensures users aren't flooded with conflicting signals.
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repo.
+2. Feature Branch: Create a branch for your microservice feature (e.g., `feature/new-worker-logic`).
+3. Tests: Ensure `tests/unit` pass.
+4. PR: Submit a Pull Request with a description of the architectural changes.
+
+---
+
+## 📜 License
+
+MIT License
