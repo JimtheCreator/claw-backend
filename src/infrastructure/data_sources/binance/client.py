@@ -9,76 +9,23 @@ import websockets
 import asyncio
 import json
 from datetime import datetime, timezone
-from collections import deque
 import time
+
+from infrastructure.database.redis.rate_limiter import redis_rate_limiter
 
 
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-
-class GlobalRateLimiter:
-    """Global rate limiter to prevent API bans across all instances"""
-    _instance = None
-    _lock = asyncio.Lock()
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-    
-    def __init__(self):
-        if not self._initialized:
-            self.max_requests_per_minute = 1000  # Conservative limit (Binance allows 1200)
-            self.max_requests_per_second = 15    # Conservative limit (Binance allows 20)
-            self.minute_window = deque()
-            self.second_window = deque()
-            self.request_lock = asyncio.Lock()
-            self._initialized = True
-            logger.info("Global rate limiter initialized (SINGLETON)")
-    
-    async def acquire(self, weight: int = 1):
-        """Acquire permission to make API request with given weight"""
-        async with self.request_lock:
-            now = time.time()
-            
-            # Clean old requests from windows
-            self._clean_windows(now)
-            
-            # Check if we can make this request
-            current_minute_weight = sum(req[1] for req in self.minute_window)
-            current_second_weight = sum(req[1] for req in self.second_window)
-            
-
-            if current_minute_weight + weight > self.max_requests_per_minute:
-                if self.minute_window:  # only wait if deque has entries
-                    wait_time = 60 - (now - self.minute_window[0][0])
-                    logger.warning(f"Rate limit: waiting {wait_time:.2f}s for minute window")
-                    await asyncio.sleep(max(wait_time, 0))
-                    return await self.acquire(weight)
-
-            if current_second_weight + weight > self.max_requests_per_second:
-                if self.second_window:  # only wait if deque has entries
-                    wait_time = 1 - (now - self.second_window[0][0])
-                    logger.warning(f"Rate limit: waiting {wait_time:.2f}s for second window")
-                    await asyncio.sleep(max(wait_time, 0))
-                    return await self.acquire(weight)
-
-            
-            # Record the request
-            self.minute_window.append((now, weight))
-            self.second_window.append((now, weight))
-    
-    def _clean_windows(self, now: float):
-        """Remove old requests from tracking windows"""
-        # Clean minute window
-        while self.minute_window and now - self.minute_window[0][0] >= 60:
-            self.minute_window.popleft()
-        
-        # Clean second window
-        while self.second_window and now - self.second_window[0][0] >= 1:
-            self.second_window.popleft()
+# NOTE: The in-process GlobalRateLimiter that used to live here has been
+# removed. It was a Python singleton, which only coordinates requests
+# within a single OS process — with ~7 separate processes across 2 Fly
+# apps independently calling Binance REST endpoints, each had its own
+# private budget and none of them knew about the others' usage. Binance
+# bans by IP, not by process, so that meant the "global" limiter was not
+# actually global. Rate limiting is now handled by
+# infrastructure.database.redis.rate_limiter.redis_rate_limiter, which
+# keeps the counters in Redis so every process shares one real budget.
 
 
 class CircuitBreaker:
@@ -130,9 +77,6 @@ class BinanceMarketData:
         'get_all_tickers': 40,
     }
     
-    # CLASS-LEVEL SINGLETON: All instances share the same limiter
-    _global_limiter = None
-    
     def __init__(self):
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_API_SECRET")
@@ -147,10 +91,10 @@ class BinanceMarketData:
         self._pool_lock = asyncio.Lock()
         self._init_task = None
         
-        # Rate limiting and circuit breaker - USE SINGLETON
-        if BinanceMarketData._global_limiter is None:
-            BinanceMarketData._global_limiter = GlobalRateLimiter()
-        self.global_limiter = BinanceMarketData._global_limiter
+        # Rate limiting: shared across ALL processes/machines via Redis.
+        # See infrastructure/database/redis/rate_limiter.py for why this
+        # replaced the old in-process singleton.
+        self.global_limiter = redis_rate_limiter
         
         self.circuit_breaker = CircuitBreaker()
         
@@ -760,14 +704,15 @@ class BinanceMarketData:
     
 
 # ===================================================================
-# === GLOBAL RATE LIMITER INITIALIZATION ===========================
+# === GLOBAL RATE LIMITER =========================================
 # ===================================================================
-# Initialize the singleton global rate limiter with conservative defaults
-# shared across ALL BinanceMarketData instances in the entire application
-_global_rate_limiter = GlobalRateLimiter()
-_global_rate_limiter.max_requests_per_minute = 800   # Safe shared limit (Binance allows 1200)
-_global_rate_limiter.max_requests_per_second = 12    # Safe shared limit (Binance allows 20)
-
-logger.info("✅ Global rate limiter initialized with shared limits:")
-logger.info(f"   - {_global_rate_limiter.max_requests_per_minute} requests per minute")
-logger.info(f"   - {_global_rate_limiter.max_requests_per_second} requests per second")
+# Real coordination now happens in Redis — see
+# infrastructure/database/redis/rate_limiter.py. The module-level
+# in-process limiter that used to be initialized here was never actually
+# read by any acquire() call in this file; it just logged a reassuring
+# message on import. Removed rather than left as a red herring.
+logger.info(
+    "✅ Binance client using Redis-backed global rate limiter "
+    f"({redis_rate_limiter.max_per_minute}/min, {redis_rate_limiter.max_per_second}/sec, "
+    "shared across all processes)"
+)

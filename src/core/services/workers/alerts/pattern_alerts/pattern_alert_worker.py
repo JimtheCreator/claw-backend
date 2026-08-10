@@ -73,6 +73,19 @@ class PatternAlertWorker:
         # FIXED: Add minimum window size for safety
         self.min_window_size = 20
 
+        # --- Restart backoff state (prevents restart-storm hammering Binance) ---
+        # A listener that keeps dying (bad symbol, API hiccup, network blip)
+        # used to get relaunched every health_check_interval (30s) forever,
+        # with no backoff. That's an unthrottled loop calling
+        # fetch_crypto_data_paginated() -> Binance REST on every attempt,
+        # invisible to any other process's rate limiting. Now capped with
+        # exponential backoff per (symbol, interval) key.
+        self._listener_failure_counts: Dict[str, int] = {}
+        self._listener_next_restart_allowed: Dict[str, float] = {}
+        self._listener_started_at: Dict[str, float] = {}
+        self.max_restart_backoff_seconds = 300   # cap at 5 minutes between attempts
+        self.restart_recovery_seconds = 120      # stable this long -> reset backoff
+
     async def _log_pattern_detection_to_csv(self, symbol: str, interval: str, pattern_name: str, candles: list):
         """
         Logs the candle snapshot to a pattern-specific CSV.
@@ -369,6 +382,7 @@ class PatternAlertWorker:
                 # Start listener task
                 task = asyncio.create_task(self.start_listener(symbol, interval))
                 self._running_tasks[task_key] = task
+                self._listener_started_at[task_key] = time.time()
                 logger.info(f"Started listener for {task_key}")
             except Exception as e:
                 logger.error(f"Error starting listener for {task_key}: {e}")
@@ -788,21 +802,68 @@ class PatternAlertWorker:
         logger.info("=== END VERIFICATION ===")
 
     async def health_monitor_loop(self):
-        """Periodically log the status of all running listener tasks and restart any that have died."""
+        """
+        Periodically log the status of all running listener tasks and restart
+        any that have died — with exponential backoff per (symbol, interval)
+        key. A listener that keeps failing waits longer between attempts each
+        time (2s, 4s, 8s... capped at max_restart_backoff_seconds) instead of
+        being relaunched every health_check_interval indefinitely. A listener
+        that stays stable for restart_recovery_seconds has its backoff reset,
+        so a one-off blip doesn't permanently slow down future recovery.
+        """
         while self._is_running and not self._shutdown_event.is_set():
             alive = []
-            done = []
+            dead_deferred = []
+            restarted = []
+            now = time.time()
+
             for key, task in list(self._running_tasks.items()):
                 if task.done():
-                    done.append(key)
-                    # Restart the listener if it died
+                    next_allowed = self._listener_next_restart_allowed.get(key, 0)
+
+                    if now < next_allowed:
+                        # Still in backoff for this key — skip restarting it
+                        # this cycle, but leave the dead task where it is so
+                        # we notice and retry once the backoff elapses.
+                        dead_deferred.append(key)
+                        continue
+
+                    failures = self._listener_failure_counts.get(key, 0) + 1
+                    self._listener_failure_counts[key] = failures
+                    backoff = min(2 ** failures, self.max_restart_backoff_seconds)
+                    self._listener_next_restart_allowed[key] = now + backoff
+
+                    logger.warning(
+                        f"[HealthCheck] Listener for {key} died (failure #{failures}). "
+                        f"Restarting now; will wait {backoff}s before the next attempt "
+                        f"if it dies again."
+                    )
+
                     symbol, interval = key.split(":")
-                    logger.warning(f"[HealthCheck] Listener for {key} died. Restarting...")
                     new_task = asyncio.create_task(self.start_listener(symbol, interval))
                     self._running_tasks[key] = new_task
+                    self._listener_started_at[key] = now
+                    restarted.append(key)
                 else:
                     alive.append(key)
-            logger.info(f"Health check: {len(alive)} listeners alive, {len(done)} restarted. Alive: {alive}")
+                    started = self._listener_started_at.get(key)
+                    if (
+                        started
+                        and self._listener_failure_counts.get(key, 0)
+                        and (now - started) > self.restart_recovery_seconds
+                    ):
+                        logger.info(
+                            f"[HealthCheck] Listener for {key} stable for "
+                            f"{self.restart_recovery_seconds}s+, resetting backoff."
+                        )
+                        self._listener_failure_counts[key] = 0
+                        self._listener_next_restart_allowed.pop(key, None)
+
+            logger.info(
+                f"Health check: {len(alive)} alive, {len(restarted)} restarted, "
+                f"{len(dead_deferred)} dead-but-backing-off. Alive: {alive}"
+                + (f" | Backing off: {dead_deferred}" if dead_deferred else "")
+            )
             await asyncio.sleep(self.config['health_check_interval'])
 
     async def stop(self):
@@ -840,6 +901,7 @@ class PatternAlertWorker:
 
             task = asyncio.create_task(self.start_listener(symbol, interval))
             self._running_tasks[f"{symbol}:{interval}"] = task
+            self._listener_started_at[f"{symbol}:{interval}"] = time.time()
             logger.info(f"--> [STARTUP_TRACE] Task launched for {symbol}:{interval}")
             self._running_tasks[f"{symbol}:{interval}"] = task
             
@@ -895,4 +957,4 @@ if __name__ == "__main__":
         logger.info("PatternAlertWorker stopped by user.")
     except Exception as e:
         logger.error(f"PatternAlertWorker failed: {e}")
-        sys.exit(1) 
+        sys.exit(1)
