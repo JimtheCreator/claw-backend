@@ -73,6 +73,19 @@ class PatternAlertWorker:
         # FIXED: Add minimum window size for safety
         self.min_window_size = 20
 
+        # Chart patterns scan the whole window for the "last N" peaks/troughs and
+        # don't check recency on their own. This caps how many candles old a chart
+        # pattern's completion point can be before we stop treating it as a fresh,
+        # alert-worthy match. Tune this if legit patterns start getting filtered
+        # (raise it) or stale ones still slip through (lower it).
+        self.chart_pattern_staleness_threshold = 10
+
+        # Same idea for harmonic patterns (gartley/bat/butterfly/crab/cypher/shark/
+        # abcd/three_drives). Their swing points are ATR-filtered major swings, so
+        # they're naturally spaced further apart than chart-pattern peaks/troughs —
+        # give them a looser threshold than chart patterns.
+        self.harmonic_pattern_staleness_threshold = 20
+
         # --- Restart backoff state (prevents restart-storm hammering Binance) ---
         # A listener that keeps dying (bad symbol, API hiccup, network blip)
         # used to get relaunched every health_check_interval (30s) forever,
@@ -636,6 +649,64 @@ class PatternAlertWorker:
                 if result is None:
                     logger.info(f"❌ No {base_pattern} pattern detected for {symbol}:{interval}")
                     return {"detected": False}
+
+                # SHAPE NORMALIZATION: chart/candlestick detectors return a single
+                # Optional[Dict]. Harmonic detectors (gartley, bat, butterfly, crab,
+                # cypher, shark, abcd, three_drives) return Optional[List[Dict]] since
+                # validate_pattern() can match several XABCD combinations in one window.
+                # Without this, `result['detected'] = ...` below throws TypeError on a
+                # list ("list indices must be integers or slices, not str"), which was
+                # being silently swallowed by the except-Exception handler further down
+                # — meaning a genuine harmonic match was detected correctly but never
+                # reached publish_match_event, so no notification was ever sent.
+                candidates = result if isinstance(result, list) else [result]
+                candidates = [c for c in candidates if isinstance(c, dict)]
+                if not candidates:
+                    logger.info(f"❌ No usable {base_pattern} pattern match for {symbol}:{interval}")
+                    return {"detected": False}
+
+                # STALENESS GUARD (chart + harmonic): these detectors scan the whole
+                # window for the "last N" peaks/troughs/swings with no requirement that
+                # the pattern actually just completed. Without this, a pattern whose
+                # final point formed many candles ago can still match and fire an alert
+                # today just because nothing newer has replaced it. Candlestick patterns
+                # are unaffected — they only ever look at the last 1-2 candles already.
+                category = detector_info.get('category')
+                staleness_threshold = {
+                    'chart': self.chart_pattern_staleness_threshold,
+                    'harmonic': self.harmonic_pattern_staleness_threshold,
+                }.get(category)
+
+                if staleness_threshold is not None:
+                    window_len = len(ohlcv_data.get('close', []))
+                    fresh_candidates = []
+                    for c in candidates:
+                        end_idx = c.get('end_index')
+                        if end_idx is None or not window_len:
+                            fresh_candidates.append(c)  # can't evaluate, don't drop it
+                            continue
+                        candles_since_completion = (window_len - 1) - end_idx
+                        if candles_since_completion <= staleness_threshold:
+                            fresh_candidates.append(c)
+                        else:
+                            logger.info(
+                                f"⏳ Stale {base_pattern} match for {symbol}:{interval} ignored "
+                                f"(completed {candles_since_completion} candles ago, "
+                                f"threshold {staleness_threshold})"
+                            )
+                    candidates = fresh_candidates
+
+                if not candidates:
+                    return {"detected": False}
+
+                # If more than one candidate survived (only possible for harmonic,
+                # since chart/candlestick only ever produce one), keep the most
+                # recently completed one; break ties by higher confidence.
+                result = max(
+                    candidates,
+                    key=lambda c: (c.get('end_index', -1), c.get('confidence', 0))
+                )
+
                 # Add core fields to result
                 result['detected'] = result.get('detected', result.get('pattern_name') == normalized_pattern_name)
                 result['symbol'] = symbol
