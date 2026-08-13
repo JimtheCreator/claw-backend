@@ -6,14 +6,13 @@ from common.logger import logger
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from supabase import create_client, Client
 from datetime import datetime, timezone
-from typing import List, Literal
 from common.logger import logger
 from fastapi import HTTPException
 from infrastructure.database.firebase.repository import FirebaseRepository
 import uuid
 from infrastructure.database.redis.cache import redis_cache
 # Add this import at the top
-from typing import List, Literal, Set
+from typing import List, Literal, Set, Optional
 
 binance = BinanceMarketData()
 
@@ -32,6 +31,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.table = "cryptocurrencies"
         self.subscription_table = "subscriptions"
         self.watchlist_table = "watchlist"
+        self.watchlist_groups_table = "watchlist_groups"
         self.price_alerts_table = "price_alerts"
         self.pattern_alerts_table = "pattern_alerts" # New table for pattern alerts
         self.redis_client = redis_cache
@@ -1065,3 +1065,143 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Failed to cleanup old analyses: {e}")
             return 0
+
+    async def get_watchlist_groups(self, user_id: str) -> List[dict]:
+        """All watchlist groups for a user, default group first, then by sort_order."""
+        try:
+            result = (
+                self.client.table(self.watchlist_groups_table)
+                .select("*")
+                .eq("user_id", user_id)
+                .order("is_default", desc=True)
+                .order("sort_order")
+                .execute()
+            )
+            if not result.data:
+                # Lazily create the default group on first touch, so brand new
+                # users don't need a separate provisioning step.
+                return [await self._create_default_group(user_id)]
+            return result.data
+        except Exception as e:
+            logger.error(f"Error fetching watchlist groups for {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to fetch watchlist groups")
+
+
+    async def _create_default_group(self, user_id: str) -> dict:
+        data = {"user_id": user_id, "name": "My Symbols", "is_default": True, "sort_order": 0}
+        result = self.client.table(self.watchlist_groups_table).insert(data).execute()
+        return result.data[0]
+
+
+    async def create_watchlist_group(self, user_id: str, name: str) -> dict:
+        name = name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Group name can't be empty")
+        try:
+            # keep new groups after existing ones
+            existing = (
+                self.client.table(self.watchlist_groups_table)
+                .select("sort_order")
+                .eq("user_id", user_id)
+                .order("sort_order", desc=True)
+                .limit(1)
+                .execute()
+            )
+            next_order = (existing.data[0]["sort_order"] + 1) if existing.data else 0
+            data = {"user_id": user_id, "name": name, "is_default": False, "sort_order": next_order}
+            result = self.client.table(self.watchlist_groups_table).insert(data).execute()
+            return result.data[0]
+        except Exception as e:
+            logger.error(f"Error creating watchlist group for {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create watchlist group")
+
+
+    async def rename_watchlist_group(self, group_id: str, user_id: str, name: str) -> dict:
+        name = name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Group name can't be empty")
+        try:
+            result = (
+                self.client.table(self.watchlist_groups_table)
+                .update({"name": name})
+                .eq("id", group_id)
+                .eq("user_id", user_id)  # ownership check, not just id lookup
+                .execute()
+            )
+            if not result.data:
+                raise HTTPException(status_code=404, detail="Group not found")
+            return result.data[0]
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error renaming watchlist group {group_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to rename watchlist group")
+
+
+    async def delete_watchlist_group(self, group_id: str, user_id: str):
+        """Deletes a group and, via ON DELETE CASCADE, every symbol inside it.
+        Refuses to delete the default group — every user must keep exactly one."""
+        try:
+            group = (
+                self.client.table(self.watchlist_groups_table)
+                .select("is_default")
+                .eq("id", group_id)
+                .eq("user_id", user_id)
+                .execute()
+            )
+            if not group.data:
+                raise HTTPException(status_code=404, detail="Group not found")
+            if group.data[0]["is_default"]:
+                raise HTTPException(status_code=400, detail="Can't delete the default group")
+
+            self.client.table(self.watchlist_groups_table).delete().eq("id", group_id).eq(
+                "user_id", user_id
+            ).execute()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting watchlist group {group_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to delete watchlist group")
+
+
+    async def reorder_watchlist_groups(self, user_id: str, ordered_group_ids: List[str]):
+        try:
+            for idx, group_id in enumerate(ordered_group_ids):
+                self.client.table(self.watchlist_groups_table).update({"sort_order": idx}).eq(
+                    "id", group_id
+                ).eq("user_id", user_id).execute()
+        except Exception as e:
+            logger.error(f"Error reordering watchlist groups for {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to reorder watchlist groups")
+
+
+    async def get_watchlist_last_updated(self, user_id: str) -> Optional[str]:
+        """Cheapest possible check: max(updated_at) across both tables for this user.
+        Powers the conditional GET /watchlist/sync endpoint so the client can skip
+        a full payload merge when nothing changed since its last sync."""
+        try:
+            groups = (
+                self.client.table(self.watchlist_groups_table)
+                .select("updated_at")
+                .eq("user_id", user_id)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            items = (
+                self.client.table(self.watchlist_table)
+                .select("updated_at")
+                .eq("user_id", user_id)
+                .order("updated_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            timestamps = []
+            if groups.data:
+                timestamps.append(groups.data[0]["updated_at"])
+            if items.data:
+                timestamps.append(items.data[0]["updated_at"])
+            return max(timestamps) if timestamps else None
+        except Exception as e:
+            logger.error(f"Error checking watchlist freshness for {user_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to check watchlist freshness")
