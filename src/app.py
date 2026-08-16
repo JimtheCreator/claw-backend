@@ -27,6 +27,9 @@ from presentation.api.routes.watchlist.user_symbol_watchlist import router as wa
 from presentation.api.routes.alerts_endpoints.price_alerts import router as price_alerts_router
 from presentation.api.routes.roomdb_cached_data import router as roomdb_cached_data_router
 from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pattern_alerts_router
+from presentation.api.routes.watchlist import watchlist_sync
+from presentation.api.routes.watchlist import watchlist_groups
+from presentation.api.routes.watchlist import user_symbol_watchlist
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -98,6 +101,9 @@ app.include_router(watchlist_router, prefix="/api/v1")
 app.include_router(price_alerts_router, prefix="/api/v1")
 app.include_router(pattern_alerts_router, prefix="/api/v1")
 app.include_router(roomdb_cached_data_router, prefix="/api/v1")
+app.include_router(watchlist_sync.router, prefix="/api/v1", tags=["Watchlist"])
+app.include_router(user_symbol_watchlist.router, prefix="/api/v1", tags=["Watchlist"])
+app.include_router(watchlist_groups.router, prefix="/api/v1", tags=["Watchlist Groups"])
 
 # Health check endpoint
 @app.get("/health")

@@ -31,7 +31,10 @@ class RedisCache:
                         redis_url,
                         encoding="utf-8",
                         decode_responses=True,
-                        socket_connect_timeout=10
+                        socket_connect_timeout=10,
+                        socket_timeout=60,         # ADDED: Prevents premature read timeouts
+                        health_check_interval=30,  # ADDED: Keeps idle connections alive
+                        socket_keepalive=True      # ADDED: Enables OS-level TCP keepalives
                     )
                 else:
                     # Fallback to individual host/port (your current method)
@@ -39,10 +42,11 @@ class RedisCache:
                         f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
                         encoding="utf-8",
                         decode_responses=True,
-                        socket_connect_timeout=10
+                        socket_connect_timeout=10,
+                        socket_timeout=60,         # ADDED
+                        health_check_interval=30,  # ADDED
+                        socket_keepalive=True      # ADDED
                     )
-
-
 
                 if await self._redis.ping():
                     logger.info("✅ Successfully connected to Redis")

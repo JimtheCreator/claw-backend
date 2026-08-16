@@ -71,8 +71,8 @@ class RedisRateLimiter:
 
     def __init__(
         self,
-        max_per_minute: int = 800,   # conservative vs Binance's ~1200-6000/min depending on endpoint
-        max_per_second: int = 12,    # conservative vs Binance's 20/sec IP limit
+        max_per_minute: int = 2400,   # INCREASED: Accommodates ~60 full fetches/min
+        max_per_second: int = 50,     # INCREASED: Must be higher than the max single request weight (40)
         key_prefix: str = "binance_rl",
         max_wait_seconds: float = 30.0,
     ):

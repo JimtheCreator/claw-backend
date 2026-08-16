@@ -31,3 +31,4 @@ concurrent-log-handler
 scikit-learn
 python-telegram-bot
 twisted
+certifi
