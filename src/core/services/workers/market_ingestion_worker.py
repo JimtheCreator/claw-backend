@@ -1,16 +1,15 @@
 import asyncio
-from multiprocessing.util import get_logger
-from src.infrastructure.data_sources.binance.client import BinanceMarketData
-from src.infrastructure.data_sources.massive.client import MassiveClient
-from src.infrastructure.database.supabase.markets_repo import MarketRepository
-from src.core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
-from src.common.logger import logger
-from src.core.services.market_cache_service import MarketCacheService
+from infrastructure.data_sources.binance.client import BinanceMarketData
+from infrastructure.data_sources.massive.client import MassiveClient
+from infrastructure.database.supabase.markets_repo import MarketRepository
+from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
+from core.services.market_cache_service import MarketCacheService
+from common.logger import logger
+from infrastructure.database.redis.cache import redis_cache
 
 
 async def fetch_and_normalize_binance() -> list[MarketInstrumentEntity]:
     client = BinanceMarketData()
-    # Call your existing BinanceClient method here
     raw_data = await client.get_exchange_info() 
     
     instruments = []
@@ -19,7 +18,6 @@ async def fetch_and_normalize_binance() -> list[MarketInstrumentEntity]:
             base = item["baseAsset"]
             quote = item["quoteAsset"]
             
-            # Simple ranking: stablecoins get pushed up, majors dominate
             rank = 50 if quote == "USDT" else 100
             if base in ["BTC", "ETH", "SOL", "BNB"]:
                 rank = 1
@@ -42,12 +40,10 @@ async def fetch_and_normalize_massive() -> list[MarketInstrumentEntity]:
     
     instruments = []
     for item in raw_data:
-        # Normalize the ticker if Massive prefixes it
         ticker = item.get("ticker", "").replace("C:", "")
         base = item.get("base", ticker[:3])
         quote = item.get("quote", ticker[3:])
         
-        # Rank majors at the top
         rank = 10 if base in ["EUR", "GBP", "USD", "JPY", "AUD"] else 100
         
         instruments.append(MarketInstrumentEntity(
@@ -62,21 +58,37 @@ async def fetch_and_normalize_massive() -> list[MarketInstrumentEntity]:
         ))
     return instruments
 
-
 async def run_market_ingestion():
     logger.info("Starting market symbol ingestion...")
+    
+    try:
+        binance_symbols = await fetch_and_normalize_binance()
+    except Exception as e:
+        logger.error(f"Error fetching Binance symbols: {e}")
+        binance_symbols = []
 
-    binance_symbols = await fetch_and_normalize_binance()
-    massive_symbols = await fetch_and_normalize_massive()
-
+    try:
+        massive_symbols = await fetch_and_normalize_massive()
+    except Exception as e:
+        logger.error(f"Error fetching Massive symbols: {e}")
+        massive_symbols = []
+    
     all_instruments = binance_symbols + massive_symbols
-
+    
     if all_instruments:
         repo = MarketRepository()
-        await repo.upsert_instruments(all_instruments)
+        success = await repo.upsert_instruments(all_instruments)
+        if success:
+            cache_service = MarketCacheService()
+            await cache_service.warm_cache(all_instruments)
+            logger.info("Market symbol ingestion and cache warming complete.")
+        else:
+            logger.error("Failed to upsert instruments.")
+    else:
+        logger.warning("No instruments fetched. Skipping upsert and cache warming.")
 
-        # Warm the Redis cache pool immediately
-        cache_service = MarketCacheService()
-        await cache_service.warm_cache(all_instruments)
-
-    logger.info("Market symbol ingestion and cache warming complete.")
+if __name__ == "__main__":
+    async def main():
+        await redis_cache.initialize()
+        await run_market_ingestion()
+    asyncio.run(main())

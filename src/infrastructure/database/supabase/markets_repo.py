@@ -1,5 +1,7 @@
 # src/infrastructure/database/supabase/crypto_repository.py
 import os
+
+from redis import asyncio
 from core.interfaces.crypto_repository import CryptoRepository
 from core.domain.entities.CryptoEntity import CryptoEntity
 from common.logger import logger
@@ -85,12 +87,17 @@ class MarketRepository(CryptoRepository):
 
         try:
             chunk_size = 1000
+            loop = asyncio.get_running_loop()
+            
             for i in range(0, len(data), chunk_size):
                 chunk = data[i : i + chunk_size]
-                await self.client.table(self.market_instruments).upsert(
-                    chunk,
-                    on_conflict="symbol,source"
-                ).execute()
+                # Bypassing to_thread to prevent any namespace collisions
+                await loop.run_in_executor(
+                    None,
+                    lambda c=chunk: self.client.table(self.table_name).upsert(
+                        c, on_conflict="symbol,source"
+                    ).execute()
+                )
 
             logger.info(f"Successfully upserted {len(instruments)} market instruments.")
             return True
@@ -100,7 +107,11 @@ class MarketRepository(CryptoRepository):
 
     async def get_active_instruments(self) -> List[MarketInstrumentEntity]:
         try:
-            response = await self.client.table(self.market_instruments).select("*").eq("is_active", True).execute()
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.client.table(self.table_name).select("*").eq("is_active", True).execute()
+            )
             return [MarketInstrumentEntity(**item) for item in response.data]
         except Exception as e:
             logger.error(f"Failed to fetch active instruments from database: {e}")

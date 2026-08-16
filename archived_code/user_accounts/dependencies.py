@@ -1,5 +1,5 @@
 # src/dependencies.py
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
 from archived_code.user_accounts.auth_service import AuthService
 
 # Singleton pattern for repositories and services
