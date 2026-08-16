@@ -1,7 +1,7 @@
 # src/infrastructure/database/supabase/crypto_repository.py
 import os
 
-from redis import asyncio
+import asyncio
 from core.interfaces.crypto_repository import CryptoRepository
 from core.domain.entities.CryptoEntity import CryptoEntity
 from common.logger import logger
@@ -43,6 +43,8 @@ class MarketRepository(CryptoRepository):
         self.storage_bucket_name = "analysis-artifacts" # Define bucket name
         self.market_instruments = "market_instruments"
         self.firebase_repo = FirebaseRepository(app_name=unique_id) # Store the method reference for later use
+
+    
 
     async def subscription_exists(self, user_id: str) -> bool:
         """Check if a subscription exists for the user in Supabase."""
@@ -94,7 +96,7 @@ class MarketRepository(CryptoRepository):
                 # Bypassing to_thread to prevent any namespace collisions
                 await loop.run_in_executor(
                     None,
-                    lambda c=chunk: self.client.table(self.table_name).upsert(
+                    lambda c=chunk: self.client.table(self.market_instruments).upsert(
                         c, on_conflict="symbol,source"
                     ).execute()
                 )
@@ -110,7 +112,7 @@ class MarketRepository(CryptoRepository):
             loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
                 None,
-                lambda: self.client.table(self.table_name).select("*").eq("is_active", True).execute()
+                lambda: self.client.table(self.market_instruments).select("*").eq("is_active", True).execute()
             )
             return [MarketInstrumentEntity(**item) for item in response.data]
         except Exception as e:

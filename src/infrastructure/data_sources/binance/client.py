@@ -12,9 +12,8 @@ from datetime import datetime, timezone
 import time
 
 from infrastructure.database.redis.rate_limiter import redis_rate_limiter
+from common.logger import logger
 
-
-logger = logging.getLogger(__name__)
 load_dotenv()
 
 # NOTE: The in-process GlobalRateLimiter that used to live here has been

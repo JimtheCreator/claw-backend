@@ -10,7 +10,7 @@ from infrastructure.database.redis.cache import redis_cache
 
 async def fetch_and_normalize_binance() -> list[MarketInstrumentEntity]:
     client = BinanceMarketData()
-    raw_data = await client.get_exchange_info() 
+    raw_data = await client.get_exchange_info()
     
     instruments = []
     for item in raw_data.get("symbols", []):
