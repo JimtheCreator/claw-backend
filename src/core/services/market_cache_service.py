@@ -4,7 +4,7 @@ from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
 from infrastructure.database.supabase.markets_repo import MarketRepository
 from common.logger import logger
 from infrastructure.database.redis.cache import redis_cache
-
+from redis.exceptions import RedisError
 
 class MarketCacheService:
     CACHE_KEY = "market:instruments:active"
@@ -28,7 +28,12 @@ class MarketCacheService:
         logger.info(f"Market cache warmed with {len(instruments)} instruments.")
 
     async def get_all_cached_instruments(self) -> List[MarketInstrumentEntity]:
-        raw_data = await self.redis.get_cached_data(self.CACHE_KEY)
+        try:
+            raw_data = await self.redis.get_cached_data(self.CACHE_KEY)
+        except RedisError as e:
+            logger.error(f"Redis unavailable for '{self.CACHE_KEY}', falling back to DB: {e}")
+            raw_data = None
+
         if raw_data:
             data = json.loads(raw_data)
             return [MarketInstrumentEntity(**item) for item in data]
@@ -36,7 +41,10 @@ class MarketCacheService:
         logger.info("Cache miss for market instruments. Fetching from database...")
         instruments = await self.repo.get_active_instruments()
         if instruments:
-            await self.warm_cache(instruments)
+            try:
+                await self.warm_cache(instruments)
+            except RedisError as e:
+                logger.error(f"Failed to warm cache after DB fallback: {e}")
         return instruments
 
     async def get_discover_page(self, category: str = "all", page: int = 1, limit: int = 30) -> Dict[str, Any]:

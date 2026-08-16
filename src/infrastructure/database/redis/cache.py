@@ -7,6 +7,9 @@ from redis.exceptions import ConnectionError, RedisError
 from typing import Dict, Union
 from dotenv import load_dotenv
 from common.logger import logger
+from redis.asyncio.retry import Retry
+from redis.backoff import ExponentialBackoff
+from redis.exceptions import ConnectionError, RedisError, TimeoutError  # add TimeoutError to existing import
 
 load_dotenv()
 
@@ -26,9 +29,14 @@ class RedisCache:
             try:
                 # First try to use REDIS_URL if available (for Upstash)
                 redis_url = os.getenv('REDIS_URL')
+                retry_policy = Retry(ExponentialBackoff(base=0.1, cap=2), retries=3)
+                retry_errors = [ConnectionError, TimeoutError, OSError]
                 if redis_url:
                     self._redis = redis.asyncio.from_url(
                         redis_url,
+                        retry=retry_policy,
+                        retry_on_error=retry_errors,
+                        retry_on_timeout=True,
                         encoding="utf-8",
                         decode_responses=True,
                         socket_connect_timeout=10,
@@ -41,6 +49,9 @@ class RedisCache:
                     self._redis = redis.asyncio.from_url(
                         f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', 6379)}",
                         encoding="utf-8",
+                        retry=retry_policy,
+                        retry_on_error=retry_errors,
+                        retry_on_timeout=True,
                         decode_responses=True,
                         socket_connect_timeout=10,
                         socket_timeout=60,         # ADDED

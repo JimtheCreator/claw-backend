@@ -52,7 +52,6 @@ async def lifespan(app: FastAPI):
         
         await redis_cache.initialize()
         await initialize_binance_connection_pool()
-        await run_market_ingestion()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
