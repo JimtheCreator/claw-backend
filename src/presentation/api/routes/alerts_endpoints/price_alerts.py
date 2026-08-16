@@ -12,7 +12,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
 sys.path.append(parent_dir)
 
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.firebase.repository import FirebaseRepository
 from infrastructure.database.redis.cache import redis_cache
 from stripe_payments.src.plan_limits import PLAN_LIMITS
@@ -37,13 +37,13 @@ def get_firebase_repo():
     return FirebaseRepository()
 
 def get_supabase_repo():
-    return SupabaseCryptoRepository()
+    return MarketRepository()
 
 @router.post("/alerts")
 async def create_alert(
     request: AlertCreate,
     user: FirebaseRepository = Depends(get_firebase_repo),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
+    repo: MarketRepository = Depends(get_supabase_repo),
 ):
     """
     Create a new price alert for a specific symbol and condition.
@@ -90,7 +90,7 @@ async def cancel_alert(
     alert_id: str, 
     user_id: str = Query(...), 
     symbol: str = Query(...), # Keep symbol for efficient removal in AlertManager
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    repo: MarketRepository = Depends(get_supabase_repo)
 ):
     """
     Cancels a price alert. This is also non-blocking.
@@ -117,7 +117,7 @@ async def cancel_alert(
         raise HTTPException(status_code=500, detail="Failed to cancel alert")
     
 @router.get("/alerts/{user_id}", response_model=List[dict])
-async def get_active_alerts(user_id: str, repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+async def get_active_alerts(user_id: str, repo: MarketRepository = Depends(get_supabase_repo)):
     """
     Retrieves the user's active price alerts directly from the database.
     This endpoint does not need to interact with the AlertManager.

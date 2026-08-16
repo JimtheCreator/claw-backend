@@ -6,7 +6,7 @@ from typing import Set
 import json
 import time
 from common.logger import logger
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.redis.cache import redis_cache
 import signal
@@ -15,7 +15,7 @@ import os
 class RobustTickerService:
     def __init__(self):
         # NOTE: self.repo is no longer used but kept for potential future use
-        self.repo = SupabaseCryptoRepository()
+        self.repo = MarketRepository()
         self.redis = redis_cache
         self._task = None
         self._running = False

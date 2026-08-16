@@ -5,7 +5,7 @@ from typing import Dict, Optional
 import json
 import os
 import csv
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from core.use_cases.market_analysis.detect_patterns_engine import PatternDetector, initialized_pattern_registry
 from infrastructure.database.redis.cache import redis_cache
@@ -47,7 +47,7 @@ class CircuitBreaker:
 class PatternAlertWorker:
     def __init__(self, config: Optional[dict] = None):
         self.config = config or self._default_config()
-        self.repo = SupabaseCryptoRepository()
+        self.repo = MarketRepository()
         self.pattern_detector = PatternDetector()
         self.redis_cache = redis_cache
         self._running_tasks: Dict[str, asyncio.Task] = {}

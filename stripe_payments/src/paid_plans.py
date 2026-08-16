@@ -8,7 +8,7 @@ from fastapi import APIRouter
 from models.requests import CancelSubscriptionRequest
 from models.response import NativeCheckoutResponseSchema, CancellationResponseSchema
 from src.infrastructure.database.firebase.repository import FirebaseRepository
-from src.infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from firebase_admin import auth
 import time
 import uuid
@@ -84,7 +84,7 @@ def get_firebase_repo():
     return FirebaseRepository(app_name=unique_id)
 
 def get_supabase_repo():
-    return SupabaseCryptoRepository()
+    return MarketRepository()
 
 def get_plan_type_from_price_id(price_id: str) -> str:
     if price_id in PRICE_ID_TO_PLAN:
@@ -162,7 +162,7 @@ async def get_user_details(user_id: str, firebase_repo: FirebaseRepository) -> d
     return {"email": email, "name": name}
 
 @router.get("/subscriptions/{user_id}/limits")
-async def get_subscription_limits_and_usage(user_id: str, supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)):
+async def get_subscription_limits_and_usage(user_id: str, supabase_repo: MarketRepository = Depends(get_supabase_repo)):
     """
     Retrieves the user's subscription plan limits and their current usage counts.
     This provides a complete picture for the client-side usage display.
@@ -285,7 +285,7 @@ async def validate_promo_code(request: PromoCodeRequest):
 async def initiate_payment_intent_or_subscription(
     request: SubscribeRequest,
     firebase_repo: FirebaseRepository = Depends(get_firebase_repo),
-    supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    supabase_repo: MarketRepository = Depends(get_supabase_repo)
 ):
     try:
         if not STRIPE_PUBLISHABLE_KEY:
@@ -798,7 +798,7 @@ async def initiate_payment_intent_or_subscription(
 async def cancel_subscription(
     request: CancelSubscriptionRequest,
     firebase_repo: FirebaseRepository = Depends(get_firebase_repo),
-    supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    supabase_repo: MarketRepository = Depends(get_supabase_repo)
 ):
     """
     Cancel a Stripe subscription for a user.
@@ -982,7 +982,7 @@ async def cancel_subscription(
 async def stripe_webhook(
     request: Request,
     firebase_repo: FirebaseRepository = Depends(get_firebase_repo),
-    supabase_repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
+    supabase_repo: MarketRepository = Depends(get_supabase_repo),
 ):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")

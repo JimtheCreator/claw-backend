@@ -3,7 +3,7 @@ import asyncio
 import json
 from typing import Dict, List
 from infrastructure.data_sources.binance.client import BinanceMarketData
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.firebase.repository import FirebaseRepository
 from infrastructure.database.redis.cache import redis_cache # Import the singleton redis_cache
 from firebase_admin import messaging
@@ -16,7 +16,7 @@ class AlertManager:
     DATA_CHANNEL_PREFIX = "binance:data:"
 
     def __init__(self):
-        self.supabase_repo = SupabaseCryptoRepository()
+        self.supabase_repo = MarketRepository()
         self.firebase_repo = FirebaseRepository()
         self._price_listener_task: asyncio.Task = None
         self._is_running = False

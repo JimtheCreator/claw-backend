@@ -1,4 +1,4 @@
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from core.use_cases.market_analysis.detect_patterns_engine import initialized_pattern_registry
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
@@ -16,7 +16,7 @@ router = APIRouter(tags=["roomdb_cached_data"])
 
 # Dependency injection function
 def get_supabase_repo():
-    return SupabaseCryptoRepository()
+    return MarketRepository()
 
 # --- Initialize your CryptoRepository ---
 try:

@@ -4,7 +4,7 @@ from common.logger import logger
 import os
 from typing import List, Dict, Optional
 import asyncio
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 
 
 class NotificationService:
@@ -18,7 +18,7 @@ class NotificationService:
                 firebase_admin.initialize_app(cred)
             NotificationService._initialized = True
             # Add a repository instance for cleaning up tokens
-            self.repo = SupabaseCryptoRepository()
+            self.repo = MarketRepository()
             logger.info("NotificationService initialized with Firebase Admin.")
 
     async def send_batch_fcm_notifications(

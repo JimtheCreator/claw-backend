@@ -20,11 +20,16 @@ from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 from core.use_cases.market_analysis.data_access import get_ohlcv_from_db
 from core.engines.chart_engine import ChartEngine
 from core.engines.trendline_engine import TrendlineEngine
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from pydantic import BaseModel
 from core.engines.support_resistance_engine import SupportResistanceEngine # Add this import
 import json
 from decimal import Decimal
+
+from celery import shared_task
+from src.core.services.workers.market_ingestion_worker import run_market_ingestion
+
+
 
 # Environment variables (these are safe to load at module level)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -498,7 +503,7 @@ def analyze_trendlines_task(
     logger.info(f"[Celery:TrendlineTask:{analysis_id}] Starting trendline analysis for {symbol}")
     
     async def _run_analysis():
-        repo = SupabaseCryptoRepository()
+        repo = MarketRepository()
         
         try:
             # Step 1: Initialize
@@ -659,3 +664,25 @@ def analyze_sr_task(
     
     # Cleaner and safer
     return asyncio.run(_run_sr_analysis())
+
+
+
+
+@shared_task(name="sync_market_symbols")
+def sync_market_symbols_task():
+    """
+    Background task to ingest Binance & Massive symbols,
+    upsert them to Supabase, and warm the Redis cache.
+    """
+    logger.info("Celery Task: sync_market_symbols started.")
+    
+    async def execute():
+        # Ensure Redis is connected in the worker thread
+        await redis_cache.initialize()
+        await run_market_ingestion()
+
+    # Celery runs sync, so we spin up an event loop for our async code
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(execute())
+    
+    logger.info("Celery Task: sync_market_symbols completed.")

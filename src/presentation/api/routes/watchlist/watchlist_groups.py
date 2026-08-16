@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 from common.logger import logger
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 
 router = APIRouter(tags=["Watchlist Groups"])
 
@@ -30,7 +30,7 @@ class ReorderGroupsRequest(BaseModel):
 
 @router.get("/watchlist-groups/{user_id}")
 async def get_watchlist_groups(user_id: str):
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         return await repo.get_watchlist_groups(user_id)
     except HTTPException:
@@ -42,7 +42,7 @@ async def get_watchlist_groups(user_id: str):
 
 @router.post("/watchlist-groups")
 async def create_watchlist_group(request: CreateGroupRequest):
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         return await repo.create_watchlist_group(request.user_id, request.name)
     except HTTPException:
@@ -54,7 +54,7 @@ async def create_watchlist_group(request: CreateGroupRequest):
 
 @router.patch("/watchlist-groups/{group_id}")
 async def rename_watchlist_group(group_id: str, request: RenameGroupRequest):
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         return await repo.rename_watchlist_group(group_id, request.user_id, request.name)
     except HTTPException:
@@ -68,7 +68,7 @@ async def rename_watchlist_group(group_id: str, request: RenameGroupRequest):
 async def delete_watchlist_group(group_id: str, user_id: str):
     """user_id passed as a query param since DELETE bodies are unreliable
     across clients/proxies — Swift's URLSession included."""
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         await repo.delete_watchlist_group(group_id, user_id)
         return {"status": "success"}
@@ -81,7 +81,7 @@ async def delete_watchlist_group(group_id: str, user_id: str):
 
 @router.patch("/watchlist-groups/reorder")
 async def reorder_watchlist_groups(request: ReorderGroupsRequest):
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         await repo.reorder_watchlist_groups(request.user_id, request.ordered_group_ids)
         return {"status": "success"}

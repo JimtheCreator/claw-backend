@@ -3,7 +3,7 @@ List all pending (unacknowledged) pattern match events for the notification-work
 """
 import asyncio
 from src.infrastructure.database.redis.cache import redis_cache
-from common.logger import logger
+from src.common.logger import logger
 
 async def main():
     await redis_cache.initialize()

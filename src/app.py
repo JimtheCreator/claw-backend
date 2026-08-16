@@ -19,6 +19,7 @@ from presentation.api.routes import get_symbol_market_data
 from presentation.api.routes import analysis
 from contextlib import asynccontextmanager
 from common.logger import configure_logging, logger
+from core.services.workers.market_ingestion_worker import run_market_ingestion
 from infrastructure.database.redis.cache import redis_cache
 from core.services.crypto_list import initialize_binance_connection_pool, close_binance_connection_pool
 from stripe_payments.src.paid_plans import router as paid_plans_router
@@ -30,6 +31,7 @@ from presentation.api.routes.alerts_endpoints.pattern_alerts import router as pa
 from presentation.api.routes.watchlist import watchlist_sync
 from presentation.api.routes.watchlist import watchlist_groups
 from presentation.api.routes.watchlist import user_symbol_watchlist
+from presentation.api.routes.discover import router as discover_router
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
         
         await redis_cache.initialize()
         await initialize_binance_connection_pool()
+        await run_market_ingestion()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
@@ -104,6 +107,7 @@ app.include_router(roomdb_cached_data_router, prefix="/api/v1")
 app.include_router(watchlist_sync.router, prefix="/api/v1", tags=["Watchlist"])
 app.include_router(user_symbol_watchlist.router, prefix="/api/v1", tags=["Watchlist"])
 app.include_router(watchlist_groups.router, prefix="/api/v1", tags=["Watchlist Groups"])
+app.include_router(discover_router, prefix="/api/v1", tags=["Discover"])
 
 # Health check endpoint
 @app.get("/health")

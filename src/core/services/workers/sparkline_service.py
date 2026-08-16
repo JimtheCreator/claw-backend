@@ -20,7 +20,7 @@ import time
 
 # Your existing imports
 from common.logger import logger, configure_logging
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.redis.cache import redis_cache
 
@@ -91,7 +91,7 @@ class StandaloneSparklineService:
     """
     
     def __init__(self):
-        self.repo = SupabaseCryptoRepository()
+        self.repo = MarketRepository()
         self.redis = redis_cache
         self.binance_client = None
         self.circuit_breaker = SymbolSpecificCircuitBreaker()

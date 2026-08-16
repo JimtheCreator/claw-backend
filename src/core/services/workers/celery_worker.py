@@ -38,6 +38,9 @@ celery_app.conf.update(
         'src.core.services.tasks.analyze_trendlines_task': {'queue': 'analysis'},   
         'src.core.services.tasks.analyze_sr_task': {'queue': 'analysis'},
 
+        # 👉 NEW: Discover Ingestion Task
+        'src.core.services.tasks.sync_market_symbols_task': {'queue': 'default'},
+
         # Broadcast tasks - I/O bound, high volume, dedicated queue
         'src.core.services.broadcast_task.dispatch_release_notifications': {'queue': 'broadcasts'},
         'src.core.services.broadcast_task.broadcast_chunk': {'queue': 'broadcasts'}

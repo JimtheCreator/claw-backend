@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, asdict
 from enum import Enum
 from contextlib import asynccontextmanager
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from core.services.notifications.notification_service import NotificationService
 from infrastructure.database.redis.cache import redis_cache
 from firebase_admin import messaging
@@ -131,7 +131,7 @@ class CircuitBreaker:
 class NotificationWorker:
     def __init__(self, config: Optional[Dict] = None):
         # Core dependencies
-        self.repo = SupabaseCryptoRepository()
+        self.repo = MarketRepository()
         self.notification_service = NotificationService()
         self.redis_cache = redis_cache
         

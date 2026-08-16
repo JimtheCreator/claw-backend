@@ -7,7 +7,7 @@ from binance import AsyncClient
 from common.utils.data_processing import downsample_sparkline
 from infrastructure.database.redis.cache import redis_cache
 import logging
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 import json
 import asyncio
 from infrastructure.data_sources.binance.client import BinanceMarketData
@@ -22,7 +22,7 @@ SPARKLINE_SEMAPHORE = asyncio.Semaphore(3)  # Max 3 concurrent get_klines calls
 SEARCH_SYMBOL_SEMAPHORE = asyncio.Semaphore(1)  # Only 1 concurrent search_symbols call (it fetches all tickers)
 
 # Initialize repositories and clients
-crypto_repo = SupabaseCryptoRepository()
+crypto_repo = MarketRepository()
 binance_client = BinanceMarketData()
 
 # Initialize the connection pool at application startup

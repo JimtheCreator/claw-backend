@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from common.logger import logger
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from typing import Dict, Any, Set
 import uuid
 from stripe_payments.src.plan_limits import PLAN_LIMITS
@@ -217,13 +217,13 @@ class WebSocketSubscribeMessage(BaseModel):
 # --- Helper function for dependency injection ---
 def get_crypto_repository():
     """Dependency injector for the crypto repository."""
-    return SupabaseCryptoRepository()
+    return MarketRepository()
 
 # Fixed SSE endpoint with proper completion detection
 @router.get("/analyze/trendlines/progress/sse/{analysis_id}")
 async def sse_analysis_updates(
     analysis_id: str,
-    repo: SupabaseCryptoRepository = Depends(get_crypto_repository)
+    repo: MarketRepository = Depends(get_crypto_repository)
 ):
     """
     FIXED: Server-Sent Events endpoint with proper completion detection.
@@ -370,7 +370,7 @@ async def sse_analysis_updates(
             summary="Get Analysis Result (Polling - Legacy)")
 async def get_analysis_result(
     analysis_id: str,
-    repo: SupabaseCryptoRepository = Depends(get_crypto_repository)
+    repo: MarketRepository = Depends(get_crypto_repository)
 ):
     """
     Legacy polling endpoint for backward compatibility.
@@ -387,7 +387,7 @@ async def get_analysis_result(
              summary="Start Trendline Analysis Task with Celery Workers")
 async def start_trendlines_analysis(
     request: AnalysisRequest,
-    repo: SupabaseCryptoRepository = Depends(get_crypto_repository)
+    repo: MarketRepository = Depends(get_crypto_repository)
 ):
     """
     Initiates a trendline analysis task using Celery workers with real-time updates.
@@ -432,7 +432,7 @@ async def start_trendlines_analysis(
 @router.post("/analyze/sr", summary="Get support/resistance levels using Celery workers")
 async def get_support_resistance(
     request: AnalysisRequest,
-    repo: SupabaseCryptoRepository = Depends(get_crypto_repository)
+    repo: MarketRepository = Depends(get_crypto_repository)
 ):
     """
     Returns support/resistance levels and demand/supply zones using Celery workers.

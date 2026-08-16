@@ -14,9 +14,11 @@ from infrastructure.database.redis.cache import redis_cache
 # Add this import at the top
 from typing import List, Literal, Set, Optional
 
+from src.core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
+
 binance = BinanceMarketData()
 
-class SupabaseCryptoRepository(CryptoRepository):
+class MarketRepository(CryptoRepository):
     def __init__(self):
         # Ensure environment variables are loaded
         supabase_url = os.getenv("SUPABASE_URL")
@@ -37,6 +39,7 @@ class SupabaseCryptoRepository(CryptoRepository):
         self.redis_client = redis_cache
         self.market_analysis_table = "market_analysis"  # Assuming this is the table for market analysis
         self.storage_bucket_name = "analysis-artifacts" # Define bucket name
+        self.market_instruments = "market_instruments"
         self.firebase_repo = FirebaseRepository(app_name=unique_id) # Store the method reference for later use
 
     async def subscription_exists(self, user_id: str) -> bool:
@@ -73,6 +76,35 @@ class SupabaseCryptoRepository(CryptoRepository):
         except Exception as e:
             logger.error(f"Error inserting subscription for user {user_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to insert subscription")
+
+    async def upsert_instruments(self, instruments: List[MarketInstrumentEntity]) -> bool:
+        if not instruments:
+            return True
+
+        data = [inst.model_dump(exclude_none=True) for inst in instruments]
+
+        try:
+            chunk_size = 1000
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i : i + chunk_size]
+                await self.client.table(self.market_instruments).upsert(
+                    chunk,
+                    on_conflict="symbol,source"
+                ).execute()
+
+            logger.info(f"Successfully upserted {len(instruments)} market instruments.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upsert market instruments: {e}")
+            return False
+
+    async def get_active_instruments(self) -> List[MarketInstrumentEntity]:
+        try:
+            response = await self.client.table(self.market_instruments).select("*").eq("is_active", True).execute()
+            return [MarketInstrumentEntity(**item) for item in response.data]
+        except Exception as e:
+            logger.error(f"Failed to fetch active instruments from database: {e}")
+            return []
         
     async def ensure_subscription_exists(self, user_id: str, PLAN_LIMITS: dict):
         """Ensure a subscription exists in Supabase, fetching from Firebase if needed."""

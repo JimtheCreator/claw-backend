@@ -10,7 +10,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))))
 sys.path.append(parent_dir)
 
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
 from stripe_payments.src.plan_limits import PLAN_LIMITS
@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 def get_supabase_repo():
-    return SupabaseCryptoRepository()
+    return MarketRepository()
 
 # --- Pydantic Models ---
 class PatternAlertCreate(BaseModel):
@@ -46,7 +46,7 @@ class PatternAlertResponse(BaseModel):
 async def create_pattern_alert(
     alert_data: PatternAlertCreate,
     x_user_id: str = Header(...),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo),
+    repo: MarketRepository = Depends(get_supabase_repo),
 ):
     """
     Create a new pattern alert for the authenticated user.
@@ -106,7 +106,7 @@ async def create_pattern_alert(
 @router.get("/read", response_model=List[PatternAlertResponse])
 async def get_pattern_alerts(
     x_user_id: str = Header(...),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    repo: MarketRepository = Depends(get_supabase_repo)
 ):
     """
     Retrieve all active pattern alerts for the authenticated user.
@@ -123,7 +123,7 @@ async def delete_pattern_alert(
     request: Request,
     alert_id: str, 
     x_user_id: str = Header(...),
-    repo: SupabaseCryptoRepository = Depends(get_supabase_repo)
+    repo: MarketRepository = Depends(get_supabase_repo)
 ):
     """
     Delete a specific pattern alert owned by the authenticated user.

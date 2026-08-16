@@ -10,7 +10,7 @@ import json
 import time
 from src.infrastructure.database.redis.cache import redis_cache
 from src.core.use_cases.market_analysis.detect_patterns_engine import initialized_pattern_registry
-from common.logger import logger
+from src.common.logger import logger
 
 async def trigger_pattern_detection():
     """Manually trigger pattern detection on BNBUSDT:5m"""

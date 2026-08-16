@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import json
 from common.logger import logger
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.redis.cache import redis_cache
 
 router = APIRouter(tags=["Symbol Watchlists"])
@@ -36,7 +36,7 @@ async def add_to_watchlist(request: AddWatchlistRequest):
     Adds a symbol to the user's watchlist in Supabase and updates
     the 'tracked_symbols' set in Redis for the background service.
     """
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         # Step 1: Add to the primary database
         await repo.add_to_watchlist(
@@ -63,7 +63,7 @@ async def remove_from_watchlist(request: RemoveWatchlistRequest):
     Removes a symbol from the user's watchlist in Supabase and from
     the 'tracked_symbols' set in Redis.
     """
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try: 
         # Step 1: Remove from the primary database
         await repo.remove_from_watchlist(user_id=request.user_id, symbol=request.symbol)
@@ -81,7 +81,7 @@ async def remove_from_watchlist(request: RemoveWatchlistRequest):
 
 @router.get("/watchlist/{user_id}")
 async def get_watchlist(user_id: str):
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         watchlist = await repo.get_watchlist(user_id)
         return watchlist
@@ -146,7 +146,7 @@ async def get_watchlist_with_details(user_id: str):
     Fetches a user's watchlist from Supabase and enriches it with
     the latest ticker and sparkline data directly from the Redis cache.
     """
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         # Step 1: Get the user's list of watched symbols from the primary database
         watchlist = await repo.get_watchlist(user_id)

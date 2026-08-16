@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from common.logger import logger
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.redis.cache import redis_cache
 
 router = APIRouter(tags=["Watchlist Sync"])
@@ -30,7 +30,7 @@ async def sync_watchlist(user_id: str, since: Optional[str] = Query(default=None
       {"unchanged": true, "synced_at": "..."}          - cache stays as-is
       {"unchanged": false, "groups": [...], "items": [...], "synced_at": "..."}
     """
-    repo = SupabaseCryptoRepository()
+    repo = MarketRepository()
     try:
         server_updated_at = await repo.get_watchlist_last_updated(user_id)
         now = datetime.now(timezone.utc).isoformat()

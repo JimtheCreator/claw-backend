@@ -3,7 +3,7 @@ import json
 import time
 from typing import Dict, Any, Optional
 from infrastructure.database.redis.cache import redis_cache
-from infrastructure.database.supabase.crypto_repository import SupabaseCryptoRepository
+from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from common.logger import logger
 
 class AnalysisService:
@@ -11,7 +11,7 @@ class AnalysisService:
     
     def __init__(self):
         self.redis_cache = redis_cache
-        self.repo = SupabaseCryptoRepository()
+        self.repo = MarketRepository()
         self.stream_name = "market-analysis-jobs"
     
     async def queue_analysis_job(
@@ -171,7 +171,7 @@ class AnalysisService:
             int: Number of jobs cleaned up
         """
         try:
-            # This would need to be implemented in the SupabaseCryptoRepository
+            # This would need to be implemented in the MarketRepository
             # For now, we'll just log the intention
             logger.info(f"Cleanup requested for jobs older than {max_age_hours} hours")
             return 0
