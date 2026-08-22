@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
         
         await redis_cache.initialize()
         await initialize_binance_connection_pool()
-        await run_market_ingestion()
+        # await run_market_ingestion()
         # await crypto_data.store_all_binance_tickers_in_supabase()
         # logger.info("Preloaded all Binance tickers into Supabase")
         
@@ -127,6 +127,20 @@ if __name__ == "__main__":
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
 
 # PYTHONPATH=./src:. python -m src.core.services.workers.celery_worker
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.ticker_service
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.sparkline_service
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.forex_ticker_service
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.forex_sparkline_service
+
+# PYTHONPATH=./src:. python -m src.app
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.notification_worker
+
+# PYTHONPATH=./src:. python -m src.core.services.workers.websocket_subscription_manager
 
 # fly deploy --config docker/core-api/fly.toml --remote-only
 

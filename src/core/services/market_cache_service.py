@@ -73,6 +73,41 @@ class MarketCacheService:
                 logger.error(f"Failed to warm cache after DB fallback: {e}")
         return instruments
 
+    # ------------------------------------------------------------------
+    # NEW: live price/change/sparkline enrichment, read from the same
+    # Redis hashes the /watchlist endpoints already read from. Applied
+    # only to the page actually being returned, not the full filtered
+    # set, to keep this to two hmget calls per request regardless of
+    # how many instruments exist in total.
+    # ------------------------------------------------------------------
+    async def _enrich_with_live_data(self, items: List[MarketInstrumentEntity]) -> List[MarketInstrumentEntity]:
+        if not items:
+            return items
+
+        symbols = [item.symbol for item in items]
+        try:
+            cached_tickers = await self.redis._redis.hmget("live_tickers", symbols)
+            cached_sparklines = await self.redis._redis.hmget("live_sparklines", symbols)
+        except RedisError as e:
+            logger.warning(f"Redis unavailable for discover live enrichment, returning static data: {e}")
+            return items
+
+        for item, ticker_raw, sparkline_raw in zip(items, cached_tickers, cached_sparklines):
+            if ticker_raw:
+                try:
+                    ticker = json.loads(ticker_raw)
+                    item.price = ticker.get("price", 0.0)
+                    item.change = ticker.get("change", 0.0)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            if sparkline_raw:
+                try:
+                    item.sparkline = json.loads(sparkline_raw)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+        return items
+
     async def get_discover_page(self, category: str = "all", page: int = 1, limit: int = 30) -> Dict[str, Any]:
         instruments = await self.get_all_cached_instruments()
 
@@ -86,6 +121,7 @@ class MarketCacheService:
         total_items = len(filtered)
         offset = (page - 1) * limit
         paginated_items = filtered[offset : offset + limit]
+        paginated_items = await self._enrich_with_live_data(paginated_items)
         has_more = (offset + limit) < total_items
 
         return {
@@ -298,6 +334,7 @@ class MarketCacheService:
         total_items = len(results)
         offset = (page - 1) * limit
         paginated_items = results[offset : offset + limit]
+        paginated_items = await self._enrich_with_live_data(paginated_items)
         has_more = (offset + limit) < total_items
 
         return {

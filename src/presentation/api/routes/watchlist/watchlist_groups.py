@@ -52,6 +52,19 @@ async def create_watchlist_group(request: CreateGroupRequest):
         raise HTTPException(status_code=500, detail="Failed to create watchlist group")
 
 
+@router.patch("/watchlist-groups/reorder")
+async def reorder_watchlist_groups(request: ReorderGroupsRequest):
+    repo = MarketRepository()
+    try:
+        await repo.reorder_watchlist_groups(request.user_id, request.ordered_group_ids)
+        return {"status": "success"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to reorder watchlist groups: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reorder watchlist groups")
+
+
 @router.patch("/watchlist-groups/{group_id}")
 async def rename_watchlist_group(group_id: str, request: RenameGroupRequest):
     repo = MarketRepository()
@@ -77,16 +90,3 @@ async def delete_watchlist_group(group_id: str, user_id: str):
     except Exception as e:
         logger.error(f"Failed to delete watchlist group {group_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete watchlist group")
-
-
-@router.patch("/watchlist-groups/reorder")
-async def reorder_watchlist_groups(request: ReorderGroupsRequest):
-    repo = MarketRepository()
-    try:
-        await repo.reorder_watchlist_groups(request.user_id, request.ordered_group_ids)
-        return {"status": "success"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to reorder watchlist groups: {e}")
-        raise HTTPException(status_code=500, detail="Failed to reorder watchlist groups")

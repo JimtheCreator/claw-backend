@@ -6,6 +6,8 @@ import json
 from common.logger import logger
 from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.redis.cache import redis_cache
+from stripe_payments.src.plan_limits import PLAN_LIMITS
+
 
 router = APIRouter(tags=["Symbol Watchlists"])
 
@@ -17,6 +19,7 @@ class AddWatchlistRequest(BaseModel):
     base_asset: str
     quote_asset: str
     source: Optional[str] = "binance"
+    group_id: Optional[str] = None
 
 class RemoveWatchlistRequest(BaseModel):
     user_id: str
@@ -25,16 +28,37 @@ class RemoveWatchlistRequest(BaseModel):
 class TickersRequest(BaseModel):
     symbols: List[str]
 
-# --- Plan Limits (Unchanged) ---
-PLAN_LIMITS = { ... } # Your plan limits dictionary here
+
+
+async def _request_priority_sparkline(symbol: str, source: str) -> None:
+    """
+    Signals the already-running sparkline_service.py (crypto) or
+    forex_sparkline_service.py (forex) to fetch this symbol NOW instead
+    of waiting for its next full sweep (up to ~2min for crypto, ~5min
+    for forex). This is a single Redis SADD, nothing else - the actual
+    fetch (klines/aggregates call, circuit breaker, downsampling, Redis
+    write) happens inside those already-running services, reusing their
+    existing update_symbol_sparkline() method unchanged. This route
+    never talks to Binance/Massive directly - that duplicated the
+    services' own fetch logic, bypassed their circuit breakers, and
+    added 2-3s of real API latency to the add request itself.
+    """
+    try:
+        key = "priority_sparkline_symbols_binance" if source == "binance" else "priority_sparkline_symbols_massive"
+        await redis_cache._redis.sadd(key, symbol)
+    except Exception as e:
+        logger.warning(f"Failed to request priority sparkline for {symbol} ({source}): {e}")
+
 
 # --- API Endpoints ---
 
 @router.post("/watchlist/add")
 async def add_to_watchlist(request: AddWatchlistRequest):
     """
-    Adds a symbol to the user's watchlist in Supabase and updates
-    the 'tracked_symbols' set in Redis for the background service.
+    Adds a symbol to the user's watchlist in Supabase, updates the
+    'tracked_symbols' set in Redis for the ticker service, and signals
+    the dedicated sparkline service to prioritize this symbol on its
+    next tick instead of waiting for a full sweep.
     """
     repo = MarketRepository()
     try:
@@ -45,10 +69,16 @@ async def add_to_watchlist(request: AddWatchlistRequest):
             base_asset=request.base_asset,
             quote_asset=request.quote_asset,
             source=request.source,
-            PLAN_LIMITS=PLAN_LIMITS
+            PLAN_LIMITS=PLAN_LIMITS,
+            group_id=request.group_id,
         )
         # Step 2: Add the symbol to the Redis set so the ticker service sees it
         await redis_cache._redis.sadd("tracked_symbols", request.symbol)
+
+        # Step 3: Signal the sparkline service (Redis SADD only - no
+        # external API call happens here, so this doesn't add latency
+        # to the response the way the old direct-fetch version did).
+        await _request_priority_sparkline(request.symbol, request.source or "binance")
 
         return {"status": "success"}
     except HTTPException as e:

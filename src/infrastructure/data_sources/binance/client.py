@@ -106,6 +106,7 @@ class BinanceMarketData:
         """Initialize connection to Binance API with proper locking"""
         async with self._connection_lock:
             if self.client is None:
+                logger.info("[binance] connect: creating main client connection...")
                 try:
                     self.client = await asyncio.wait_for(
                         AsyncClient.create(
@@ -121,6 +122,8 @@ class BinanceMarketData:
                 except Exception as e:
                     logger.error(f"Failed to connect to Binance API: {str(e)}")
                     raise
+            else:
+                logger.info("[binance] connect: main client already connected, reusing.")
 
     async def init_connection_pool(self):
         """Initialize a small pool of connections"""
@@ -155,6 +158,7 @@ class BinanceMarketData:
 
     async def get_all_tickers(self) -> list[dict]:
         """Fetch all 24hr tickers in one request (80 weight)."""
+        logger.info("[binance] get_all_tickers: acquiring rate limit budget...")
         await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
 
         client = await self.get_pooled_client()
@@ -163,6 +167,7 @@ class BinanceMarketData:
                 client.get_ticker(),  # ✅ No symbol → returns ALL tickers
                 timeout=self._connection_timeout
             )
+            logger.info(f"[binance] get_all_tickers: fetched {len(tickers)} ticker(s).")
             return tickers
         except Exception as e:
             logger.error(f"Error fetching all tickers: {e}")
@@ -171,6 +176,7 @@ class BinanceMarketData:
     async def get_pooled_client(self):
         """Get a client from the pool"""
         if not self._connection_pool:
+            logger.info("[binance] get_pooled_client: pool empty, initializing...")
             await self.init_connection_pool()
             
         async with self._pool_lock:
@@ -179,6 +185,7 @@ class BinanceMarketData:
                     return client
                     
         # Fallback to main client
+        logger.warning("[binance] get_pooled_client: no pooled connections available, falling back to main client.")
         if not self.client:
             await self.connect()
         return self.client
@@ -318,6 +325,7 @@ class BinanceMarketData:
                     logger.warning(f"Filtered out all klines for {symbol}/{interval} due to invalid values")
                     return []
 
+                logger.info(f"[binance] get_klines: fetched {len(valid_klines)} valid candle(s) for {symbol}/{interval}.")
                 return valid_klines
 
             except Exception as e:
@@ -333,6 +341,7 @@ class BinanceMarketData:
     async def get_exchange_info(self):
         """Get exchange information with rate limiting"""
         async def _fetch_exchange_info():
+            logger.info("[binance] get_exchange_info: acquiring rate limit budget...")
             await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_exchange_info'])
             client = await self.get_pooled_client()
             return await asyncio.wait_for(
@@ -341,7 +350,9 @@ class BinanceMarketData:
             )
 
         try:
-            return await self.circuit_breaker.call(_fetch_exchange_info)
+            info = await self.circuit_breaker.call(_fetch_exchange_info)
+            logger.info(f"[binance] get_exchange_info: fetched {len(info.get('symbols', []))} symbol(s).")
+            return info
         except Exception as e:
             logger.error(f"Error fetching exchange info: {e}")
             return {"symbols": []}
@@ -357,7 +368,9 @@ class BinanceMarketData:
             )
 
         try:
-            return await self.circuit_breaker.call(_fetch_ticker)
+            ticker = await self.circuit_breaker.call(_fetch_ticker)
+            logger.info(f"[binance] get_ticker({symbol}): {ticker.get('lastPrice', 'n/a')}")
+            return ticker
         except Exception as e:
             logger.error(f"Error fetching ticker for {symbol}: {e}")
             return {
@@ -485,13 +498,19 @@ class BinanceMarketData:
     async def search_symbols(self, query: str, limit: int = 20):
         """Search for symbols with rate limiting"""
         async def _search_symbols():
-            logger.info(f"Searching for symbols...")
-            await self.get_all_tickers()
-            logger.info(f"✅ DONE")
+            logger.info(f"[binance] search_symbols: fetching all tickers for query='{query}'...")
+            # NOTE: this used to call get_all_tickers() and discard the
+            # result (no return statement), so `all_tickers` below was
+            # always None and every call to search_symbols() silently blew
+            # up inside the try/except and returned []. Fixed to actually
+            # return the tickers it fetches.
+            tickers = await self.get_all_tickers()
+            logger.info(f"[binance] search_symbols: fetched {len(tickers)} raw ticker(s).")
+            return tickers
 
         try:
             all_tickers = await self.circuit_breaker.call(_search_symbols)
-            
+
             query = query.upper()
             limit = min(limit, 100)  # Limit results
             
@@ -511,20 +530,28 @@ class BinanceMarketData:
             )
             
             filtered_tickers = exact_matches + contains_matches
-            
+            logger.info(
+                f"[binance] search_symbols('{query}'): {len(exact_matches)} exact, "
+                f"{len(contains_matches)} partial match(es)."
+            )
+
             # Get exchange info with rate limiting
             exchange_info = await self.get_exchange_info()
             symbol_info = {}
-            
+
+            # NOTE: previously logged one line PER symbol here (thousands of
+            # log lines on every call, for every trading pair on Binance).
+            # Replaced with a single summary line -- the per-symbol detail
+            # added no diagnostic value and drowned out everything else.
             for symbol_data in exchange_info.get('symbols', []):
                 symbol = symbol_data.get('symbol')
                 if symbol:
-                    logger.info(f"Found symbol: {symbol}")
                     symbol_info[symbol] = {
                         'base_currency': symbol_data.get('quoteAsset'),
                         'asset': symbol_data.get('baseAsset')
                     }
-            
+            logger.info(f"[binance] search_symbols: built symbol_info lookup for {len(symbol_info)} symbol(s).")
+
             # Enhance results
             enhanced_results = []
             for ticker in filtered_tickers[:limit]:
@@ -532,9 +559,10 @@ class BinanceMarketData:
                 if symbol in symbol_info:
                     ticker.update(symbol_info[symbol])
                 enhanced_results.append(ticker)
-            
+
+            logger.info(f"[binance] search_symbols('{query}') returning {len(enhanced_results)} result(s).")
             return enhanced_results
-            
+
         except Exception as e:
             logger.error(f"Error searching symbols: {e}")
             return []

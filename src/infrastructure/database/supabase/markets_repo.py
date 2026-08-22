@@ -85,7 +85,13 @@ class MarketRepository(CryptoRepository):
         if not instruments:
             return True
 
-        data = [inst.model_dump(exclude_none=True) for inst in instruments]
+        # price/change/sparkline are live-only fields (populated on read from
+        # Redis by MarketCacheService._enrich_with_live_data) - not real
+        # columns on market_instruments, so they must never be sent to Supabase.
+        data = [
+            inst.model_dump(exclude_none=True, exclude={"price", "change", "sparkline"})
+            for inst in instruments
+        ]
 
         try:
             chunk_size = 1000
@@ -230,23 +236,33 @@ class MarketRepository(CryptoRepository):
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # +++ ADD THIS NEW METHOD TO THE CLASS +++
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    async def get_all_unique_watchlist_symbols(self) -> Set[str]:
+    async def get_all_unique_watchlist_symbols(self, source: Optional[str] = None) -> Set[str]:
         """
         Fetches a distinct set of all symbols present in any user's watchlist.
-        This is used by the background ticker service to know which data to fetch from Binance.
+        Used by the background sparkline services to know what to fetch.
+
+        `source` filters to one data provider ("binance", "massive", ...).
+        Without it, this previously returned symbols from EVERY source
+        mixed together - which meant the crypto sparkline service was
+        trying (and failing, via its circuit breaker) to fetch klines for
+        any forex symbols someone had added. Pass source="binance" from
+        the Binance sparkline service and source="massive" from the forex
+        one so each only pulls its own symbols.
         """
         try:
-            # Supabase doesn't have a direct .distinct() method in the Python client,
-            # so we fetch all symbols and process them into a unique set.
-            # This is efficient as the number of unique symbols is far less than total watchlist entries.
-            result = self.client.table(self.watchlist_table).select("symbol").execute()
+            query = self.client.table(self.watchlist_table).select("symbol")
+            if source:
+                query = query.eq("source", source)
+            result = query.execute()
 
             if not result.data:
                 return set()
 
-            # Use a set comprehension for an efficient and concise way to get unique symbols
             unique_symbols = {item['symbol'] for item in result.data}
-            logger.info(f"Found {len(unique_symbols)} unique symbols across all watchlists.")
+            logger.info(
+                f"Found {len(unique_symbols)} unique watchlist symbols"
+                f"{f' for source={source}' if source else ''}."
+            )
             return unique_symbols
 
         except Exception as e:
@@ -258,16 +274,54 @@ class MarketRepository(CryptoRepository):
     # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         
     async def get_watchlist(self, user_id: str) -> List[dict]:
-        """Retrieve all items in the user's watchlist."""
+        """Retrieve all items in the user's watchlist, newest-added first.
+        Previously had no ORDER BY at all - Postgres gives no ordering
+        guarantee without one, so items could come back in an arbitrary
+        (and inconsistent-across-requests) order. Newest-first matches
+        what the client now does optimistically on add."""
         try:
-            result = self.client.table(self.watchlist_table).select("*").eq("user_id", user_id).execute()
+            result = (
+                self.client.table(self.watchlist_table)
+                .select("*")
+                .eq("user_id", user_id)
+                .order("added_at", desc=True)
+                .execute()
+            )
             return result.data
         except Exception as e:
             logger.error(f"Error getting watchlist: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to get watchlist")
         
-    async def add_to_watchlist(self, user_id: str, symbol: str, base_asset: str, quote_asset: str, source: str, PLAN_LIMITS: dict):
-        """Add an item to the watchlist, handling subscription logic internally."""
+    async def _get_or_create_default_group_id(self, user_id: str) -> str:
+        """Look up the user's default watchlist group, creating it if this
+        is their first-ever watchlist action. Reuses the same lazy-create
+        path as get_watchlist_groups() rather than duplicating it, so
+        there's exactly one place a default group ever gets created."""
+        groups = await self.get_watchlist_groups(user_id)
+        default = next((g for g in groups if g.get("is_default")), None)
+        if default:
+            return default["id"]
+        created = await self._create_default_group(user_id)
+        return created["id"]
+
+    async def add_to_watchlist(
+        self,
+        user_id: str,
+        symbol: str,
+        base_asset: str,
+        quote_asset: str,
+        source: str,
+        PLAN_LIMITS: dict,
+        group_id: Optional[str] = None,
+    ):
+        """Add an item to the watchlist, handling subscription logic internally.
+
+        `group_id` was previously accepted from the iOS client but silently
+        dropped here entirely - the insert never included it, so every
+        symbol landed with no group association at all (or, if the column
+        is NOT NULL, the insert would have been failing outright). Falls
+        back to the user's default group ("My Symbols") when not provided.
+        """
         try:
             # Ensure subscription exists
             await self.ensure_subscription_exists(user_id, PLAN_LIMITS)
@@ -281,6 +335,8 @@ class MarketRepository(CryptoRepository):
             if watchlist_limit != -1 and count >= watchlist_limit:
                 raise HTTPException(status_code=403, detail="Watchlist limit reached")
 
+            resolved_group_id = group_id or await self._get_or_create_default_group_id(user_id)
+
             # Add item to watchlist
             data = {
                 "user_id": user_id,
@@ -288,10 +344,11 @@ class MarketRepository(CryptoRepository):
                 "base_currency": base_asset,
                 "asset": quote_asset,
                 "source": source,
+                "group_id": resolved_group_id,
                 "added_at": datetime.now(timezone.utc).isoformat()
             }
             self.client.table(self.watchlist_table).insert(data).execute()
-            logger.info(f"Added {symbol} to watchlist for user {user_id}")
+            logger.info(f"Added {symbol} to watchlist for user {user_id} (group={resolved_group_id})")
         except HTTPException as e:
             raise e
         except Exception as e:

@@ -9,6 +9,89 @@ import pandas as pd
 from typing import Dict, List, Any, Optional, Tuple
 from common.logger import logger
 
+# --- Shared trend-context gate for reversal-type patterns -----------------
+# Several candlestick patterns (engulfing, piercing, dark cloud cover,
+# tweezers, three outside up/down, three white soldiers, three line strike,
+# kicker) are only meaningful as *reversal* signals -- the same candle
+# geometry appearing mid-trend or in chop isn't the textbook pattern, it's
+# noise. This mirrors the SMA50-based "Detect Trend Based On" rule used by
+# TradingView's official candlestick pattern library so those patterns stop
+# firing outside of an actual prior trend.
+TREND_SMA_PERIOD = 50
+
+
+def _pattern_trend_context(closes: np.ndarray, n_pattern_candles: int, period: int = TREND_SMA_PERIOD) -> Dict[str, bool]:
+    """
+    Returns {"downtrend": bool, "uptrend": bool} evaluated on data strictly
+    BEFORE the pattern's own candles, so the pattern's own move can't
+    influence the trend that's supposed to precede it.
+
+    Fails OPEN (both flags True) when there isn't enough prior history to
+    compute an SMA -- this avoids silently suppressing every pattern on
+    short OHLCV windows (e.g. a freshly-listed symbol, or a short lookback
+    request). Callers that want a strict trend requirement should treat a
+    fail-open result as "trend unknown" rather than "trend confirmed".
+    """
+    if n_pattern_candles >= len(closes):
+        return {"downtrend": True, "uptrend": True}
+
+    prior_closes = closes[:-n_pattern_candles]
+    if len(prior_closes) < period:
+        return {"downtrend": True, "uptrend": True}
+
+    sma = float(np.mean(prior_closes[-period:]))
+    reference_close = float(prior_closes[-1])
+    return {
+        "downtrend": reference_close < sma,
+        "uptrend": reference_close > sma,
+    }
+
+
+def _rolling_range_stats(highs: np.ndarray, lows: np.ndarray, period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Per-candle range (high-low) plus a trailing EMA of range (ATR-style,
+    simplified -- no gap/prior-close component since these patterns only
+    need a same-timeframe volatility yardstick).
+
+    Used as a SIGNIFICANCE filter: hammer/shooting-star/hanging-man/inverted
+    -hammer all currently validate shadow/body proportions relative only to
+    the candle's OWN high-low range, which is scale-invariant (fine across
+    a $0.00001 memecoin vs EURUSD) but says nothing about whether that
+    candle's range is actually meaningful. A candle sitting inside a dead-
+    quiet consolidation can satisfy every internal ratio check on a tiny,
+    insignificant range and still get flagged with the same confidence as a
+    hammer that actually broke out of the recent volatility band. Comparing
+    candle_range against a trailing ATR catches that.
+    """
+    ranges = highs - lows
+    if len(ranges) == 0:
+        return ranges, ranges
+    alpha = 2.0 / (period + 1.0)
+    range_avg = np.empty_like(ranges, dtype=float)
+    range_avg[0] = ranges[0]
+    for i in range(1, len(ranges)):
+        range_avg[i] = alpha * ranges[i] + (1 - alpha) * range_avg[i - 1]
+    return ranges, range_avg
+
+
+def _rolling_body_stats(opens: np.ndarray, closes: np.ndarray, period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Body size per candle plus a trailing EMA of body size (Wilder/Pine-style
+    C_BodyAvg). Used to classify a body as "small" or "long" RELATIVE to
+    recent volatility instead of a fixed ratio -- so a "long body" means the
+    same thing on a $0.00001 memecoin as it does on EURUSD.
+    """
+    bodies = np.abs(closes - opens)
+    if len(bodies) == 0:
+        return bodies, bodies
+    alpha = 2.0 / (period + 1.0)
+    body_avg = np.empty_like(bodies, dtype=float)
+    body_avg[0] = bodies[0]
+    for i in range(1, len(bodies)):
+        body_avg[i] = alpha * bodies[i] + (1 - alpha) * body_avg[i - 1]
+    return bodies, body_avg
+
+
 # --- Candlestick Pattern Detection Functions ---
 @register_pattern("engulfing", "candlestick", types=["bullish_engulfing", "bearish_engulfing"])
 async def _detect_engulfing(ohlcv: dict) -> Optional[Dict[str, Any]]:
@@ -45,12 +128,29 @@ async def _detect_engulfing(ohlcv: dict) -> Optional[Dict[str, Any]]:
             pattern_type = "bearish_engulfing"
         if not is_engulfing:
             return None
+        # Engulfing is definitionally a REVERSAL pattern -- require the
+        # opposite prior trend, or this is just two candles that happen to
+        # overlap, not a reversal signal. (Previously ungated: this pattern
+        # used to fire identically whether it appeared after a downtrend,
+        # an uptrend, or in flat chop.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if pattern_type == "bullish_engulfing" and not trend["downtrend"]:
+            return None
+        if pattern_type == "bearish_engulfing" and not trend["uptrend"]:
+            return None
         # Calculate confidence based on engulfing magnitude
         prev_size = abs(prev_close - prev_open)
         curr_size = abs(curr_close - curr_open)
         confidence = 0.6  # Base confidence
-        # Higher confidence for larger engulfing candles
-        if curr_size > prev_size * 1.5:
+        # Higher confidence for larger engulfing candles, relative to recent
+        # average body size rather than just the immediately preceding
+        # candle -- a fixed 1.5x-of-previous-candle comparison behaves very
+        # differently on a noisy low-cap altcoin vs. a stable forex pair.
+        _, body_avg = _rolling_body_stats(opens, closes)
+        avg_body = float(body_avg[-1]) if len(body_avg) else 0.0
+        if avg_body > 0 and curr_size > avg_body * 1.2:
+            confidence += 0.15
+        elif curr_size > prev_size * 1.5:
             confidence += 0.2
         # Higher confidence if the engulfing is complete (not just body)
         if pattern_type == "bullish_engulfing" and curr_open < prev_close and curr_close > prev_open:
@@ -403,9 +503,20 @@ async def _detect_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         if upper_shadow_ratio > 0.15:
             return None
-        # Check for prior downtrend
-        prior_closes = closes[-6:-1]  # 5 candles before current
-        if not (prior_closes[0] > prior_closes[-1]):
+        # Significance filter: reject hammers formed on a candle whose range
+        # is small relative to recent volatility (ATR-style). Internal
+        # ratios alone can be satisfied by a tiny, insignificant candle
+        # sitting inside a dead-quiet consolidation. (Previously missing --
+        # ratios were only ever compared against the candle's own range.)
+        _, range_avg = _rolling_range_stats(highs[:-1], lows[:-1])
+        atr = float(range_avg[-1]) if len(range_avg) else 0.0
+        if atr > 0 and candle_range < atr * 0.5:
+            return None
+        # Check for prior downtrend -- reuse the shared SMA50 trend gate
+        # instead of a bespoke 2-point close comparison, for consistency
+        # with the rest of the engine and a more robust trend read.
+        trend = _pattern_trend_context(closes, n_pattern_candles=1)
+        if not trend["downtrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
@@ -415,7 +526,7 @@ async def _detect_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             confidence += 0.05
         if curr_close > curr_open:
             confidence += 0.05
-        if prior_closes[0] > prior_closes[-1] * 1.03:
+        if atr > 0 and candle_range > atr * 1.2:
             confidence += 0.05
         # Prepare key levels (strictly pattern-relevant)
         key_levels = {
@@ -493,9 +604,16 @@ async def _detect_shooting_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         if lower_shadow_ratio > 0.1:
             return None
-        # Check for prior uptrend
-        prior_closes = closes[-6:-1]  # 5 candles before current
-        if not (prior_closes[0] < prior_closes[-1]):
+        # Significance filter: reject shooting stars formed on a candle
+        # whose range is small relative to recent volatility (ATR-style).
+        # (Previously missing.)
+        _, range_avg = _rolling_range_stats(highs[:-1], lows[:-1])
+        atr = float(range_avg[-1]) if len(range_avg) else 0.0
+        if atr > 0 and candle_range < atr * 0.5:
+            return None
+        # Check for prior uptrend -- reuse the shared SMA50 trend gate.
+        trend = _pattern_trend_context(closes, n_pattern_candles=1)
+        if not trend["uptrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
@@ -505,7 +623,7 @@ async def _detect_shooting_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             confidence += 0.05
         if curr_close < curr_open:
             confidence += 0.05
-        if prior_closes[0] * 1.03 < prior_closes[-1]:
+        if atr > 0 and candle_range > atr * 1.2:
             confidence += 0.05
         # Prepare key levels (strictly pattern-relevant)
         key_levels = {
@@ -575,6 +693,12 @@ async def _detect_three_line_strike(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         # Check fourth candle engulfs all three
         if not (candle4_open <= candle3_close and candle4_close >= candle1_open):
+            return None
+        # Bullish reversal pattern -- require a prior downtrend, otherwise
+        # this is just three down candles inside an uptrend/chop, not a
+        # reversal. (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=4)
+        if not trend["downtrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.7
@@ -668,6 +792,12 @@ async def detect_three_outside_up(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Check third candle closes higher than second
         if candle3_close <= candle2_close:
             return None
+        # Bullish reversal pattern -- require a prior downtrend.
+        # (Previously ungated: the confidence-only trend check below stayed,
+        # but a pattern in an uptrend/chop no longer fires at all.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=3)
+        if not trend["downtrend"]:
+            return None
         # Calculate confidence based on pattern quality
         confidence = 0.7
         candle2_body = candle2_close - candle2_open
@@ -754,6 +884,10 @@ async def detect_three_outside_down(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         # Check third candle closes lower than second
         if candle3_close >= candle2_close:
+            return None
+        # Bearish reversal pattern -- require a prior uptrend.
+        trend = _pattern_trend_context(closes, n_pattern_candles=3)
+        if not trend["uptrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.7
@@ -1012,6 +1146,11 @@ async def detect_dark_cloud_cover(ohlcv: dict) -> Optional[Dict[str, Any]]:
         prev_mid = (prev_open + prev_close) / 2
         if curr_close >= prev_mid:
             return None
+        # Bearish reversal pattern -- require a prior uptrend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if not trend["uptrend"]:
+            return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
         penetration = (prev_close - curr_close) / (prev_close - prev_open) if (prev_close - prev_open) != 0 else 0
@@ -1088,6 +1227,11 @@ async def detect_piercing_pattern(ohlcv: dict) -> Optional[Dict[str, Any]]:
         prev_mid = (prev_open + prev_close) / 2
         if curr_close <= prev_mid:
             return None
+        # Bullish reversal pattern -- require a prior downtrend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if not trend["downtrend"]:
+            return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
         penetration = (curr_close - prev_close) / (prev_open - prev_close) if (prev_open - prev_close) != 0 else 0
@@ -1158,6 +1302,13 @@ async def detect_kicker(ohlcv: dict) -> Optional[Dict[str, Any]]:
         elif prev_close > prev_open and curr_close < curr_open and curr_open < prev_close:
             pattern_type = "bearish_kicker"
         else:
+            return None
+        # Reversal pattern -- require the opposite prior trend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if pattern_type == "bullish_kicker" and not trend["downtrend"]:
+            return None
+        if pattern_type == "bearish_kicker" and not trend["uptrend"]:
             return None
         # Calculate confidence based on gap size and body size
         confidence = 0.7
@@ -1236,6 +1387,11 @@ async def detect_three_white_soldiers(ohlcv: dict) -> Optional[Dict[str, Any]]:
         if not (candle2_open > candle1_open and candle2_open < candle1_close):
             return None
         if not (candle3_open > candle2_open and candle3_open < candle2_close):
+            return None
+        # Bullish reversal pattern -- require a prior downtrend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=3)
+        if not trend["downtrend"]:
             return None
         # Calculate confidence based on body size and progression
         confidence = 0.7
@@ -1321,9 +1477,15 @@ async def detect_hanging_man(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         if upper_shadow_ratio > 0.15:
             return None
-        # Check for prior uptrend
-        prior_closes = closes[-6:-1]  # 5 candles before current
-        if not (prior_closes[0] < prior_closes[-1]):
+        # Significance filter: reject hanging-man candles whose range is
+        # small relative to recent volatility (ATR-style). (Previously missing.)
+        _, range_avg = _rolling_range_stats(highs[:-1], lows[:-1])
+        atr = float(range_avg[-1]) if len(range_avg) else 0.0
+        if atr > 0 and candle_range < atr * 0.5:
+            return None
+        # Check for prior uptrend -- reuse the shared SMA50 trend gate.
+        trend = _pattern_trend_context(closes, n_pattern_candles=1)
+        if not trend["uptrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
@@ -1333,7 +1495,7 @@ async def detect_hanging_man(ohlcv: dict) -> Optional[Dict[str, Any]]:
             confidence += 0.05
         if curr_close < curr_open:
             confidence += 0.05
-        if prior_closes[0] * 1.03 < prior_closes[-1]:
+        if atr > 0 and candle_range > atr * 1.2:
             confidence += 0.05
         # Prepare key levels (strictly pattern-relevant)
         key_levels = {
@@ -1405,9 +1567,15 @@ async def detect_inverted_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             return None
         if lower_shadow_ratio > 0.15:
             return None
-        # Check for prior downtrend
-        prior_closes = closes[-6:-1]  # 5 candles before current
-        if not (prior_closes[0] > prior_closes[-1]):
+        # Significance filter: reject inverted-hammer candles whose range is
+        # small relative to recent volatility (ATR-style). (Previously missing.)
+        _, range_avg = _rolling_range_stats(highs[:-1], lows[:-1])
+        atr = float(range_avg[-1]) if len(range_avg) else 0.0
+        if atr > 0 and candle_range < atr * 0.5:
+            return None
+        # Check for prior downtrend -- reuse the shared SMA50 trend gate.
+        trend = _pattern_trend_context(closes, n_pattern_candles=1)
+        if not trend["downtrend"]:
             return None
         # Calculate confidence based on pattern quality
         confidence = 0.65
@@ -1417,7 +1585,7 @@ async def detect_inverted_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             confidence += 0.05
         if curr_close > curr_open:
             confidence += 0.05
-        if prior_closes[0] > prior_closes[-1] * 1.03:
+        if atr > 0 and candle_range > atr * 1.2:
             confidence += 0.05
         # Prepare key levels (strictly pattern-relevant)
         key_levels = {
@@ -1478,6 +1646,11 @@ async def detect_tweezers_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Highs must be very close
         top_diff = abs(prev_high - curr_high)
         if top_diff > 0.001 * max(prev_high, curr_high):
+            return None
+        # Bearish reversal pattern -- require a prior uptrend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if not trend["uptrend"]:
             return None
         # Calculate confidence based on body size and top similarity
         confidence = 0.65
@@ -1547,6 +1720,11 @@ async def detect_tweezers_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Lows must be very close
         bottom_diff = abs(prev_low - curr_low)
         if bottom_diff > 0.001 * min(prev_low, curr_low):
+            return None
+        # Bullish reversal pattern -- require a prior downtrend.
+        # (Previously ungated.)
+        trend = _pattern_trend_context(closes, n_pattern_candles=2)
+        if not trend["downtrend"]:
             return None
         # Calculate confidence based on body size and bottom similarity
         confidence = 0.65

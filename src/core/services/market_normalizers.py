@@ -15,11 +15,28 @@ from typing import List
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.data_sources.massive.client import MassiveClient
 from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
+from common.logger import logger
+
+# How many Massive fx pages the *startup/scheduled* ingestion sync pulls.
+# Massive is rate-limited to 5 req/min, so pulling the whole universe
+# (up to 10 pages) blocks ingestion for minutes and still comes back
+# incomplete (see get_forex_pairs' max_pages warning). Rather than eating
+# that cost eagerly, ingestion only seeds a fast, bounded batch (2 pages =
+# up to ~2000 of the most-alphabetically-common pairs); anything a user
+# actually searches for that isn't in that seed is fetched, persisted, and
+# cached on-demand by MarketCacheService._search_external, which already
+# implements the "fetch once on first search, serve from cache after"
+# strategy. This keeps ingestion fast without losing coverage.
+MASSIVE_INGESTION_SEED_PAGES = 2
 
 
 async def fetch_and_normalize_binance() -> List[MarketInstrumentEntity]:
+    logger.info("[normalizers] Fetching Binance exchange info...")
     client = BinanceMarketData()
     raw_data = await client.get_exchange_info()
+
+    total_symbols = len(raw_data.get("symbols", []))
+    logger.info(f"[normalizers] Binance returned {total_symbols} raw symbols; filtering to TRADING status...")
 
     instruments = []
     for item in raw_data.get("symbols", []):
@@ -41,13 +58,25 @@ async def fetch_and_normalize_binance() -> List[MarketInstrumentEntity]:
                 popularity_rank=rank,
                 is_active=True
             ))
+    logger.info(f"[normalizers] Normalized {len(instruments)} active Binance instruments.")
     return instruments
 
 
 async def fetch_and_normalize_massive() -> List[MarketInstrumentEntity]:
+    """Seeds the fx universe for the ingestion sync with a fast, bounded
+    pull (see MASSIVE_INGESTION_SEED_PAGES) instead of paging through the
+    entire universe. Anything outside the seed is picked up lazily the
+    first time a user searches for it -- see search_and_normalize_massive
+    and MarketCacheService._search_external."""
+    logger.info(
+        f"[normalizers] Seeding Massive fx universe "
+        f"(max_pages={MASSIVE_INGESTION_SEED_PAGES}, rest filled lazily on search)..."
+    )
     client = MassiveClient()
-    raw_data = await client.get_forex_pairs()
-    return [_normalize_massive_item(item) for item in raw_data]
+    raw_data = await client.get_forex_pairs(max_pages=MASSIVE_INGESTION_SEED_PAGES)
+    instruments = [_normalize_massive_item(item) for item in raw_data]
+    logger.info(f"[normalizers] Normalized {len(instruments)} seeded Massive fx instruments.")
+    return instruments
 
 
 async def search_and_normalize_massive(query: str) -> List[MarketInstrumentEntity]:
@@ -57,9 +86,12 @@ async def search_and_normalize_massive(query: str) -> List[MarketInstrumentEntit
     where a ticker sorts in the unfiltered list (confirmed against the real
     API: XAUUSD is outside the first 1000 unfiltered results but `search`
     finds it immediately)."""
+    logger.info(f"[normalizers] Live Massive search for query='{query}'...")
     client = MassiveClient()
     raw_data = await client.search_forex_pairs(query)
-    return [_normalize_massive_item(item) for item in raw_data]
+    instruments = [_normalize_massive_item(item) for item in raw_data]
+    logger.info(f"[normalizers] Live Massive search for '{query}' returned {len(instruments)} match(es).")
+    return instruments
 
 
 def _normalize_massive_item(item: dict) -> MarketInstrumentEntity:
