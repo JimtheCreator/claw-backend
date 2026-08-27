@@ -11,7 +11,7 @@ sys.path.append(parent_dir)
 from core.domain.entities.MarketDataEntity import MarketDataEntity, DeleteResponse
 from core.use_cases.market.market_data import fetch_crypto_data_paginated, delete_market_data
 import json
-from infrastructure.data_sources.binance.client import BinanceMarketData
+from infrastructure.data_sources.binance.client import BinanceMarketData, shared_binance_client
 from core.services.crypto_list import search_cryptos
 from common.logger import logger
 from datetime import datetime, timezone
@@ -39,9 +39,9 @@ INTERVAL_MS = {
 
 router = APIRouter(tags=["Market Data"])
 
-# Create a single shared client for all WebSocket connections
-# This avoids creating multiple connection pools
-shared_binance_client = BinanceMarketData()
+# Shared client (defined in infrastructure.data_sources.binance.client) -
+# reused here rather than opening a second independent connection pool
+# for this route module.
 
 @router.get("/market-data/{symbol}")
 async def get_market_data(

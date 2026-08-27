@@ -241,7 +241,10 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         '''
         
         try:
-            result = self.client.query_api().query(query)
+            # client.query_api().query() is the synchronous InfluxDB SDK -
+            # run it off the event loop so it doesn't stall every other
+            # coroutine (websocket streams included) for the query duration.
+            result = await asyncio.to_thread(self.client.query_api().query, query)
             parsed_records = []
             for table in result:
                 for record in table.records:
@@ -293,7 +296,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             |> limit(n: {page_size}, offset: {offset})
             '''
             
-            result = self.client.query_api().query(query)
+            result = await asyncio.to_thread(self.client.query_api().query, query)
             
             parsed_records = []
             for table in result:

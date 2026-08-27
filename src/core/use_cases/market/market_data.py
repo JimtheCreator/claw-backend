@@ -6,7 +6,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
-from infrastructure.data_sources.binance.client import BinanceMarketData
+from infrastructure.data_sources.binance.client import BinanceMarketData, shared_binance_client
 from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
@@ -204,9 +204,14 @@ async def fetch_crypto_data_paginated(
         )
         
         if historical:
-            # Standard stale data check for first page
+            # Standard stale data check for first page.
+            # This is awaited on purpose (again) - with the shared pooled
+            # Binance client below, this is now a single fast REST call in
+            # the common case (small gap), not a fresh connection handshake
+            # + retry loop. Awaiting it means the initial payload the client
+            # gets is actually caught-up, so there's no gap between the last
+            # REST candle and the first live tick for it to paper over.
             if page == 1:
-                # --- FIX: Capture the freshly fetched data ---
                 newly_fetched_data = await _check_and_update_stale_data(
                     historical,
                     symbol,
@@ -215,7 +220,6 @@ async def fetch_crypto_data_paginated(
                     page_size
                 )
                 if newly_fetched_data:
-                    # --- FIX: Append it to the response ---
                     historical.extend(newly_fetched_data)
             return historical
         
@@ -238,10 +242,12 @@ async def _fetch_from_binance_chronological(
     prioritize_recent: bool
 ) -> list:
     """Fetch from Binance with optional recent-data priority, always return chronological"""
-    binance = None
     try:
         logger.info(f"No data found in InfluxDB for {symbol} ({interval}), fetching from Binance")
-        binance = BinanceMarketData()
+        # Reuse the shared, pooled client - same reasoning as
+        # _fetch_and_save_missing_data. Do not disconnect it at the end;
+        # it's shared process-wide (also used by the websocket route).
+        binance = shared_binance_client
         await binance.ensure_connected()
         
         if prioritize_recent:
@@ -291,13 +297,10 @@ async def _fetch_from_binance_chronological(
     except Exception as e:
         logger.error(f"Error fetching data from Binance: {str(e)}")
         return {"error": f"Failed to fetch data from Binance: {str(e)}"}
-    finally:
-        # CRITICAL: Always close the connection, even on timeout/exception  
-        if binance:
-            try:
-                await binance.disconnect()
-            except Exception as cleanup_error:
-                logger.error(f"Error closing Binance connection: {str(cleanup_error)}")
+    # No finally/disconnect here - `binance` is the shared, process-wide
+    # client now (also used by the websocket route), not a private
+    # connection this function owns. Closing it here would pull the rug
+    # out from under any concurrent websocket streams.
 
 async def _check_and_update_stale_data(
     historical: list, 
@@ -332,7 +335,11 @@ async def _fetch_and_save_missing_data(
 ):
     """Fetch and save missing data between two timestamps"""
     try:
-        binance = BinanceMarketData()
+        # Reuse the shared, already-connected client instead of opening a
+        # fresh AsyncClient.create() handshake and tearing it down every
+        # call - that handshake was the actual cost on this path, not the
+        # klines request itself.
+        binance = shared_binance_client
         await binance.ensure_connected()
         
         missing_data = []
@@ -369,10 +376,13 @@ async def _fetch_and_save_missing_data(
             missing_data.extend(batch_entities)
             # MODIFICATION: Ensure we always move forward
             current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1 
-            await asyncio.sleep(0.2) # Reduced sleep time is fine
+            # Only sleep if there's actually another iteration coming up -
+            # no point paying 0.2s on the common one-batch case, which is
+            # every normal "chart just opened, InfluxDB is a few candles
+            # behind" request.
+            if current_start_ms < end_time_ms:
+                await asyncio.sleep(0.2)
 
-        await binance.disconnect()
-        
         if missing_data:
             missing_data_json = [entity.model_dump_json() for entity in missing_data]
             save_market_data_task.delay(missing_data_json)
@@ -502,4 +512,3 @@ async def delete_all_market_data():
         error_msg = f"Failed to delete all market data: {str(e)}"
         logger.error(error_msg)
         return {"status": "error", "message": error_msg}
-

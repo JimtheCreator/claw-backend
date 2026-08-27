@@ -731,6 +731,18 @@ class BinanceMarketData:
     
 
 # ===================================================================
+# === SHARED CLIENT SINGLETON ======================================
+# ===================================================================
+# One pooled, long-lived client for this process, instead of every
+# caller doing `BinanceMarketData()` + `ensure_connected()` +
+# `disconnect()` per request. Each of those does a real AsyncClient.create()
+# handshake against Binance - that's the dominant cost on the stale-data
+# catch-up path and the "no InfluxDB data yet" cold-fetch path, not the
+# klines call itself. Import this instance instead of instantiating a
+# fresh BinanceMarketData() for anything short-lived.
+shared_binance_client = BinanceMarketData()
+
+# ===================================================================
 # === GLOBAL RATE LIMITER =========================================
 # ===================================================================
 # Real coordination now happens in Redis — see
