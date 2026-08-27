@@ -406,10 +406,25 @@ class WebsocketSubscriptionManager:
                             
                             if command == "subscribe":
                                 self.stream_subscribers[stream_name] += 1
-                                
+                                is_first_subscriber = self.stream_subscribers[stream_name] == 1
+
                                 if stream_name not in self.active_streams:
-                                    subscribe_queue.add(stream_name)
-                                    logger.info(f"Queued subscription for {stream_name} (subscribers: {self.stream_subscribers[stream_name]})")
+                                    if is_first_subscriber:
+                                        # A client that just (re)connected is
+                                        # waiting on this stream's first live
+                                        # tick to pick up right where its
+                                        # REST snapshot left off. Making that
+                                        # wait up to `batch_interval` for a
+                                        # batch window that may otherwise be
+                                        # empty adds a needless, visible gap
+                                        # on cold start. Steady-state streams
+                                        # (subscriber count going 1->2, etc.)
+                                        # still batch normally below.
+                                        logger.info(f"Fast-subscribing new stream {stream_name} (first subscriber)")
+                                        await self._subscribe_streams_batch([stream_name])
+                                    else:
+                                        subscribe_queue.add(stream_name)
+                                        logger.info(f"Queued subscription for {stream_name} (subscribers: {self.stream_subscribers[stream_name]})")
                             
                             elif command == "unsubscribe":
                                 self.stream_subscribers[stream_name] = max(0, self.stream_subscribers[stream_name] - 1)

@@ -173,7 +173,13 @@ async def websocket_stream_market_data(
                 symbol=symbol,
                 interval=interval,
                 page=1,
-                page_size=15
+                # Was 15 - only ~15 candles of coverage, so any client that
+                # went offline/backgrounded for longer than that (spotty
+                # signal, app backgrounded, etc.) reconnects to a snapshot
+                # that can't cover the gap. 200 matches the client's own
+                # initial REST load size, so a reconnect snapshot is now
+                # capable of closing realistic outage windows on its own.
+                page_size=200
             )
 
             initial_candles = []
