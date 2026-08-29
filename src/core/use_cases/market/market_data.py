@@ -221,6 +221,23 @@ async def fetch_crypto_data_paginated(
                 )
                 if newly_fetched_data:
                     historical.extend(newly_fetched_data)
+
+                # === MODIFICATION START ===
+                # The stale-tail check above only looks at the *last*
+                # candle - it can't see a hole in the middle of an
+                # otherwise-fresh range. That's exactly what a client
+                # leaving a timeframe mid-candle and returning later
+                # produces: candles before and after exist, so the tail
+                # looks fine, but the candle that closed while nobody was
+                # subscribed is missing. Scan for those and backfill them
+                # from Binance the same way a stale tail gets backfilled.
+                gap_filled_data = await _check_and_fill_internal_gaps(
+                    historical, symbol, interval, page_size
+                )
+                if gap_filled_data:
+                    historical.extend(gap_filled_data)
+                    historical.sort(key=lambda x: x.timestamp)
+                # === MODIFICATION END ===
             return historical
         
         # No data in InfluxDB, fetch from Binance
@@ -324,6 +341,52 @@ async def _check_and_update_stale_data(
     
     # --- FIX: Return an empty list if no new data was fetched ---
     return []
+
+
+async def _check_and_fill_internal_gaps(
+    historical: list,
+    symbol: str,
+    interval: str,
+    page_size: int,
+    max_gaps: int = 5
+):
+    """Find holes *inside* an otherwise-populated range and backfill them.
+
+    `_check_and_update_stale_data` only looks at the last candle - it's
+    blind to a gap that isn't at the tail. This walks the already-sorted
+    list looking for consecutive candles more than one interval apart and
+    fetches each hole from Binance directly, same as a stale tail would
+    be. Capped at `max_gaps` per call so a badly corrupted range can't
+    turn one request into an unbounded number of Binance calls.
+    """
+    filled: list = []
+    try:
+        if len(historical) < 2:
+            return filled
+
+        interval_delta = timedelta(minutes=INTERVAL_MINUTES[interval])
+        gaps_found = 0
+
+        for i in range(len(historical) - 1):
+            if gaps_found >= max_gaps:
+                break
+            current_time = historical[i].timestamp
+            next_time = historical[i + 1].timestamp
+            if next_time - current_time > interval_delta:
+                gaps_found += 1
+                logger.info(
+                    f"Internal gap detected for {symbol} ({interval}) "
+                    f"between {current_time} and {next_time}, backfilling."
+                )
+                gap_data = await _fetch_and_save_missing_data(
+                    symbol, interval, current_time, next_time, page_size
+                )
+                if gap_data:
+                    filled.extend(gap_data)
+    except Exception as e:
+        logger.error(f"Error checking for internal gaps: {str(e)}")
+
+    return filled
 
 
 async def _fetch_and_save_missing_data(

@@ -1,4 +1,4 @@
-# src/presentation/api/routes/market_data.py
+# src/presentation/api/routes/get_symbol_market_data.py
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -164,12 +164,62 @@ async def websocket_stream_market_data(
     client_id = f"{websocket.client.host}:{websocket.client.port}"
     logger.info(f"Client ID: {client_id}, Streams to subscribe: {streams_to_subscribe}")
     redis_pubsub = None
-    
+    # Raw Redis pub/sub messages captured between "we started listening"
+    # and "we finished building the historical snapshot". Redis pub/sub
+    # has no replay - a message published before we subscribe is gone
+    # forever, and one published *during* a slow DB/REST fetch is just as
+    # gone if we don't subscribe until after that fetch returns. Buffering
+    # here and merging/replaying afterward is what closes that window.
+    buffered_messages: list = []
+
+    async def drain_available_messages():
+        """Non-blocking sweep of whatever has already arrived on the
+        pubsub socket. Safe to call repeatedly while other work is in
+        flight - each call just picks up what's there and returns."""
+        while True:
+            msg = await redis_pubsub.get_message(ignore_subscribe_messages=True, timeout=0.01)
+            if not msg or msg.get("type") != "message":
+                break
+            buffered_messages.append(msg)
+
     try:
+        # === MODIFICATION START ===
+        # Subscribe to live data BEFORE fetching history (was: fetch
+        # history, publish subscribe requests, subscribe). That ordering
+        # left a gap exactly the size of the historical fetch - if
+        # fetch_crypto_data_paginated took 4 seconds (stale-data REST
+        # backfill, DB latency, network hiccup), any candles/ticks
+        # published to Redis in those 4 seconds were never seen by this
+        # client, because nothing was subscribed yet to receive them.
+        #
+        # Subscribing first means nothing published from this point on
+        # can be missed - it just lands in `buffered_messages` until the
+        # historical snapshot is ready to merge with it.
+        for stream in streams_to_subscribe:
+            await redis_cache.publish(CONTROL_CHANNEL, f"subscribe:{stream}")
+            logger.info(f"Published SUBSCRIBE request for stream: {stream}")
+
+        data_channels = [f"{DATA_CHANNEL_PREFIX}{s}" for s in streams_to_subscribe]
+        logger.info(f"Subscribing to Redis channels: {data_channels}")
+        redis_pubsub = await redis_cache.subscribe(*data_channels)
+        logger.info("Successfully subscribed to Redis data channels")
+
+        await websocket.send_json({
+            "type": "subscription_confirmed",
+            "streams": streams_to_subscribe,
+            "message": f"Subscribed to {len(streams_to_subscribe)} streams"
+        })
+        # === MODIFICATION END ===
+
         if include_ohlcv:
             logger.info(f"Fetching initial candles for {symbol} using robust method")
-            
-            initial_entities = await fetch_crypto_data_paginated(
+
+            # === MODIFICATION START ===
+            # Run the historical fetch concurrently with draining the
+            # buffer, instead of awaiting it blind. This is what actually
+            # catches messages published *during* the fetch, not just
+            # before/after it.
+            fetch_task = asyncio.create_task(fetch_crypto_data_paginated(
                 symbol=symbol,
                 interval=interval,
                 page=1,
@@ -180,7 +230,15 @@ async def websocket_stream_market_data(
                 # initial REST load size, so a reconnect snapshot is now
                 # capable of closing realistic outage windows on its own.
                 page_size=200
-            )
+            ))
+            while not fetch_task.done():
+                await drain_available_messages()
+                await asyncio.sleep(0.02)
+            initial_entities = fetch_task.result()
+            # One more sweep - a message can land in the gap between the
+            # fetch resolving and us getting here.
+            await drain_available_messages()
+            # === MODIFICATION END ===
 
             initial_candles = []
             # Get the millisecond duration for the requested interval, default to 1m if not found
@@ -200,31 +258,85 @@ async def websocket_stream_market_data(
                         "is_closed": True # This is a safe logical deduction for historical data
                     })
 
+            # === MODIFICATION START ===
+            # Merge any buffered kline updates straight into the snapshot,
+            # keyed by open_time (a live update for a candle already in
+            # `initial_candles` wins, since it's more current). This means
+            # candles that opened/closed while the fetch was in flight are
+            # never missing from the very first payload the client sees -
+            # no separate gap-heal round trip needed for them.
+            expected_kline_stream = f"{symbol_lower}@kline_{interval}"
+            candles_by_time = {c["open_time"]: c for c in initial_candles}
+            for msg in buffered_messages:
+                channel = msg.get("channel")
+                if isinstance(channel, bytes):
+                    channel = channel.decode("utf-8")
+                stream_name = (channel or "").replace(DATA_CHANNEL_PREFIX, "")
+                if stream_name != expected_kline_stream:
+                    continue
+                try:
+                    raw = msg["data"]
+                    if isinstance(raw, bytes):
+                        raw = raw.decode("utf-8")
+                    payload = json.loads(raw)
+                    k = payload.get("k")
+                    if not k:
+                        continue
+                    candles_by_time[k["t"]] = {
+                        "open_time": k["t"],
+                        "close_time": k.get("T", k["t"] + interval_duration_ms - 1),
+                        "open": float(k["o"]),
+                        "high": float(k["h"]),
+                        "low": float(k["l"]),
+                        "close": float(k["c"]),
+                        "volume": float(k["v"]),
+                        "is_closed": bool(k.get("x", False))
+                    }
+                except Exception as e:
+                    logger.error(f"Failed to merge buffered kline into snapshot for {symbol}: {e}")
+
+            initial_candles = sorted(candles_by_time.values(), key=lambda c: c["open_time"])
+            # === MODIFICATION END ===
+
             if initial_candles:
                 await websocket.send_json({"type": "historical", "data": initial_candles})
                 logger.info(f"Sent {len(initial_candles)} historical candles to client")
             else:
                 logger.warning(f"Could not retrieve initial candles for {symbol}")
+        else:
+            # Still drain anything that arrived since we subscribed, so
+            # the replay below has it even with no OHLCV history step.
+            await drain_available_messages()
 
         # === MODIFICATION START ===
-        # Unconditionally publish subscribe requests. The manager will handle deduplication.
-        for stream in streams_to_subscribe:
-            await redis_cache.publish(CONTROL_CHANNEL, f"subscribe:{stream}")
-            logger.info(f"Published SUBSCRIBE request for stream: {stream}")
+        # Replay everything buffered while we were fetching/merging.
+        # Ticker updates in particular aren't folded into the historical
+        # merge above, so without this replay they'd just be dropped -
+        # same bug, smaller symptom (a stale price flash instead of a
+        # missing candle).
+        message_count = 0
+        for msg in buffered_messages:
+            try:
+                data = msg['data']
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8')
+                channel_name = msg['channel']
+                if isinstance(channel_name, bytes):
+                    channel_name = channel_name.decode('utf-8')
+                parsed_data = json.loads(data)
+                await websocket.send_json({
+                    "type": "live_data",
+                    "stream": channel_name.replace(DATA_CHANNEL_PREFIX, ''),
+                    "data": parsed_data,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+                message_count += 1
+            except Exception as e:
+                logger.error(f"Error replaying buffered message for {symbol}: {e}")
+        if buffered_messages:
+            logger.info(f"Replayed {len(buffered_messages)} messages buffered during snapshot fetch for {client_id}")
         # === MODIFICATION END ===
 
-        data_channels = [f"{DATA_CHANNEL_PREFIX}{s}" for s in streams_to_subscribe]
-        logger.info(f"Subscribing to Redis channels: {data_channels}")
-        redis_pubsub = await redis_cache.subscribe(*data_channels)
-        logger.info("Successfully subscribed to Redis data channels")
-
-        await websocket.send_json({
-            "type": "subscription_confirmed",
-            "streams": streams_to_subscribe,
-            "message": f"Subscribed to {len(streams_to_subscribe)} streams"
-        })
-
-        message_count = 0
         last_ping = time.time()
         while True:
             try:

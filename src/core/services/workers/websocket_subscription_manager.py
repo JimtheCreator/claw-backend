@@ -32,6 +32,9 @@ print(f"Added to Python path: {project_root}")
 from infrastructure.database.redis.cache import redis_cache
 from common.logger import logger
 from infrastructure.data_sources.binance.client import BinanceMarketData  # ADD THIS LINE
+from datetime import datetime, timezone
+from core.services.tasks import save_market_data_task
+from core.domain.entities.MarketDataEntity import MarketDataEntity
 
 # Configuration - Conservative Binance limits
 BINANCE_STREAM_URL = "wss://stream.binance.com:9443/stream"
@@ -585,7 +588,20 @@ class WebsocketSubscriptionManager:
             return False
 
     async def _cache_candle_data(self, stream_name: str, kline_data: dict):
-        """Cache completed candle data for historical requests"""
+        """Persist a just-closed candle from the live stream.
+
+        This used to only write to a `candles:{symbol}:{interval}` Redis
+        key - a short-lived cache nothing in the codebase ever reads back.
+        InfluxDB (what /market-data and the gap-heal endpoint actually
+        query) only ever got written to by REST backfills. That meant any
+        candle that closed purely while a client was live-streaming - with
+        no REST re-fetch happening afterward to trigger the stale-tail
+        backfill - was silently lost. That's the exact "candle that was
+        forming has no close" bug: leave a timeframe mid-candle, come back
+        later, and the candle that closed while nobody was subscribed was
+        never saved anywhere durable, and the tail-only staleness check
+        that drives backfilling can't see a hole that isn't at the tail.
+        """
         try:
             parts = stream_name.split('@kline_')
             if len(parts) != 2:
@@ -620,6 +636,26 @@ class WebsocketSubscriptionManager:
             candles = sorted(candles, key=lambda x: x['open_time'])[-100:]
             
             await redis_cache.set_cached_data(cache_key, json.dumps(candles), ttl=3600)
+
+            # === MODIFICATION START ===
+            # Actually persist to InfluxDB via the same Celery save path
+            # the REST backfill uses, so this candle is durably there the
+            # next time anyone requests a range covering it - not just
+            # sitting in a Redis cache with a 1-hour TTL that nothing reads.
+            open_time_ms = kline.get('t')
+            if open_time_ms is not None:
+                entity = MarketDataEntity(
+                    symbol=symbol,
+                    interval=interval,
+                    open=candle_data["open"],
+                    high=candle_data["high"],
+                    low=candle_data["low"],
+                    close=candle_data["close"],
+                    volume=candle_data["volume"],
+                    timestamp=datetime.fromtimestamp(open_time_ms / 1000, tz=timezone.utc)
+                )
+                save_market_data_task.delay([entity.model_dump_json()])
+            # === MODIFICATION END ===
             
         except Exception as e:
             logger.error(f"Error caching candle data: {e}")
