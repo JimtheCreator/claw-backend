@@ -204,42 +204,27 @@ async def fetch_crypto_data_paginated(
         )
         
         if historical:
-            # Standard stale data check for first page.
-            # This is awaited on purpose (again) - with the shared pooled
-            # Binance client below, this is now a single fast REST call in
-            # the common case (small gap), not a fresh connection handshake
-            # + retry loop. Awaiting it means the initial payload the client
-            # gets is actually caught-up, so there's no gap between the last
-            # REST candle and the first live tick for it to paper over.
             if page == 1:
                 newly_fetched_data = await _check_and_update_stale_data(
-                    historical,
-                    symbol,
-                    interval,
-                    end_time,
-                    page_size
+                    historical, symbol, interval, end_time, page_size
                 )
                 if newly_fetched_data:
-                    historical.extend(newly_fetched_data)
+                    # --- FIX: Deduplicate and merge by timestamp to safely heal the boundary candle ---
+                    merged_dict = {c.timestamp: c for c in historical}
+                    for c in newly_fetched_data:
+                        merged_dict[c.timestamp] = c
+                    historical = sorted(merged_dict.values(), key=lambda x: x.timestamp)
 
-                # === MODIFICATION START ===
-                # The stale-tail check above only looks at the *last*
-                # candle - it can't see a hole in the middle of an
-                # otherwise-fresh range. That's exactly what a client
-                # leaving a timeframe mid-candle and returning later
-                # produces: candles before and after exist, so the tail
-                # looks fine, but the candle that closed while nobody was
-                # subscribed is missing. Scan for those and backfill them
-                # from Binance the same way a stale tail gets backfilled.
                 gap_filled_data = await _check_and_fill_internal_gaps(
                     historical, symbol, interval, page_size
                 )
                 if gap_filled_data:
-                    historical.extend(gap_filled_data)
-                    historical.sort(key=lambda x: x.timestamp)
-                # === MODIFICATION END ===
+                    merged_dict = {c.timestamp: c for c in historical}
+                    for c in gap_filled_data:
+                        merged_dict[c.timestamp] = c
+                    historical = sorted(merged_dict.values(), key=lambda x: x.timestamp)
             return historical
-        
+
         # No data in InfluxDB, fetch from Binance
         return await _fetch_from_binance_chronological(
             symbol, interval, start_time, end_time, page_size, prioritize_recent
@@ -290,25 +275,30 @@ async def _fetch_from_binance_chronological(
             limit=page_size
         )
         
-        data_entities = [
-            MarketDataEntity(
-                symbol=symbol, interval=interval,
-                timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                close=float(k[4]), volume=float(k[5])
-            ) for k in klines if len(k) >= 6 and all(k[1:6])
-        ]
+        current_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        data_entities = []
+        entities_to_save = []
         
-        # Always return in chronological order
+        for k in klines:
+            if len(k) >= 6 and all(k[1:6]):
+                entity = MarketDataEntity(
+                    symbol=symbol, interval=interval,
+                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                    open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                    close=float(k[4]), volume=float(k[5])
+                )
+                data_entities.append(entity)
+                # --- FIX: Only queue the candle for InfluxDB if it has fully closed ---
+                if k[6] < current_time_ms:
+                    entities_to_save.append(entity)
+        
         data_entities.sort(key=lambda x: x.timestamp)
         
-        # Save the data in background
-        if data_entities:
-            logger.info(f"Dispatching Celery task to save {len(data_entities)} fetched records")
-            data_to_save_json = [entity.model_dump_json() for entity in data_entities]
+        if entities_to_save:
+            logger.info(f"Dispatching Celery task to save {len(entities_to_save)} fetched records")
+            data_to_save_json = [entity.model_dump_json() for entity in entities_to_save]
             save_market_data_task.delay(data_to_save_json)
         
-        logger.info(f"Returning {len(data_entities)} records from Binance (chronological order)")
         return data_entities
         
     except Exception as e:
@@ -406,11 +396,12 @@ async def _fetch_and_save_missing_data(
         await binance.ensure_connected()
         
         missing_data = []
-        interval_duration = timedelta(minutes=INTERVAL_MINUTES[interval])
-        # MODIFICATION: Start fetching from the candle *after* the last known time
-        current_start_time = from_time + interval_duration
-        current_start_ms = int(current_start_time.timestamp() * 1000)
+        # --- FIX: Start exactly at from_time (NOT from_time + interval). 
+        # This forces Binance to return the last known candle, completely overwriting 
+        # any partial/corrupted snapshot currently stuck in InfluxDB.
+        current_start_ms = int(from_time.timestamp() * 1000)
         end_time_ms = int(to_time.timestamp() * 1000)
+        current_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
 
         while current_start_ms < end_time_ms:
             klines = await binance.get_klines(
@@ -424,34 +415,36 @@ async def _fetch_and_save_missing_data(
             if not klines:
                 break
 
-            batch_entities = [
-                MarketDataEntity(
-                    symbol=symbol, interval=interval,
-                    timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
-                    open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                    close=float(k[4]), volume=float(k[5])
-                ) for k in klines if len(k) >= 6 and all(k[1:6])
-            ]
+            batch_entities = []
+            entities_to_save = []
+            
+            for k in klines:
+                if len(k) >= 6 and all(k[1:6]):
+                    entity = MarketDataEntity(
+                        symbol=symbol, interval=interval,
+                        timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
+                        open=float(k[1]), high=float(k[2]), low=float(k[3]),
+                        close=float(k[4]), volume=float(k[5])
+                    )
+                    batch_entities.append(entity)
+                    # --- FIX: Only queue closed candles ---
+                    if k[6] < current_time_ms:
+                        entities_to_save.append(entity)
             
             if not batch_entities:
                 break
 
             missing_data.extend(batch_entities)
-            # MODIFICATION: Ensure we always move forward
             current_start_ms = int(batch_entities[-1].timestamp.timestamp() * 1000) + 1 
-            # Only sleep if there's actually another iteration coming up -
-            # no point paying 0.2s on the common one-batch case, which is
-            # every normal "chart just opened, InfluxDB is a few candles
-            # behind" request.
+            
             if current_start_ms < end_time_ms:
                 await asyncio.sleep(0.2)
 
-        if missing_data:
-            missing_data_json = [entity.model_dump_json() for entity in missing_data]
-            save_market_data_task.delay(missing_data_json)
-            logger.info(f"Dispatched Celery task to save {len(missing_data)} missing candles.")
+            if entities_to_save:
+                missing_data_json = [entity.model_dump_json() for entity in entities_to_save]
+                save_market_data_task.delay(missing_data_json)
+                logger.info(f"Dispatched Celery task to save {len(entities_to_save)} missing candles.")
             
-        # --- FIX: Return the fetched data ---
         return missing_data
             
     except Exception as e:
