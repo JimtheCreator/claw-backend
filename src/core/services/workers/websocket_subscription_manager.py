@@ -788,4 +788,4 @@ class WebsocketSubscriptionManager:
 
 if __name__ == "__main__":
     manager = WebsocketSubscriptionManager()
-    asyncio.run(manager.run())
+    asyncio.run(manager.run()) 
