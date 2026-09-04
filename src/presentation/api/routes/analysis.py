@@ -19,7 +19,8 @@ from core.engines.chart_engine import ChartEngine
 # Import Celery tasks
 from core.services.tasks import (
     analyze_trendlines_task,
-    analyze_sr_task
+    analyze_sr_task,
+    analyze_smc_task
 )
 
 # Import existing Redis cache
@@ -205,6 +206,13 @@ class AnalysisRequest(BaseModel):
     symbol: str
     interval: str
     timeframe: str
+
+class SmcAnalysisRequest(AnalysisRequest):
+    # Defaults on, matching the standalone-vs-MTFA design: at the top of
+    # the timeframe ladder (or with this explicitly off) the pipeline
+    # degrades to standalone automatically - true just means "consult
+    # higher timeframes when there's a ladder rung to consult".
+    mtfa_enabled: bool = True
 
 class AnalysisTaskResponse(BaseModel):
     message: str
@@ -475,3 +483,80 @@ async def get_support_resistance(
     except Exception as e:
         logger.error(f"[API] S/R error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="S/R detection failed")
+
+# --- SMC/ICT analysis endpoint (Celery, progressive updates via SSE) ---
+@router.post("/analyze/smc",
+             response_model=AnalysisTaskResponse,
+             status_code=202,
+             summary="Start SMC/ICT Analysis Task with Celery Workers")
+async def start_smc_analysis(
+    request: SmcAnalysisRequest,
+    repo: MarketRepository = Depends(get_crypto_repository)
+):
+    """
+    Initiates the SMC/ICT structural analysis pipeline (swings, market
+    structure, liquidity, sweeps, FVG, inversion FVG, order blocks,
+    imbalance confluence, premium/discount, optional MTFA) using Celery
+    workers, with progressive per-stage updates delivered over SSE - see
+    sse_smc_analysis_updates below.
+
+    Mirrors start_trendlines_analysis exactly: create a processing
+    record, queue the task, return immediately with the analysis_id the
+    client subscribes to for updates.
+    """
+    logger.info(f"[API] Received SMC analysis request for {request.symbol} from user {request.user_id}")
+
+    # Requires an "smc" entry in PLAN_LIMITS (stripe_payments/src/plan_limits.py)
+    # - not added here since I don't have visibility into that file's
+    # current structure; check_and_increment_analysis_usage will raise if
+    # the analysis_type key is missing.
+    await repo.check_and_increment_analysis_usage(
+        user_id=request.user_id,
+        analysis_type="smc",
+        PLAN_LIMITS=PLAN_LIMITS
+    )
+
+    analysis_id = await repo.create_analysis_record(
+        user_id=request.user_id,
+        symbol=request.symbol,
+        interval=request.interval,
+        timeframe=request.timeframe,
+        status="processing"
+    )
+    logger.info(f"[API] Created analysis record {analysis_id} with status 'processing'.")
+
+    analyze_smc_task.delay(
+        analysis_id=analysis_id,
+        user_id=request.user_id,
+        symbol=request.symbol,
+        interval=request.interval,
+        timeframe=request.timeframe,
+        mtfa_enabled=request.mtfa_enabled
+    )
+
+    logger.info(f"[API] Queued SMC analysis Celery task for {analysis_id}")
+
+    return {
+        "message": "SMC analysis has been queued with Celery workers. Use SSE for real-time progressive updates.",
+        "analysis_id": analysis_id
+    }
+
+
+@router.get("/analyze/smc/progress/sse/{analysis_id}")
+async def sse_smc_analysis_updates(
+    analysis_id: str,
+    repo: MarketRepository = Depends(get_crypto_repository)
+):
+    """
+    Progressive-update stream for SMC analysis, over the SAME underlying
+    mechanism as the trendline SSE endpoint above (sse_analysis_updates):
+    the Redis channel `analysis:{analysis_id}` is already type-agnostic -
+    it doesn't know or care whether analyze_trendlines_task or
+    analyze_smc_task published to it. This route exists purely so SMC
+    analysis gets a correctly-named URL instead of routing clients
+    through a path literally called "trendlines" - it delegates entirely
+    to the existing handler rather than duplicating ~150 lines of
+    reconnect/keepalive/completion-detection logic that would then need
+    to be kept in sync by hand.
+    """
+    return await sse_analysis_updates(analysis_id, repo)

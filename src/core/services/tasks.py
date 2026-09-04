@@ -26,6 +26,21 @@ from core.engines.support_resistance_engine import SupportResistanceEngine # Add
 import json
 from decimal import Decimal
 
+# --- NEW IMPORTS FOR SMC ANALYSIS TASK ---
+import pandas as pd
+from core.engines.swing_structure_engine import SwingStructureEngine
+from core.engines.market_structure_engine import MarketStructureEngine
+from core.engines.liquidity_engine import LiquidityEngine
+from core.engines.liquidity_sweep_engine import LiquiditySweepEngine
+from core.engines.fvg_engine import FVGEngine
+from core.engines.inversion_fvg_engine import InversionFVGEngine
+from core.engines.order_block_engine import OrderBlockEngine
+from core.engines.imbalance_order_block_engine import ImbalanceOrderBlockEngine
+from core.engines.premium_discount_engine import PremiumDiscountEngine
+from core.use_cases.market_analysis.analyze_with_mtfa import analyze_with_mtfa
+from core.config.mtfa_ladder import get_htf_chain
+from common.utils.serialization import serialize_result
+
 from celery import shared_task
 from src.core.services.workers.market_ingestion_worker import run_market_ingestion
 
@@ -666,6 +681,257 @@ def analyze_sr_task(
     return asyncio.run(_run_sr_analysis())
 
 
+def _make_candle_fetcher(timeframe: str):
+    """
+    Adapts get_ohlcv_from_db (symbol, interval, timeframe) -> DataFrame
+    into the (symbol, interval) -> DataFrame shape analyze_with_mtfa
+    expects, closing over a fixed `timeframe` (lookback window) so every
+    rung of the MTFA ladder fetches the same relative window - just fewer
+    candles at coarser granularity, which is the expected behavior.
+    """
+    async def fetcher(symbol: str, interval: str):
+        ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+        return pd.DataFrame(ohlcv)
+    return fetcher
+
+
+@celery_app.task(name="src.core.services.tasks.analyze_smc_task")
+def analyze_smc_task(
+    analysis_id: str,
+    user_id: str,
+    symbol: str,
+    interval: str,
+    timeframe: str,
+    mtfa_enabled: bool = True
+):
+    """
+    Celery task for the SMC/ICT structural analysis pipeline (swings,
+    market structure, liquidity, sweeps, FVG, inversion FVG, order
+    blocks, imbalance confluence, premium/discount) plus optional MTFA.
+
+    Unlike analyze_trendlines_task, this does NOT call a single bundled
+    orchestrator - each engine runs individually with its own
+    send_progress_sync call carrying that engine's ACTUAL serialized
+    result in extra_data. That's what makes this genuinely progressive
+    rather than just a sequence of status strings: a client watching the
+    SSE stream gets real swing points the moment swings are done, real
+    FVG zones the moment FVGs are done, etc., not just "processing..."
+    updates followed by one giant payload at the end. analyze_smc_structure
+    and analyze_with_mtfa (the async orchestrators built earlier) remain
+    useful for contexts that don't need this granularity - this task
+    intentionally unrolls the same pipeline for the progress hooks.
+    """
+    logger.info(f"[Celery:SmcTask:{analysis_id}] Starting SMC analysis for {symbol}")
+
+    async def _run_analysis():
+        repo = MarketRepository()
+        total_steps = 14 if mtfa_enabled else 13
+        step = 0
+
+        try:
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Initializing SMC analysis...")
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, f"Fetching OHLCV data for {symbol} ({interval})...")
+            ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
+            if not ohlcv or not ohlcv.get('timestamp'):
+                raise ValueError("OHLCV data could not be fetched or is empty.")
+            df = pd.DataFrame(ohlcv)
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting swing structure...")
+            swing_result = SwingStructureEngine(interval=interval).detect_swings(df)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(swing_result.swings)} swing points.",
+                extra_data={"swings": serialize_result(swing_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting market structure (BOS/CHoCH)...")
+            structure_result = MarketStructureEngine(interval=interval).detect_structure(df, swing_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(structure_result.events)} structure events, trend={structure_result.trend}.",
+                extra_data={"market_structure": serialize_result(structure_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Mapping liquidity pools...")
+            liquidity_result = LiquidityEngine(interval=interval).map_liquidity(df, swing_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Mapped {len(liquidity_result.pools)} liquidity pools.",
+                extra_data={"liquidity": serialize_result(liquidity_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting liquidity sweeps...")
+            sweep_result = LiquiditySweepEngine(interval=interval).detect_sweeps(df, liquidity_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(sweep_result.events)} liquidity sweep events.",
+                extra_data={"liquidity_sweeps": serialize_result(sweep_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting Fair Value Gaps...")
+            fvg_result = FVGEngine(interval=interval).detect_fvgs(df)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(fvg_result.zones)} FVG zones.",
+                extra_data={"fvg": serialize_result(fvg_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting Inversion FVGs...")
+            inversion_result = InversionFVGEngine(interval=interval).detect_inversions(df, fvg_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(inversion_result.zones)} inversion FVG zones.",
+                extra_data={"inversion_fvg": serialize_result(inversion_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Detecting Order Blocks...")
+            ob_result = OrderBlockEngine(interval=interval).detect_order_blocks(df, structure_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(ob_result.zones)} order blocks.",
+                extra_data={"order_blocks": serialize_result(ob_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Finding Imbalance + Order Block confluence...")
+            imbalance_result = ImbalanceOrderBlockEngine(interval=interval).find_confluence(fvg_result, ob_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(imbalance_result.zones)} confluence zones.",
+                extra_data={"imbalance_order_blocks": serialize_result(imbalance_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Calculating premium/discount pricing...")
+            pd_result = PremiumDiscountEngine(interval=interval).calculate_zone(df, swing_result, structure_result)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Premium/discount zone: {pd_result.zone}.",
+                extra_data={"premium_discount": serialize_result(pd_result)}
+            )
+
+            smc_data = {
+                "fvg": fvg_result,
+                "inversion_fvg": inversion_result,
+                "order_blocks": ob_result,
+                "imbalance_order_blocks": imbalance_result,
+                "liquidity": liquidity_result,
+                "liquidity_sweeps": sweep_result,
+                "market_structure": structure_result,
+                "premium_discount": pd_result,
+            }
+
+            mtfa_summary = None
+            if mtfa_enabled:
+                step += 1
+                htf_chain = get_htf_chain(interval)
+                if htf_chain:
+                    send_progress_sync(
+                        analysis_id, step, total_steps,
+                        f"Resolving MTFA context against {', '.join(htf_chain)}..."
+                    )
+                    fetcher = _make_candle_fetcher(timeframe)
+                    mtfa_result = await analyze_with_mtfa(
+                        symbol, interval, mtfa_enabled=True, candle_fetcher=fetcher
+                    )
+                    mtfa_summary = {
+                        "context": mtfa_result["context"],
+                        "htf_trend_alignment": mtfa_result["htf_trend_alignment"],
+                    }
+                    send_progress_sync(
+                        analysis_id, step, total_steps,
+                        f"MTFA resolved - alignment: {mtfa_summary['htf_trend_alignment']}",
+                        extra_data={"mtfa": mtfa_summary}
+                    )
+                else:
+                    send_progress_sync(
+                        analysis_id, step, total_steps,
+                        f"No higher timeframe configured for {interval} - MTFA is a no-op at this interval."
+                    )
+                    mtfa_summary = {"context": "standalone", "htf_trend_alignment": {}}
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Rendering interactive chart...")
+            chart = ChartEngine(ohlcv_data=ohlcv, analysis_data={}, smc_data=smc_data)
+            # HTML (not image) - this is the interactive WebView path, not
+            # a static snapshot. If payload size ever becomes a problem
+            # (large symbol lists, very long lookback windows), switch
+            # this to repo.upload_chart_image-style cloud upload + URL,
+            # same pattern the trendline task already uses - not needed
+            # at typical sizes (~50KB observed in testing).
+            chart_html = chart.create_chart(output_type="html")
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Saving analysis results...")
+            serialized_smc = {k: serialize_result(v) for k, v in smc_data.items()}
+            updates = {
+                "status": "completed",
+                "analysis_data": serialized_smc,
+                "error_message": None,
+            }
+            await repo.update_analysis_record(analysis_id, updates)
+
+            completion_data = {
+                "analysis_id": analysis_id,
+                "status": "completed",
+                "progress": "SMC analysis completed successfully.",
+                "step": total_steps,
+                "total_steps": total_steps,
+                "analysis_data": serialized_smc,
+                "mtfa": mtfa_summary,
+                "chart_html": chart_html,
+                "summary": {
+                    "symbol": symbol,
+                    "interval": interval,
+                    "timeframe": timeframe,
+                    "trend": structure_result.trend,
+                    "fvg_zones": len(fvg_result.zones),
+                    "order_blocks": len(ob_result.zones),
+                    "liquidity_pools": len(liquidity_result.pools),
+                    "liquidity_sweeps": len(sweep_result.events),
+                    "premium_discount_zone": pd_result.zone,
+                },
+                "timestamp": datetime.now().timestamp()
+            }
+            publish_completion_message_safe(analysis_id, completion_data)
+            logger.info(f"[Celery:SmcTask:{analysis_id}] Analysis completed successfully")
+
+        except Exception as e:
+            logger.error(f"[Celery:SmcTask:{analysis_id}] Analysis failed: {e}", exc_info=True)
+
+            error_updates = {
+                "status": "failed",
+                "error_message": str(e)
+            }
+            await repo.update_analysis_record(analysis_id, error_updates)
+
+            error_data = {
+                "analysis_id": analysis_id,
+                "status": "failed",
+                "progress": f"SMC analysis failed: {str(e)}",
+                "error_message": str(e),
+                "error_details": {
+                    "symbol": symbol,
+                    "interval": interval,
+                    "timeframe": timeframe,
+                    "error_type": type(e).__name__
+                },
+                "timestamp": datetime.now().timestamp()
+            }
+            publish_completion_message_safe(analysis_id, error_data)
+            raise
+
+    return asyncio.run(_run_analysis())
 
 
 @shared_task(name="sync_market_symbols")

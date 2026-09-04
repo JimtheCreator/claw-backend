@@ -32,3 +32,4 @@ scikit-learn
 python-telegram-bot
 twisted
 certifi
+pytest

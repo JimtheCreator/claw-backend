@@ -3,7 +3,6 @@
 from pydantic import BaseModel
 from typing import Dict, Literal, Optional
 
-
 class PremiumDiscountResult(BaseModel):
     """
     A present-tense snapshot classifying the current close within the

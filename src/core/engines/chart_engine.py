@@ -5,18 +5,26 @@ import pandas as pd
 from common.logger import logger
 
 class ChartEngine:
-    def __init__(self, ohlcv_data: Dict[str, list], analysis_data: Optional[Dict[str, Any]] = None, config: Optional[Dict] = None):
+    def __init__(self, ohlcv_data: Dict[str, list], analysis_data: Optional[Dict[str, Any]] = None, smc_data: Optional[Dict[str, Any]] = None, config: Optional[Dict] = None):
         """
         Initializes the ChartEngine.
 
         Args:
             ohlcv_data (Dict[str, list]): OHLCV data.
             analysis_data (Dict[str, Any]): Pattern analysis results.
+            smc_data (Dict[str, Any], optional): SMC engine outputs to overlay -
+                any subset of {"fvg", "inversion_fvg", "order_blocks",
+                "imbalance_order_blocks", "liquidity", "liquidity_sweeps",
+                "market_structure", "premium_discount"}. Each key is drawn
+                independently - a missing key just means that overlay is
+                skipped, not an error. See add_smc_overlays for the full
+                contract.
             overlays (Dict[str, Any], optional): Overlay data for trendlines, S/R, etc.
             config (Dict, optional): Configuration for chart aesthetics.
         """
         self.ohlcv = ohlcv_data
         self.analysis = analysis_data or {}
+        self.smc_data = smc_data or {}
         
         # Convert the ohlcv data dictionary to a DataFrame
         self.ohlcv_df = pd.DataFrame(self.ohlcv)
@@ -191,7 +199,30 @@ class ChartEngine:
                 "target_line": "rgba(255, 0, 255, 0.7)",
                 "annotation_bg": "rgba(242, 54, 69, 0.8)",
                 "annotation_font": "#FFFFFF",
-                "grid": "#1c1c1c"  # Added grid color to match Kotlin frontend
+                "grid": "#1c1c1c",  # Added grid color to match Kotlin frontend
+                # --- SMC overlay colors ---
+                "fvg_bullish_fill": "rgba(20, 184, 157, 0.15)",
+                "fvg_bullish_line": "rgba(20, 184, 157, 0.6)",
+                "fvg_bearish_fill": "rgba(242, 54, 69, 0.15)",
+                "fvg_bearish_line": "rgba(242, 54, 69, 0.6)",
+                "ob_bullish_fill": "rgba(0, 153, 255, 0.15)",
+                "ob_bullish_line": "rgba(0, 153, 255, 0.6)",
+                "ob_bearish_fill": "rgba(255, 140, 0, 0.15)",
+                "ob_bearish_line": "rgba(255, 140, 0, 0.6)",
+                "inversion_fvg_bullish_fill": "rgba(153, 51, 255, 0.15)",
+                "inversion_fvg_bullish_line": "rgba(153, 51, 255, 0.6)",
+                "inversion_fvg_bearish_fill": "rgba(255, 51, 153, 0.15)",
+                "inversion_fvg_bearish_line": "rgba(255, 51, 153, 0.6)",
+                "imbalance_ob_bullish_fill": "rgba(20, 184, 157, 0.3)",
+                "imbalance_ob_bearish_fill": "rgba(242, 54, 69, 0.3)",
+                "liquidity_buy_side": "rgba(255, 215, 0, 0.6)",
+                "liquidity_sell_side": "rgba(0, 229, 255, 0.6)",
+                "sweep_marker": "#FFFFFF",
+                "structure_bos": "rgba(255, 255, 255, 0.7)",
+                "structure_choch": "rgba(255, 215, 0, 0.9)",
+                "premium_fill": "rgba(242, 54, 69, 0.06)",
+                "discount_fill": "rgba(20, 184, 157, 0.06)",
+                "equilibrium_line": "rgba(255, 255, 255, 0.5)",
             }
         }
 
@@ -1039,7 +1070,334 @@ class ChartEngine:
                 xref="x1", yref="y1"
             )
 
+    # ==================================================================
+    # SMC overlays (FVG, Order Blocks, Liquidity, Market Structure, etc.)
+    # ==================================================================
+    #
+    # These draw with go.Scatter via add_trace, never fig.add_shape -
+    # shapes are layout-level and are NOT legend-toggleable in Plotly, so
+    # anything meant to be switchable via the legend (the whole point of
+    # the interactive Analysis view) has to be a real trace.
+    #
+    # Each zone TYPE gets one legend entry, not one per zone instance:
+    # only the first trace drawn for a given (kind, direction) sets
+    # showlegend=True; every subsequent one shares the same legendgroup
+    # with showlegend=False, so clicking that single legend entry toggles
+    # every zone of that kind together.
+    #
+    # Every method below accepts either the engine's pydantic result
+    # object directly or its dict/JSON form (via _field) - callers on
+    # either side of a serialization boundary don't need to convert first.
+
+    @staticmethod
+    def _field(obj, key, default=None):
+        """Reads `key` from a pydantic model or a plain dict alike."""
+        if obj is None:
+            return default
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    def _zone_end_time(self, mitigated_index):
+        """Active (unmitigated) zones extend to the right edge of the
+        visible chart; mitigated ones stop at the candle that closed
+        them out - a zone shouldn't visually persist past the point it
+        stopped being relevant."""
+        if mitigated_index is not None and mitigated_index in self.ohlcv_df.index:
+            return self.ohlcv_df.loc[mitigated_index, 'timestamp']
+        return self.ohlcv_df['timestamp'].max()
+
+    def _draw_zone_box(self, start_idx, end_time, top, bottom, fillcolor, linecolor,
+                        legend_name, legendgroup, show_legend, hover_text):
+        if start_idx not in self.ohlcv_df.index:
+            return
+        start_time = self.ohlcv_df.loc[start_idx, 'timestamp']
+        self.fig.add_trace(go.Scatter(
+            x=[start_time, end_time, end_time, start_time, start_time],
+            y=[top, top, bottom, bottom, top],
+            fill='toself',
+            mode='lines',
+            line=dict(color=linecolor, width=1),
+            fillcolor=fillcolor,
+            name=legend_name,
+            legendgroup=legendgroup,
+            showlegend=show_legend,
+            hoverinfo='text',
+            text=hover_text,
+        ), row=1, col=1)
+
+    def add_fvg_overlays(self, fvg_result=None):
+        """Draws FVG zones. Expects an FVGResult (or its dict form) with
+        a `zones` list of {type, top, bottom, start_index, mitigated_index,
+        mitigation_status}."""
+        fvg_result = fvg_result if fvg_result is not None else self.smc_data.get("fvg")
+        zones = self._field(fvg_result, "zones") or []
+        if not zones:
+            return
+        colors = self.config['colors']
+        shown = {"bullish": False, "bearish": False}
+        for z in zones:
+            z_type = self._field(z, "type")
+            fill = colors['fvg_bullish_fill'] if z_type == 'bullish' else colors['fvg_bearish_fill']
+            line = colors['fvg_bullish_line'] if z_type == 'bullish' else colors['fvg_bearish_line']
+            end_time = self._zone_end_time(self._field(z, "mitigated_index"))
+            top, bottom = self._field(z, "top"), self._field(z, "bottom")
+            status = self._field(z, "mitigation_status")
+            self._draw_zone_box(
+                self._field(z, "start_index"), end_time, top, bottom, fill, line,
+                legend_name=f"{z_type.capitalize()} FVG",
+                legendgroup=f"fvg_{z_type}",
+                show_legend=not shown.get(z_type, True),
+                hover_text=f"{z_type.capitalize()} FVG [{bottom:.6g}, {top:.6g}] - {status}",
+            )
+            shown[z_type] = True
+        logger.info(f"[ChartEngine] Overlayed {len(zones)} FVG zones.")
+
+    def add_inversion_fvg_overlays(self, inversion_result=None):
+        """Draws Inversion FVG zones. Expects an InversionFVGResult (or
+        dict form) with `zones` of {type, top, bottom, inversion_index,
+        retested_index, retest_status}. `type` here is the FLIPPED
+        polarity, drawn in the inversion-specific palette so it reads
+        visually distinct from a same-direction plain FVG."""
+        inversion_result = inversion_result if inversion_result is not None else self.smc_data.get("inversion_fvg")
+        zones = self._field(inversion_result, "zones") or []
+        if not zones:
+            return
+        colors = self.config['colors']
+        shown = {"bullish": False, "bearish": False}
+        for z in zones:
+            z_type = self._field(z, "type")
+            fill = colors['inversion_fvg_bullish_fill'] if z_type == 'bullish' else colors['inversion_fvg_bearish_fill']
+            line = colors['inversion_fvg_bullish_line'] if z_type == 'bullish' else colors['inversion_fvg_bearish_line']
+            inversion_index = self._field(z, "inversion_index")
+            end_time = self._zone_end_time(self._field(z, "retested_index"))
+            top, bottom = self._field(z, "top"), self._field(z, "bottom")
+            status = self._field(z, "retest_status")
+            self._draw_zone_box(
+                inversion_index, end_time, top, bottom, fill, line,
+                legend_name=f"{z_type.capitalize()} Inversion FVG",
+                legendgroup=f"inversion_fvg_{z_type}",
+                show_legend=not shown.get(z_type, True),
+                hover_text=f"{z_type.capitalize()} Inversion FVG [{bottom:.6g}, {top:.6g}] - {status}",
+            )
+            shown[z_type] = True
+        logger.info(f"[ChartEngine] Overlayed {len(zones)} Inversion FVG zones.")
+
+    def add_order_block_overlays(self, ob_result=None):
+        """Draws Order Block zones. Expects an OrderBlockResult (or dict
+        form) with `zones` of {type, top, bottom, candle_index,
+        mitigated_index, mitigation_status}."""
+        ob_result = ob_result if ob_result is not None else self.smc_data.get("order_blocks")
+        zones = self._field(ob_result, "zones") or []
+        if not zones:
+            return
+        colors = self.config['colors']
+        shown = {"bullish": False, "bearish": False}
+        for z in zones:
+            z_type = self._field(z, "type")
+            fill = colors['ob_bullish_fill'] if z_type == 'bullish' else colors['ob_bearish_fill']
+            line = colors['ob_bullish_line'] if z_type == 'bullish' else colors['ob_bearish_line']
+            end_time = self._zone_end_time(self._field(z, "mitigated_index"))
+            top, bottom = self._field(z, "top"), self._field(z, "bottom")
+            status = self._field(z, "mitigation_status")
+            self._draw_zone_box(
+                self._field(z, "candle_index"), end_time, top, bottom, fill, line,
+                legend_name=f"{z_type.capitalize()} Order Block",
+                legendgroup=f"ob_{z_type}",
+                show_legend=not shown.get(z_type, True),
+                hover_text=f"{z_type.capitalize()} OB [{bottom:.6g}, {top:.6g}] - {status}",
+            )
+            shown[z_type] = True
+        logger.info(f"[ChartEngine] Overlayed {len(zones)} Order Block zones.")
+
+    def add_imbalance_order_block_overlays(self, imb_result=None):
+        """Draws Imbalance+OB confluence zones - the intersection region
+        between an FVG and an Order Block of the same direction. Expects
+        an ImbalanceOrderBlockResult (or dict form) with `zones` of
+        {type, top, bottom, fvg_formed_index, ob_candle_index,
+        overlap_ratio}. Always extends to the chart's right edge -
+        confluence zones don't carry their own independent mitigation
+        state here, only their component zones do, so there's no
+        principled "end" to anchor to besides the visible window."""
+        imb_result = imb_result if imb_result is not None else self.smc_data.get("imbalance_order_blocks")
+        zones = self._field(imb_result, "zones") or []
+        if not zones:
+            return
+        colors = self.config['colors']
+        end_time = self.ohlcv_df['timestamp'].max()
+        shown = {"bullish": False, "bearish": False}
+        for z in zones:
+            z_type = self._field(z, "type")
+            fill = colors['imbalance_ob_bullish_fill'] if z_type == 'bullish' else colors['imbalance_ob_bearish_fill']
+            start_idx = min(self._field(z, "fvg_formed_index"), self._field(z, "ob_candle_index"))
+            top, bottom = self._field(z, "top"), self._field(z, "bottom")
+            ratio = self._field(z, "overlap_ratio") or 0
+            self._draw_zone_box(
+                start_idx, end_time, top, bottom, fill, fill,
+                legend_name=f"{z_type.capitalize()} Imbalance+OB",
+                legendgroup=f"imbalance_ob_{z_type}",
+                show_legend=not shown.get(z_type, True),
+                hover_text=f"{z_type.capitalize()} Imbalance+OB [{bottom:.6g}, {top:.6g}] - overlap {ratio:.0%}",
+            )
+            shown[z_type] = True
+        logger.info(f"[ChartEngine] Overlayed {len(zones)} Imbalance+OB confluence zones.")
+
+    def add_liquidity_overlays(self, liquidity_result=None):
+        """Draws Liquidity pools as thin horizontal lines from the pool's
+        first contributing swing to the chart's right edge - line width
+        scales with `touches` (capped) so a genuine multi-touch equal-
+        high/low pool reads as visually stronger than an isolated one.
+        Expects a LiquidityMapResult (or dict form) with `pools` of
+        {side, level, touches, first_index}."""
+        liquidity_result = liquidity_result if liquidity_result is not None else self.smc_data.get("liquidity")
+        pools = self._field(liquidity_result, "pools") or []
+        if not pools:
+            return
+        colors = self.config['colors']
+        end_time = self.ohlcv_df['timestamp'].max()
+        shown = {"buy_side": False, "sell_side": False}
+        for pool in pools:
+            side = self._field(pool, "side")
+            color = colors['liquidity_buy_side'] if side == 'buy_side' else colors['liquidity_sell_side']
+            first_index = self._field(pool, "first_index")
+            if first_index not in self.ohlcv_df.index:
+                continue
+            start_time = self.ohlcv_df.loc[first_index, 'timestamp']
+            level = self._field(pool, "level")
+            touches = self._field(pool, "touches", 1)
+            width = min(1 + touches, 6)
+            label = "Buy-side Liquidity" if side == 'buy_side' else "Sell-side Liquidity"
+            self.fig.add_trace(go.Scatter(
+                x=[start_time, end_time], y=[level, level],
+                mode='lines',
+                line=dict(color=color, width=width, dash='dot'),
+                name=label, legendgroup=f"liquidity_{side}",
+                showlegend=not shown.get(side, True),
+                hoverinfo='text', text=f"{label} @ {level:.6g} ({touches} touches)",
+            ), row=1, col=1)
+            shown[side] = True
+        logger.info(f"[ChartEngine] Overlayed {len(pools)} liquidity pools.")
+
+    def add_liquidity_sweep_overlays(self, sweep_result=None):
+        """Draws Liquidity Sweep events as markers at the wick that took
+        the pool out. Expects a LiquiditySweepResult (or dict form) with
+        `events` of {pool_side, index, wick_price}."""
+        sweep_result = sweep_result if sweep_result is not None else self.smc_data.get("liquidity_sweeps")
+        events = self._field(sweep_result, "events") or []
+        if not events:
+            return
+        colors = self.config['colors']
+        valid = [e for e in events if self._field(e, "index") in self.ohlcv_df.index]
+        if not valid:
+            return
+        times = [self.ohlcv_df.loc[self._field(e, "index"), 'timestamp'] for e in valid]
+        prices = [self._field(e, "wick_price") for e in valid]
+        hover = [
+            f"Liquidity sweep ({self._field(e, 'pool_side')}) @ {self._field(e, 'wick_price'):.6g}"
+            for e in valid
+        ]
+        self.fig.add_trace(go.Scatter(
+            x=times, y=prices, mode='markers',
+            marker=dict(symbol='x', size=9, color=colors['sweep_marker'], line=dict(width=1, color='black')),
+            name="Liquidity Sweep", legendgroup="liquidity_sweeps", showlegend=True,
+            hoverinfo='text', text=hover,
+        ), row=1, col=1)
+        logger.info(f"[ChartEngine] Overlayed {len(valid)} liquidity sweep events.")
+
+    def add_market_structure_overlays(self, structure_result=None):
+        """Draws BOS/CHoCH events as a marker at the break candle
+        connected by a dotted line back to the swing level it broke.
+        CHoCH is drawn in a distinct color from BOS since it's the rarer,
+        higher-signal event (trend change vs. continuation). Expects a
+        MarketStructureResult (or dict form) with `events` of {kind,
+        direction, index, level, reference_swing_index}."""
+        structure_result = structure_result if structure_result is not None else self.smc_data.get("market_structure")
+        events = self._field(structure_result, "events") or []
+        if not events:
+            return
+        colors = self.config['colors']
+        shown = {"BOS": False, "CHoCH": False}
+        for e in events:
+            idx = self._field(e, "index")
+            ref_idx = self._field(e, "reference_swing_index")
+            if idx not in self.ohlcv_df.index or ref_idx not in self.ohlcv_df.index:
+                continue
+            kind = self._field(e, "kind")
+            level = self._field(e, "level")
+            color = colors['structure_choch'] if kind == 'CHoCH' else colors['structure_bos']
+            x0 = self.ohlcv_df.loc[ref_idx, 'timestamp']
+            x1 = self.ohlcv_df.loc[idx, 'timestamp']
+            self.fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[level, level],
+                mode='lines+markers',
+                line=dict(color=color, width=1, dash='dot'),
+                marker=dict(size=[0, 7], color=color),
+                name=kind, legendgroup=f"structure_{kind}",
+                showlegend=not shown.get(kind, True),
+                hoverinfo='text', text=f"{kind} {self._field(e, 'direction')} @ {level:.6g}",
+            ), row=1, col=1)
+            shown[kind] = True
+        logger.info(f"[ChartEngine] Overlayed {len(events)} market structure events.")
+
+    def add_premium_discount_overlay(self, pd_result=None):
+        """Draws the active dealing range as two shaded halves (premium
+        above equilibrium, discount below) plus an equilibrium line.
+        Expects a PremiumDiscountResult (or dict form) with
+        range_available, top, bottom, equilibrium. One toggle for the
+        whole range - premium and discount are two halves of a single
+        concept, not overlays a trader would want to show separately."""
+        pd_result = pd_result if pd_result is not None else self.smc_data.get("premium_discount")
+        if not self._field(pd_result, "range_available"):
+            return
+        colors = self.config['colors']
+        top = self._field(pd_result, "top")
+        bottom = self._field(pd_result, "bottom")
+        equilibrium = self._field(pd_result, "equilibrium")
+        x0 = self.ohlcv_df['timestamp'].min()
+        x1 = self.ohlcv_df['timestamp'].max()
+
+        self.fig.add_trace(go.Scatter(
+            x=[x0, x1, x1, x0, x0], y=[top, top, equilibrium, equilibrium, top],
+            fill='toself', mode='lines', line=dict(width=0), fillcolor=colors['premium_fill'],
+            name="Premium/Discount Range", legendgroup="premium_discount", showlegend=True,
+            hoverinfo='text', text=f"Premium zone (above {equilibrium:.6g})",
+        ), row=1, col=1)
+        self.fig.add_trace(go.Scatter(
+            x=[x0, x1, x1, x0, x0], y=[equilibrium, equilibrium, bottom, bottom, equilibrium],
+            fill='toself', mode='lines', line=dict(width=0), fillcolor=colors['discount_fill'],
+            name="Premium/Discount Range", legendgroup="premium_discount", showlegend=False,
+            hoverinfo='text', text=f"Discount zone (below {equilibrium:.6g})",
+        ), row=1, col=1)
+        self.fig.add_trace(go.Scatter(
+            x=[x0, x1], y=[equilibrium, equilibrium],
+            mode='lines', line=dict(color=colors['equilibrium_line'], width=1, dash='dash'),
+            name="Premium/Discount Range", legendgroup="premium_discount", showlegend=False,
+            hoverinfo='text', text=f"Equilibrium @ {equilibrium:.6g}",
+        ), row=1, col=1)
+        logger.info(f"[ChartEngine] Overlayed premium/discount range [{bottom:.6g}, {top:.6g}].")
+
+    def add_smc_overlays(self, smc_data: Optional[Dict[str, Any]] = None):
+        """Draws every SMC overlay present in smc_data (or self.smc_data
+        if not passed). Each is fully independent - a missing key is
+        skipped silently, and a bad/empty result in one key never blocks
+        the others, since each add_* method already guards its own
+        inputs. Extending this later (a new engine) is one new
+        add_<type>_overlays method plus one line here - no changes needed
+        to anything else in this class."""
+        data = smc_data if smc_data is not None else self.smc_data
+        if not data:
+            return
+        self.add_fvg_overlays(data.get("fvg"))
+        self.add_inversion_fvg_overlays(data.get("inversion_fvg"))
+        self.add_order_block_overlays(data.get("order_blocks"))
+        self.add_imbalance_order_block_overlays(data.get("imbalance_order_blocks"))
+        self.add_liquidity_overlays(data.get("liquidity"))
+        self.add_liquidity_sweep_overlays(data.get("liquidity_sweeps"))
+        self.add_market_structure_overlays(data.get("market_structure"))
+        self.add_premium_discount_overlay(data.get("premium_discount"))
+
     def create_chart(self, output_type: str = 'image') -> bytes | str:
+
         """Generates the chart with all overlays."""
         self._create_figure()
         # Add overlays if present
@@ -1047,11 +1405,16 @@ class ChartEngine:
         self.add_support_resistance()
         self.add_trendlines()
         self._draw_patterns()
+        self.add_smc_overlays()
         self._add_candlestick_trace() # Draw candlesticks on top
         self._add_volume_trace()
 
         if output_type == 'image':
             return self.fig.to_image(format="png", width=1600, height=900, scale=2)
         elif output_type == 'html':
-            return self.fig.to_html()
+            # include_plotlyjs='cdn' keeps the payload small for the
+            # interactive Analysis view (WebView embed) - the app already
+            # needs network access, so pulling plotly.js from cdnjs beats
+            # inlining the full library into every response.
+            return self.fig.to_html(include_plotlyjs='cdn')
         raise ValueError("Invalid output_type. Choose 'image' or 'html'.")
