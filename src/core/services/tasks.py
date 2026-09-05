@@ -41,6 +41,25 @@ from core.use_cases.market_analysis.analyze_with_mtfa import analyze_with_mtfa
 from core.config.mtfa_ladder import get_htf_chain
 from common.utils.serialization import serialize_result
 
+# --- Previously orphaned standalone engines - now wired into the pipeline ---
+from core.engines.vwap_engine import VWAPEngine
+from core.engines.volume_profile_engine import VolumeProfileEngine
+from core.engines.rsi_macd_divergence_engine import RSIMACDDivergenceEngine
+from core.engines.cvd_engine import CVDEngine
+from core.engines.tsmom_engine import TSMOMEngine
+
+# Sensible default lookback windows per interval for MTFA's higher-timeframe
+# fetches - see _make_candle_fetcher for why these can't just reuse the
+# requested TF's own timeframe. Sized for roughly 150-200+ candles per
+# interval, comfortably above what any engine here needs to confirm
+# structure, not just the bare minimum to avoid an empty result.
+from typing import Dict as _Dict
+HTF_LOOKBACK_DEFAULTS: _Dict[str, str] = {
+    "1m": "6h", "5m": "2d", "15m": "5d", "30m": "10d",
+    "1h": "14d", "2h": "30d", "4h": "60d", "6h": "90d",
+    "1d": "200d", "3d": "450d", "1w": "150w", "1M": "150M",
+}
+
 from celery import shared_task
 from src.core.services.workers.market_ingestion_worker import run_market_ingestion
 
@@ -681,15 +700,36 @@ def analyze_sr_task(
     return asyncio.run(_run_sr_analysis())
 
 
-def _make_candle_fetcher(timeframe: str):
+def _make_candle_fetcher(requested_interval: str, requested_timeframe: str):
     """
     Adapts get_ohlcv_from_db (symbol, interval, timeframe) -> DataFrame
     into the (symbol, interval) -> DataFrame shape analyze_with_mtfa
-    expects, closing over a fixed `timeframe` (lookback window) so every
-    rung of the MTFA ladder fetches the same relative window - just fewer
-    candles at coarser granularity, which is the expected behavior.
+    expects.
+
+    Each HTF rung gets its OWN lookback timeframe from
+    HTF_LOOKBACK_DEFAULTS, not the requested TF's timeframe reused across
+    every rung. Reusing one value (say "7d") for every interval was a
+    real bug: 7 days is ~168 candles on 1h but only ~7 candles on 1d -
+    below SwingStructureEngine's minimum of 2*window+1 (5, at the default
+    daily window of 2) to confirm even a single swing. Every downstream
+    engine (structure, liquidity, order blocks...) would then run on an
+    empty swing list, and analyze_with_mtfa would still report
+    context="mtfa" as if real higher-timeframe context had been
+    resolved - a silent correctness failure, not a crash, which is worse.
+
+    The interval the caller actually REQUESTED keeps using their own
+    `requested_timeframe` - their explicit lookback choice should win for
+    the timeframe they asked to analyze. Every OTHER interval (i.e. every
+    HTF rung) falls back to HTF_LOOKBACK_DEFAULTS, sized to comfortably
+    clear the swing-confirmation minimum and give the rest of the
+    pipeline something meaningful to work with (roughly 150-200+ candles
+    per timeframe, not just the bare minimum to not crash).
     """
     async def fetcher(symbol: str, interval: str):
+        if interval == requested_interval:
+            timeframe = requested_timeframe
+        else:
+            timeframe = HTF_LOOKBACK_DEFAULTS.get(interval, requested_timeframe)
         ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
         return pd.DataFrame(ohlcv)
     return fetcher
@@ -716,16 +756,24 @@ def analyze_smc_task(
     rather than just a sequence of status strings: a client watching the
     SSE stream gets real swing points the moment swings are done, real
     FVG zones the moment FVGs are done, etc., not just "processing..."
-    updates followed by one giant payload at the end. analyze_smc_structure
-    and analyze_with_mtfa (the async orchestrators built earlier) remain
-    useful for contexts that don't need this granularity - this task
-    intentionally unrolls the same pipeline for the progress hooks.
+    updates followed by one giant payload at the end.
+
+    NOTE: analyze_smc_structure (core/use_cases/market_analysis/smc.py)
+    is now DEAD CODE - it was the original bundled orchestrator this task
+    superseded, and nothing calls it anymore. analyze_with_mtfa is still
+    live and used below for the MTFA branch. Flagging this here rather
+    than pretending the old orchestrator still has a purpose - it should
+    either be deleted or explicitly repurposed, not left as an unused
+    function with no note explaining why it's still in the codebase.
     """
     logger.info(f"[Celery:SmcTask:{analysis_id}] Starting SMC analysis for {symbol}")
 
     async def _run_analysis():
         repo = MarketRepository()
-        total_steps = 14 if mtfa_enabled else 13
+        # +5 for the standalone indicator group (VWAP, Volume Profile,
+        # RSI/MACD Divergence, CVD, TSMOM), always run regardless of the
+        # MTFA toggle - none of them depend on higher-timeframe data.
+        total_steps = 19 if mtfa_enabled else 18
         step = 0
 
         try:
@@ -831,6 +879,77 @@ def analyze_smc_task(
                 "premium_discount": pd_result,
             }
 
+            # --- Standalone indicators (VWAP, Volume Profile, RSI/MACD ---
+            # --- Divergence, CVD, TSMOM) - always run, MTFA-independent ---
+            #
+            # Kept in a SEPARATE dict from smc_data on purpose: smc_data
+            # feeds ChartEngine.add_smc_overlays, which only has draw
+            # methods for the 8 SMC/ICT zone types above. None of these
+            # 5 have a chart overlay implementation yet (VWAP/CVD are
+            # line-series overlays, Volume Profile is normally a sideways
+            # histogram pane, RSI/MACD divergence needs oscillator
+            # subplots, TSMOM isn't spatial at all) - passing them to
+            # ChartEngine today would just be silently ignored since it
+            # reads specific keys, not all of smc_data. They're real,
+            # tested, and included in the analysis payload below; drawing
+            # them is separate, not-yet-built work, not a broken promise.
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Computing VWAP and bands...")
+            vwap_result = VWAPEngine(interval=interval).calculate_vwap(df)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"VWAP computed across {len(vwap_result.points)} candles.",
+                extra_data={"vwap": serialize_result(vwap_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Building volume profile...")
+            volume_profile_result = VolumeProfileEngine(interval=interval).calculate_profile(df)
+            vp_msg = "Volume profile unavailable (no volume or degenerate range)."
+            if volume_profile_result.profile_available:
+                vp_msg = f"Volume profile built, POC at {volume_profile_result.poc_price:.6g}."
+            send_progress_sync(
+                analysis_id, step, total_steps, vp_msg,
+                extra_data={"volume_profile": serialize_result(volume_profile_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Checking RSI/MACD divergence...")
+            divergence_result = RSIMACDDivergenceEngine(interval=interval).detect_divergence(df)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Found {len(divergence_result.events)} RSI/MACD divergence events.",
+                extra_data={"rsi_macd_divergence": serialize_result(divergence_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Computing cumulative volume delta...")
+            cvd_result = CVDEngine(interval=interval).calculate_cvd(df)
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"CVD computed across {len(cvd_result.points)} candles.",
+                extra_data={"cvd": serialize_result(cvd_result)}
+            )
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Computing TSMOM / multi-horizon trend signal...")
+            tsmom_result = TSMOMEngine(interval=interval).calculate_signal(df)
+            tsmom_msg = "TSMOM signal unavailable (insufficient history for any configured horizon)."
+            if tsmom_result.signal_available:
+                tsmom_msg = f"TSMOM signal: {tsmom_result.trend_label}."
+            send_progress_sync(
+                analysis_id, step, total_steps, tsmom_msg,
+                extra_data={"tsmom": serialize_result(tsmom_result)}
+            )
+
+            standalone_indicators = {
+                "vwap": vwap_result,
+                "volume_profile": volume_profile_result,
+                "rsi_macd_divergence": divergence_result,
+                "cvd": cvd_result,
+                "tsmom": tsmom_result,
+            }
+
             mtfa_summary = None
             if mtfa_enabled:
                 step += 1
@@ -840,7 +959,7 @@ def analyze_smc_task(
                         analysis_id, step, total_steps,
                         f"Resolving MTFA context against {', '.join(htf_chain)}..."
                     )
-                    fetcher = _make_candle_fetcher(timeframe)
+                    fetcher = _make_candle_fetcher(interval, timeframe)
                     mtfa_result = await analyze_with_mtfa(
                         symbol, interval, mtfa_enabled=True, candle_fetcher=fetcher
                     )
@@ -874,9 +993,11 @@ def analyze_smc_task(
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Saving analysis results...")
             serialized_smc = {k: serialize_result(v) for k, v in smc_data.items()}
+            serialized_standalone = {k: serialize_result(v) for k, v in standalone_indicators.items()}
+            serialized_all = {**serialized_smc, **serialized_standalone}
             updates = {
                 "status": "completed",
-                "analysis_data": serialized_smc,
+                "analysis_data": serialized_all,
                 "error_message": None,
             }
             await repo.update_analysis_record(analysis_id, updates)
@@ -887,7 +1008,7 @@ def analyze_smc_task(
                 "progress": "SMC analysis completed successfully.",
                 "step": total_steps,
                 "total_steps": total_steps,
-                "analysis_data": serialized_smc,
+                "analysis_data": serialized_all,
                 "mtfa": mtfa_summary,
                 "chart_html": chart_html,
                 "summary": {
@@ -900,6 +1021,8 @@ def analyze_smc_task(
                     "liquidity_pools": len(liquidity_result.pools),
                     "liquidity_sweeps": len(sweep_result.events),
                     "premium_discount_zone": pd_result.zone,
+                    "tsmom_trend": tsmom_result.trend_label if tsmom_result.signal_available else None,
+                    "divergence_events": len(divergence_result.events),
                 },
                 "timestamp": datetime.now().timestamp()
             }
