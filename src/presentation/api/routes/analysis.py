@@ -67,10 +67,10 @@ class ConnectionManager:
         """Listen for Redis pub/sub messages and forward to WebSocket clients"""
         try:
             # Subscribe to all analysis channels using pattern
-            pubsub = await redis_cache.subscribe("analysis:*")
+            pubsub = await redis_cache.psubscribe("analysis:*")
             
             async for message in pubsub.listen():
-                if message['type'] == 'message':
+                if message['type'] == 'pmessage':
                     channel = message['channel']
                     if channel.startswith('analysis:'):
                         analysis_id = channel.split(':', 1)[1]
@@ -135,14 +135,14 @@ class SSEConnectionManager:
                 await redis_cache.initialize()
                 
                 # Subscribe with pattern matching for all analysis channels
-                self.redis_pubsub = await redis_cache.subscribe("analysis:*")
+                self.redis_pubsub = await redis_cache.psubscribe("analysis:*")
                 logger.info("SSE Redis listener successfully subscribed to 'analysis:*'")
                 
                 retry_count = 0  # Reset retry count on successful connection
                 
                 async for message in self.redis_pubsub.listen():
                     try:
-                        if message['type'] == 'message':
+                        if message['type'] == 'pmessage':
                             logger.info(f"SSE Redis listener received message: {message}")
                             
                             channel = message['channel']
@@ -506,15 +506,19 @@ async def start_smc_analysis(
     """
     logger.info(f"[API] Received SMC analysis request for {request.symbol} from user {request.user_id}")
 
-    # Requires an "smc" entry in PLAN_LIMITS (stripe_payments/src/plan_limits.py)
-    # - not added here since I don't have visibility into that file's
-    # current structure; check_and_increment_analysis_usage will raise if
-    # the analysis_type key is missing.
-    await repo.check_and_increment_analysis_usage(
+    # SMC analysis uses the existing market-analysis allowance. The previous
+    # generic counter looked for `smc_analysis_limit`, which no subscription
+    # row has, so every genuine SMC request could be rejected before Celery
+    # was even queued.
+    within_limit = await repo.check_market_analysis_limit(
         user_id=request.user_id,
-        analysis_type="smc",
         PLAN_LIMITS=PLAN_LIMITS
     )
+    if not within_limit:
+        raise HTTPException(
+            status_code=403,
+            detail="You have reached your market analysis limit for this period."
+        )
 
     analysis_id = await repo.create_analysis_record(
         user_id=request.user_id,

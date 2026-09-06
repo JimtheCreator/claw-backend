@@ -7,7 +7,6 @@ from common.logger import logger
 from common.utils.ohlcv_prep import prepare_ohlcv
 from core.domain.entities.VolumeProfileEntity import VolumeProfileBin, VolumeProfileResult
 
-
 class VolumeProfileEngine:
     """
     Volume-by-price distribution over a candle window, plus Point of
@@ -119,3 +118,6 @@ class VolumeProfileEngine:
                 accumulated += bin_volumes[low_idx]
 
         return low_idx, high_idx
+
+
+ 

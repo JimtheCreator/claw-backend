@@ -38,8 +38,10 @@ from core.engines.order_block_engine import OrderBlockEngine
 from core.engines.imbalance_order_block_engine import ImbalanceOrderBlockEngine
 from core.engines.premium_discount_engine import PremiumDiscountEngine
 from core.use_cases.market_analysis.analyze_with_mtfa import analyze_with_mtfa
+from core.use_cases.market_analysis.trade_plan import build_trade_plan
+from core.use_cases.market_analysis.analysis_snapshot import closed_candles
+from core.engines.analysis_chart_presentation import PRESENTATION_VERSION
 from core.config.mtfa_ladder import get_htf_chain
-from common.utils.serialization import serialize_result
 
 # --- Previously orphaned standalone engines - now wired into the pipeline ---
 from core.engines.vwap_engine import VWAPEngine
@@ -537,6 +539,10 @@ def analyze_trendlines_task(
     logger.info(f"[Celery:TrendlineTask:{analysis_id}] Starting trendline analysis for {symbol}")
     
     async def _run_analysis():
+        # The worker is a separate process from FastAPI, so it does not share
+        # the API process's Redis startup hook. Initialise before data access
+        # to keep the Binance rate limiter operating rather than failing open.
+        await redis_cache.initialize()
         repo = MarketRepository()
         
         try:
@@ -700,7 +706,7 @@ def analyze_sr_task(
     return asyncio.run(_run_sr_analysis())
 
 
-def _make_candle_fetcher(requested_interval: str, requested_timeframe: str):
+def _make_candle_fetcher(requested_interval: str, requested_timeframe: str, as_of=None):
     """
     Adapts get_ohlcv_from_db (symbol, interval, timeframe) -> DataFrame
     into the (symbol, interval) -> DataFrame shape analyze_with_mtfa
@@ -731,7 +737,7 @@ def _make_candle_fetcher(requested_interval: str, requested_timeframe: str):
         else:
             timeframe = HTF_LOOKBACK_DEFAULTS.get(interval, requested_timeframe)
         ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
-        return pd.DataFrame(ohlcv)
+        return closed_candles(pd.DataFrame(ohlcv), interval, as_of)
     return fetcher
 
 
@@ -749,14 +755,10 @@ def analyze_smc_task(
     market structure, liquidity, sweeps, FVG, inversion FVG, order
     blocks, imbalance confluence, premium/discount) plus optional MTFA.
 
-    Unlike analyze_trendlines_task, this does NOT call a single bundled
-    orchestrator - each engine runs individually with its own
-    send_progress_sync call carrying that engine's ACTUAL serialized
-    result in extra_data. That's what makes this genuinely progressive
-    rather than just a sequence of status strings: a client watching the
-    SSE stream gets real swing points the moment swings are done, real
-    FVG zones the moment FVGs are done, etc., not just "processing..."
-    updates followed by one giant payload at the end.
+    Each engine runs individually and reports its completed stage over
+    SSE. The raw detector objects remain backend implementation detail;
+    the completed client result is a rendered requested-timeframe chart
+    with its analysis overlays and conditional projection.
 
     NOTE: analyze_smc_structure (core/use_cases/market_analysis/smc.py)
     is now DEAD CODE - it was the original bundled orchestrator this task
@@ -766,14 +768,18 @@ def analyze_smc_task(
     either be deleted or explicitly repurposed, not left as an unused
     function with no note explaining why it's still in the codebase.
     """
-    logger.info(f"[Celery:SmcTask:{analysis_id}] Starting SMC analysis for {symbol}")
+    logger.info(f"[Celery:SmcTask:{analysis_id}] Starting SMC analysis for {symbol}; renderer={PRESENTATION_VERSION}")
 
     async def _run_analysis():
+        # The worker is a separate process from FastAPI, so it does not share
+        # the API process's Redis startup hook. Initialise before data access
+        # to keep the Binance rate limiter operating rather than failing open.
+        await redis_cache.initialize()
         repo = MarketRepository()
         # +5 for the standalone indicator group (VWAP, Volume Profile,
         # RSI/MACD Divergence, CVD, TSMOM), always run regardless of the
         # MTFA toggle - none of them depend on higher-timeframe data.
-        total_steps = 19 if mtfa_enabled else 18
+        total_steps = 20 if mtfa_enabled else 19
         step = 0
 
         try:
@@ -785,15 +791,18 @@ def analyze_smc_task(
             ohlcv = await get_ohlcv_from_db(symbol, interval, timeframe)
             if not ohlcv or not ohlcv.get('timestamp'):
                 raise ValueError("OHLCV data could not be fetched or is empty.")
-            df = pd.DataFrame(ohlcv)
+            snapshot_time = datetime.now(timezone.utc)
+            df = closed_candles(pd.DataFrame(ohlcv), interval, snapshot_time)
+            if df.empty:
+                raise ValueError("No closed candles available for structural confirmation.")
+            ohlcv = df.to_dict("list")
 
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Detecting swing structure...")
             swing_result = SwingStructureEngine(interval=interval).detect_swings(df)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(swing_result.swings)} swing points.",
-                extra_data={"swings": serialize_result(swing_result)}
+                f"Found {len(swing_result.swings)} swing points."
             )
 
             step += 1
@@ -801,8 +810,7 @@ def analyze_smc_task(
             structure_result = MarketStructureEngine(interval=interval).detect_structure(df, swing_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(structure_result.events)} structure events, trend={structure_result.trend}.",
-                extra_data={"market_structure": serialize_result(structure_result)}
+                f"Found {len(structure_result.events)} structure events, trend={structure_result.trend}."
             )
 
             step += 1
@@ -810,8 +818,7 @@ def analyze_smc_task(
             liquidity_result = LiquidityEngine(interval=interval).map_liquidity(df, swing_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Mapped {len(liquidity_result.pools)} liquidity pools.",
-                extra_data={"liquidity": serialize_result(liquidity_result)}
+                f"Mapped {len(liquidity_result.pools)} liquidity pools."
             )
 
             step += 1
@@ -819,8 +826,7 @@ def analyze_smc_task(
             sweep_result = LiquiditySweepEngine(interval=interval).detect_sweeps(df, liquidity_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(sweep_result.events)} liquidity sweep events.",
-                extra_data={"liquidity_sweeps": serialize_result(sweep_result)}
+                f"Found {len(sweep_result.events)} liquidity sweep events."
             )
 
             step += 1
@@ -828,8 +834,7 @@ def analyze_smc_task(
             fvg_result = FVGEngine(interval=interval).detect_fvgs(df)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(fvg_result.zones)} FVG zones.",
-                extra_data={"fvg": serialize_result(fvg_result)}
+                f"Found {len(fvg_result.zones)} FVG zones."
             )
 
             step += 1
@@ -837,8 +842,7 @@ def analyze_smc_task(
             inversion_result = InversionFVGEngine(interval=interval).detect_inversions(df, fvg_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(inversion_result.zones)} inversion FVG zones.",
-                extra_data={"inversion_fvg": serialize_result(inversion_result)}
+                f"Found {len(inversion_result.zones)} inversion FVG zones."
             )
 
             step += 1
@@ -846,8 +850,7 @@ def analyze_smc_task(
             ob_result = OrderBlockEngine(interval=interval).detect_order_blocks(df, structure_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(ob_result.zones)} order blocks.",
-                extra_data={"order_blocks": serialize_result(ob_result)}
+                f"Found {len(ob_result.zones)} order blocks."
             )
 
             step += 1
@@ -855,8 +858,7 @@ def analyze_smc_task(
             imbalance_result = ImbalanceOrderBlockEngine(interval=interval).find_confluence(fvg_result, ob_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(imbalance_result.zones)} confluence zones.",
-                extra_data={"imbalance_order_blocks": serialize_result(imbalance_result)}
+                f"Found {len(imbalance_result.zones)} confluence zones."
             )
 
             step += 1
@@ -864,8 +866,7 @@ def analyze_smc_task(
             pd_result = PremiumDiscountEngine(interval=interval).calculate_zone(df, swing_result, structure_result)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Premium/discount zone: {pd_result.zone}.",
-                extra_data={"premium_discount": serialize_result(pd_result)}
+                f"Premium/discount zone: {pd_result.zone}."
             )
 
             smc_data = {
@@ -882,24 +883,15 @@ def analyze_smc_task(
             # --- Standalone indicators (VWAP, Volume Profile, RSI/MACD ---
             # --- Divergence, CVD, TSMOM) - always run, MTFA-independent ---
             #
-            # Kept in a SEPARATE dict from smc_data on purpose: smc_data
-            # feeds ChartEngine.add_smc_overlays, which only has draw
-            # methods for the 8 SMC/ICT zone types above. None of these
-            # 5 have a chart overlay implementation yet (VWAP/CVD are
-            # line-series overlays, Volume Profile is normally a sideways
-            # histogram pane, RSI/MACD divergence needs oscillator
-            # subplots, TSMOM isn't spatial at all) - passing them to
-            # ChartEngine today would just be silently ignored since it
-            # reads specific keys, not all of smc_data. They're real,
-            # tested, and included in the analysis payload below; drawing
-            # them is separate, not-yet-built work, not a broken promise.
+            # These remain separate from smc_data because ChartEngine has
+            # no visual treatment for them yet. Their values stay server-side
+            # rather than being pushed to the mobile client as unusable JSON.
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Computing VWAP and bands...")
             vwap_result = VWAPEngine(interval=interval).calculate_vwap(df)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"VWAP computed across {len(vwap_result.points)} candles.",
-                extra_data={"vwap": serialize_result(vwap_result)}
+                f"VWAP computed across {len(vwap_result.points)} candles."
             )
 
             step += 1
@@ -909,8 +901,7 @@ def analyze_smc_task(
             if volume_profile_result.profile_available:
                 vp_msg = f"Volume profile built, POC at {volume_profile_result.poc_price:.6g}."
             send_progress_sync(
-                analysis_id, step, total_steps, vp_msg,
-                extra_data={"volume_profile": serialize_result(volume_profile_result)}
+                analysis_id, step, total_steps, vp_msg
             )
 
             step += 1
@@ -918,8 +909,7 @@ def analyze_smc_task(
             divergence_result = RSIMACDDivergenceEngine(interval=interval).detect_divergence(df)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"Found {len(divergence_result.events)} RSI/MACD divergence events.",
-                extra_data={"rsi_macd_divergence": serialize_result(divergence_result)}
+                f"Found {len(divergence_result.events)} RSI/MACD divergence events."
             )
 
             step += 1
@@ -927,8 +917,7 @@ def analyze_smc_task(
             cvd_result = CVDEngine(interval=interval).calculate_cvd(df)
             send_progress_sync(
                 analysis_id, step, total_steps,
-                f"CVD computed across {len(cvd_result.points)} candles.",
-                extra_data={"cvd": serialize_result(cvd_result)}
+                f"CVD computed across {len(cvd_result.points)} candles."
             )
 
             step += 1
@@ -938,19 +927,22 @@ def analyze_smc_task(
             if tsmom_result.signal_available:
                 tsmom_msg = f"TSMOM signal: {tsmom_result.trend_label}."
             send_progress_sync(
-                analysis_id, step, total_steps, tsmom_msg,
-                extra_data={"tsmom": serialize_result(tsmom_result)}
+                analysis_id, step, total_steps, tsmom_msg
             )
 
-            standalone_indicators = {
-                "vwap": vwap_result,
-                "volume_profile": volume_profile_result,
-                "rsi_macd_divergence": divergence_result,
-                "cvd": cvd_result,
-                "tsmom": tsmom_result,
+            # Always deliver an explicit MTFA state. `None` is ambiguous to a
+            # frontend: it cannot tell whether the user switched MTFA off, the
+            # interval has no higher rung, or the worker simply forgot it.
+            mtfa_summary = {
+                "enabled": mtfa_enabled,
+                "context": "disabled" if not mtfa_enabled else None,
+                "htf_requested": [],
+                "htf_resolved": [],
+                "htf_unavailable": {},
+                "requested_trend": structure_result.trend,
+                "htf_trends": {},
+                "htf_trend_alignment": {},
             }
-
-            mtfa_summary = None
             if mtfa_enabled:
                 step += 1
                 htf_chain = get_htf_chain(interval)
@@ -959,70 +951,121 @@ def analyze_smc_task(
                         analysis_id, step, total_steps,
                         f"Resolving MTFA context against {', '.join(htf_chain)}..."
                     )
-                    fetcher = _make_candle_fetcher(interval, timeframe)
+                    fetcher = _make_candle_fetcher(interval, timeframe, snapshot_time)
                     mtfa_result = await analyze_with_mtfa(
-                        symbol, interval, mtfa_enabled=True, candle_fetcher=fetcher
+                        symbol,
+                        interval,
+                        mtfa_enabled=True,
+                        candle_fetcher=fetcher,
+                        requested_result={
+                            "interval": interval,
+                            "swings": swing_result,
+                            "market_structure": structure_result,
+                            "liquidity": liquidity_result,
+                        },
                     )
                     mtfa_summary = {
+                        "enabled": True,
                         "context": mtfa_result["context"],
+                        "htf_requested": mtfa_result["htf_requested"],
+                        "htf_resolved": list(mtfa_result["htf"]),
+                        "htf_unavailable": mtfa_result["htf_unavailable"],
+                        "requested_trend": structure_result.trend,
+                        "htf_trends": {
+                            tf: result["market_structure"].trend
+                            for tf, result in mtfa_result["htf"].items()
+                        },
                         "htf_trend_alignment": mtfa_result["htf_trend_alignment"],
                     }
                     send_progress_sync(
                         analysis_id, step, total_steps,
-                        f"MTFA resolved - alignment: {mtfa_summary['htf_trend_alignment']}",
-                        extra_data={"mtfa": mtfa_summary}
+                        "Higher-timeframe context resolved; evaluating pullback and continuation conditions."
                     )
                 else:
                     send_progress_sync(
                         analysis_id, step, total_steps,
                         f"No higher timeframe configured for {interval} - MTFA is a no-op at this interval."
                     )
-                    mtfa_summary = {"context": "standalone", "htf_trend_alignment": {}}
+                    mtfa_summary.update({"context": "no_higher_timeframe"})
+
+            trade_plan = build_trade_plan(
+                df,
+                interval=interval,
+                structure=structure_result,
+                premium_discount=pd_result,
+                liquidity=liquidity_result,
+                fvg=fvg_result,
+                order_blocks=ob_result,
+                confluence=imbalance_result,
+                mtfa=mtfa_summary,
+                swings=swing_result,
+            )
 
             step += 1
-            send_progress_sync(analysis_id, step, total_steps, "Rendering interactive chart...")
-            chart = ChartEngine(ohlcv_data=ohlcv, analysis_data={}, smc_data=smc_data)
-            # HTML (not image) - this is the interactive WebView path, not
-            # a static snapshot. If payload size ever becomes a problem
-            # (large symbol lists, very long lookback windows), switch
-            # this to repo.upload_chart_image-style cloud upload + URL,
-            # same pattern the trendline task already uses - not needed
-            # at typical sizes (~50KB observed in testing).
-            chart_html = chart.create_chart(output_type="html")
+            send_progress_sync(
+                analysis_id, step, total_steps,
+                f"Rendering {interval} chart with analysis overlays and conditional projection..."
+            )
+            # The chart is the product delivered to the mobile client. The
+            # SMC/MTFA objects stay server-side and drive these overlays; the
+            # client never needs to recreate them with unsupported custom
+            # Lightweight Charts primitives.
+            chart = ChartEngine(
+                ohlcv_data=ohlcv,
+                analysis_data={"trade_plan": trade_plan, "symbol": symbol},
+                smc_data=smc_data,
+            )
+            chart_image = chart.create_chart(output_type="image")
+
+            step += 1
+            send_progress_sync(analysis_id, step, total_steps, "Uploading rendered analysis chart...")
+            chart_url = await repo.upload_chart_image(
+                file_bytes=chart_image,
+                analysis_id=analysis_id,
+                user_id=user_id,
+            )
 
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Saving analysis results...")
-            serialized_smc = {k: serialize_result(v) for k, v in smc_data.items()}
-            serialized_standalone = {k: serialize_result(v) for k, v in standalone_indicators.items()}
-            serialized_all = {**serialized_smc, **serialized_standalone}
+            # Keep the persisted result intentionally small and presentation
+            # oriented. The rendered chart is the user-facing result, not a
+            # dump of detector JSON the iOS client cannot faithfully overlay.
+            rendered_result = {
+                "presentation": "rendered_chart",
+                "presentation_version": PRESENTATION_VERSION,
+                "as_of": snapshot_time.isoformat(),
+                "interval": interval,
+                "chart_url": chart_url,
+                "trade_plan": trade_plan,
+            }
             updates = {
                 "status": "completed",
-                "analysis_data": serialized_all,
+                "analysis_data": rendered_result,
+                "chart_url": chart_url,
                 "error_message": None,
             }
-            await repo.update_analysis_record(analysis_id, updates)
+            try:
+                await repo.update_analysis_record(analysis_id, updates)
+            except Exception as update_error:
+                # Mirrors the established trendline path for deployments
+                # that have not migrated the optional chart_url column yet.
+                if "chart_url" not in str(update_error):
+                    raise
+                updates.pop("chart_url", None)
+                await repo.update_analysis_record(analysis_id, updates)
 
             completion_data = {
                 "analysis_id": analysis_id,
                 "status": "completed",
-                "progress": "SMC analysis completed successfully.",
+                "progress": "Analysis chart and conditional forecast are ready.",
                 "step": total_steps,
                 "total_steps": total_steps,
-                "analysis_data": serialized_all,
-                "mtfa": mtfa_summary,
-                "chart_html": chart_html,
-                "summary": {
+                "chart_url": chart_url,
+                "result": {
                     "symbol": symbol,
                     "interval": interval,
                     "timeframe": timeframe,
-                    "trend": structure_result.trend,
-                    "fvg_zones": len(fvg_result.zones),
-                    "order_blocks": len(ob_result.zones),
-                    "liquidity_pools": len(liquidity_result.pools),
-                    "liquidity_sweeps": len(sweep_result.events),
-                    "premium_discount_zone": pd_result.zone,
-                    "tsmom_trend": tsmom_result.trend_label if tsmom_result.signal_available else None,
-                    "divergence_events": len(divergence_result.events),
+                    "message": "Open chart_url to view the requested-timeframe analysis.",
                 },
                 "timestamp": datetime.now().timestamp()
             }

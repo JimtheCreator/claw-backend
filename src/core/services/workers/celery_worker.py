@@ -2,6 +2,7 @@
 import os
 import sys
 from celery import Celery
+from kombu import Queue
 from dotenv import load_dotenv
 
 # Path setup to ensure 'src' is importable
@@ -15,6 +16,18 @@ load_dotenv()
 celery_app = Celery("tasks", broker=os.getenv('REDIS_URL'), backend=os.getenv('REDIS_URL'))
 
 celery_app.conf.update(
+    # Do not send un-routed work to Celery's implicit `celery` queue: this
+    # worker consumes `default`, `telegram`, and `analysis` instead.
+    task_default_queue='default',
+    task_queues=(
+        Queue('default'),
+        Queue('telegram'),
+        Queue('analysis'),
+        Queue('broadcasts'),
+        # Drain jobs sent by older application builds before an explicit
+        # route/default queue was configured. New tasks do not use this.
+        Queue('celery'),
+    ),
     task_serializer='json',
     accept_content=['json'],
     result_serializer='json',
@@ -37,6 +50,7 @@ celery_app.conf.update(
         # Analysis tasks - CPU intensive, use dedicated queue
         'src.core.services.tasks.analyze_trendlines_task': {'queue': 'analysis'},   
         'src.core.services.tasks.analyze_sr_task': {'queue': 'analysis'},
+        'src.core.services.tasks.analyze_smc_task': {'queue': 'analysis'},
 
         # 👉 NEW: Discover Ingestion Task
         'src.core.services.tasks.sync_market_symbols_task': {'queue': 'default'},
@@ -64,6 +78,10 @@ celery_app.conf.update(
             'time_limit': 300,  # 5 minutes for S/R analysis
             'soft_time_limit': 240,  # 4 minutes soft limit
         },
+        'src.core.services.tasks.analyze_smc_task': {
+            'time_limit': 600,  # SMC rendering can include multiple engines
+            'soft_time_limit': 480,
+        },
     }
 )
 
@@ -77,7 +95,7 @@ celery_app.conf.update(
 # celery -A src.core.services.workers.celery_worker worker --pool=processes --concurrency=2 --loglevel=info --queues=analysis
 
 # To run both queues on the same machine:
-# celery -A src.core.services.workers.celery_worker worker --pool=threads --concurrency=4 --loglevel=info --queues=default,telegram,analysis
+# celery -A src.core.services.workers.celery_worker worker --pool=threads --concurrency=4 --loglevel=info --queues=default,telegram,analysis,celery
 
 # Purge all queues:
 # celery -A src.core.services.workers.celery_worker purge -f

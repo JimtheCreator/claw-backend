@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
 from typing import Dict, List, Any, Optional
 import pandas as pd
@@ -62,6 +63,24 @@ class ChartEngine:
             "cup_and_handle": self._draw_cup_and_handle,
             # ... other patterns will be mapped here
         }
+
+    @staticmethod
+    def _json_safe_plotly_value(value: Any) -> Any:
+        """Convert pandas datetimes before Kaleido hands the figure to orjson.
+
+        Plotly accepts pandas Timestamp instances for an interactive HTML
+        chart, but Kaleido's image renderer does not. ISO-8601 strings retain
+        the date axis while making the final PNG payload JSON safe.
+        """
+        if isinstance(value, pd.Timestamp):
+            return value.isoformat()
+        if isinstance(value, dict):
+            return {key: ChartEngine._json_safe_plotly_value(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [ChartEngine._json_safe_plotly_value(item) for item in value]
+        if hasattr(value, "tolist") and not isinstance(value, (str, bytes)):
+            return ChartEngine._json_safe_plotly_value(value.tolist())
+        return value
 
     def add_trendlines(self):
         """Overlay trendlines (support/resistance) as lines on the chart."""
@@ -1396,9 +1415,137 @@ class ChartEngine:
         self.add_market_structure_overlays(data.get("market_structure"))
         self.add_premium_discount_overlay(data.get("premium_discount"))
 
+    def add_trade_plan_overlay(self, trade_plan: Optional[Dict[str, Any]] = None):
+        """Draw the requested-timeframe forecast as a conditional chart overlay.
+
+        MTFA informs whether this plan is allowed, but never contributes a
+        second chart.  The user receives one chart: the timeframe they chose,
+        with its own zones/structure and a clearly labelled conditional path.
+        """
+        plan = trade_plan if trade_plan is not None else self.analysis.get("trade_plan")
+        if not plan or self.ohlcv_df.empty:
+            return
+
+        current_price = self._field(plan, "current_price")
+        action = self._field(plan, "action", "wait")
+        trend = self._field(plan, "trend_direction", "undetermined")
+        reason = self._field(plan, "reason", "")
+        if current_price is None:
+            return
+
+        last_time = self.ohlcv_df['timestamp'].max()
+        step = self._projection_step()
+        entry_time = last_time + step
+        target_time = last_time + step * 6
+
+        if action not in {"long", "short"}:
+            self.fig.add_annotation(
+                xref="paper", yref="paper", x=0.01, y=0.99,
+                text=f"{self._field(plan, 'interval', '')} • {trend.title()} • WAIT<br><sup>{reason}</sup>",
+                showarrow=False, align="left", xanchor="left", yanchor="top",
+                bgcolor="rgba(255, 193, 7, 0.9)",
+                font=dict(color="#111111", size=12), bordercolor="#111111", borderwidth=1,
+            )
+            return
+
+        entry = self._field(plan, "entry_level")
+        stop = self._field(plan, "stop_loss")
+        target = self._field(plan, "take_profit")
+        zone = self._field(plan, "entry_zone") or {}
+        if None in {entry, stop, target}:
+            return
+
+        is_long = action == "long"
+        direction_color = "#00C853" if is_long else "#FF1744"
+        entry_color = "#FFC107"
+        stop_color = "#FF1744"
+        target_color = "#00C853"
+        zone_bottom = self._field(zone, "bottom", entry)
+        zone_top = self._field(zone, "top", entry)
+
+        # The entry box, invalidation and objective are intentionally much
+        # stronger than analytical zones: they answer the trader's three
+        # immediate questions without requiring the client to parse data.
+        self.fig.add_trace(go.Scatter(
+            x=[last_time, target_time, target_time, last_time, last_time],
+            y=[zone_top, zone_top, zone_bottom, zone_bottom, zone_top],
+            fill="toself", mode="lines", line=dict(color=entry_color, width=1),
+            fillcolor="rgba(255, 193, 7, 0.18)", name="Entry Zone",
+            legendgroup="trade_plan", showlegend=True, hoverinfo="skip",
+        ), row=1, col=1)
+        self.fig.add_annotation(
+            x=target_time, y=(zone_top + zone_bottom) / 2,
+            text=f"Entry zone ({self._field(zone, 'source', 'setup')})", showarrow=False,
+            xanchor="right", font=dict(color=entry_color, size=10),
+        )
+        self._add_plan_level(last_time, target_time, entry, entry_color, "Entry", "dot")
+        self._add_plan_level(last_time, target_time, stop, stop_color, "Stop loss", "dash")
+        self._add_plan_level(last_time, target_time, target, target_color, "Target", "dash")
+
+        # This is a scenario path, not a prediction: it visualizes the
+        # required retrace/breakout and the target only after confirmation.
+        self.fig.add_trace(go.Scatter(
+            x=[last_time, entry_time, target_time], y=[current_price, entry, target],
+            mode="lines+markers", line=dict(color=direction_color, width=3, dash="dash"),
+            marker=dict(size=[7, 8, 10], color=[entry_color, entry_color, target_color], symbol=["circle", "diamond", "triangle-up" if is_long else "triangle-down"]),
+            name="Conditional Projection", legendgroup="trade_plan", showlegend=True,
+            hovertemplate="Conditional projection<extra></extra>",
+        ), row=1, col=1)
+
+        confirmation = self._field(plan, "confirmation_required", "Wait for confirmation.")
+        rr = self._field(plan, "risk_reward")
+        rr_text = f" • {rr:.2f}R" if isinstance(rr, (int, float)) else ""
+        self.fig.add_annotation(
+            xref="paper", yref="paper", x=0.01, y=0.99,
+            text=(f"{self._field(plan, 'interval', '')} • {action.upper()} SETUP{rr_text}<br>"
+                  f"<b>WAIT FOR CONFIRMATION</b><br><sup>{confirmation}</sup>"),
+            showarrow=False, align="left", xanchor="left", yanchor="top",
+            bgcolor="rgba(0, 0, 0, 0.78)", font=dict(color="#FFFFFF", size=12),
+            bordercolor=direction_color, borderwidth=2,
+        )
+        self._expand_for_trade_plan(target_time, stop, target)
+
+    def _add_plan_level(self, start_time, end_time, level, color, label, dash):
+        self.fig.add_trace(go.Scatter(
+            x=[start_time, end_time], y=[level, level], mode="lines",
+            line=dict(color=color, width=2, dash=dash), name=label,
+            legendgroup="trade_plan", showlegend=True,
+            hovertemplate=f"{label}: {level:.8g}<extra></extra>",
+        ), row=1, col=1)
+        self.fig.add_annotation(
+            x=end_time, y=level, text=f"{label}: {level:.8g}", showarrow=False,
+            xanchor="right", yanchor="bottom", font=dict(color=color, size=10),
+        )
+
+    def _projection_step(self):
+        timestamps = self.ohlcv_df['timestamp']
+        if len(timestamps) < 2:
+            return pd.Timedelta(minutes=1)
+        step = timestamps.iloc[-1] - timestamps.iloc[-2]
+        return step if step > pd.Timedelta(0) else pd.Timedelta(minutes=1)
+
+    def _expand_for_trade_plan(self, end_time, stop, target):
+        """Keep future projection and its levels inside the static PNG frame."""
+        start_time = self.ohlcv_df['timestamp'].min()
+        self.fig.update_xaxes(range=[start_time, end_time], row=1, col=1)
+        self.fig.update_xaxes(range=[start_time, end_time], row=2, col=1)
+        low = min(float(self.ohlcv_df['low'].min()), float(stop), float(target))
+        high = max(float(self.ohlcv_df['high'].max()), float(stop), float(target))
+        padding = (high - low) * 0.06 if high > low else 1
+        self.fig.update_yaxes(range=[low - padding, high + padding], row=1, col=1)
+
     def create_chart(self, output_type: str = 'image') -> bytes | str:
 
         """Generates the chart with all overlays."""
+        if isinstance(self.analysis, dict) and self.analysis.get("trade_plan"):
+            from core.engines.analysis_chart_presentation import AnalysisChartPresentation
+            self.fig = AnalysisChartPresentation(self.ohlcv_df, self.analysis, self.smc_data).figure()
+            if output_type == 'image':
+                payload = self._json_safe_plotly_value(self.fig.to_plotly_json())
+                return pio.to_image(payload, format="png", width=1600, height=900, scale=2)
+            if output_type == 'html':
+                return self.fig.to_html(include_plotlyjs='cdn')
+            raise ValueError("Invalid output_type. Choose 'image' or 'html'.")
         self._create_figure()
         # Add overlays if present
         # Draw all analysis overlays
@@ -1406,11 +1553,13 @@ class ChartEngine:
         self.add_trendlines()
         self._draw_patterns()
         self.add_smc_overlays()
+        self.add_trade_plan_overlay()
         self._add_candlestick_trace() # Draw candlesticks on top
         self._add_volume_trace()
 
         if output_type == 'image':
-            return self.fig.to_image(format="png", width=1600, height=900, scale=2)
+            figure_payload = self._json_safe_plotly_value(self.fig.to_plotly_json())
+            return pio.to_image(figure_payload, format="png", width=1600, height=900, scale=2)
         elif output_type == 'html':
             # include_plotlyjs='cdn' keeps the payload small for the
             # interactive Analysis view (WebView embed) - the app already

@@ -3,27 +3,30 @@ from fastapi import FastAPI, HTTPException
 from firebase_admin import credentials, db
 from common.logger import logger
 from datetime import datetime, timezone
+from threading import Lock
 import firebase_admin
 import os
 
+
+_firebase_app_lock = Lock()
+
 class FirebaseRepository:
     def __init__(self, app_name=None):
-        # Initialize Firebase Admin SDK only once or with a unique name
-        if not firebase_admin._apps:
-            # No apps initialized yet
-            cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
-            firebase_admin.initialize_app(cred, {
-                'databaseURL': os.getenv("FIREBASE_DATABASE_URL")
-            })
-        elif app_name and app_name not in firebase_admin._apps:
-            # Initialize with a unique name if provided
-            cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
-            firebase_admin.initialize_app(cred, {
-                'databaseURL': os.getenv("FIREBASE_DATABASE_URL")
-            }, name=app_name)
-        
-        # Reference to the database
-        self.db = db.reference('users')
+        # Firebase Admin is process-wide. MarketRepository is intentionally
+        # short-lived, so constructing it must reuse one default app instead
+        # of racing to initialise it (or leaking a named app per request).
+        # `app_name` is retained for call-site compatibility; this repository
+        # uses the shared default application.
+        with _firebase_app_lock:
+            try:
+                app = firebase_admin.get_app()
+            except ValueError:
+                cred = credentials.Certificate(os.getenv("FIREBASE_CREDENTIALS_PATH"))
+                app = firebase_admin.initialize_app(cred, {
+                    'databaseURL': os.getenv("FIREBASE_DATABASE_URL")
+                })
+
+        self.db = db.reference('users', app=app)
     
     async def check_user_exists(self, user_id: str) -> bool:
         """Check if a user exists in Firebase"""
