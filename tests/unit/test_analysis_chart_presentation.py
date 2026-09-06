@@ -99,7 +99,7 @@ def test_image_path_serializes_dates_and_uses_focused_chart():
     payload = renderer.call_args.args[0]
     orjson.dumps(payload, option=orjson.OPT_SERIALIZE_NUMPY)
     assert renderer.call_args.kwargs["height"] == 900
-    assert payload["layout"]["meta"]["presentation_version"] == "scenario-v3"
+    assert payload["layout"]["meta"]["presentation_version"] == "evidence-v4"
     candle_trace = next(t for t in payload["data"] if t["type"] == "candlestick")
     assert len(candle_trace["x"]) == 60
     assert "2026-09-06" in candle_trace["x"][0]

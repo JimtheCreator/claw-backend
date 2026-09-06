@@ -75,11 +75,15 @@ class RedisRateLimiter:
         max_per_second: int = 50,     # INCREASED: Must be higher than the max single request weight (40)
         key_prefix: str = "binance_rl",
         max_wait_seconds: float = 30.0,
+        redis_client=None,
+        fail_closed: bool = False,
     ):
         self.max_per_minute = max_per_minute
         self.max_per_second = max_per_second
         self.key_prefix = key_prefix
         self.max_wait_seconds = max_wait_seconds
+        self.redis_client = redis_client
+        self.fail_closed = fail_closed
 
     async def acquire(self, weight: int = 1):
         """Block until `weight` units of budget are available, globally."""
@@ -91,7 +95,7 @@ class RedisRateLimiter:
             min_key = f"{self.key_prefix}:min:{int(now // 60)}"
 
             try:
-                client = redis_cache.get_redis_client()
+                client = self.redis_client if self.redis_client is not None else redis_cache.get_redis_client()
                 result = await client.eval(
                     _ACQUIRE_SCRIPT,
                     2,
@@ -102,6 +106,8 @@ class RedisRateLimiter:
                     self.max_per_minute,
                 )
             except Exception as e:
+                if self.fail_closed:
+                    raise RuntimeError("Exchange rate-limit service unavailable; data request deferred.") from e
                 # Redis being unavailable shouldn't take down every Binance
                 # call in the app. Fail open, but log loudly — this means
                 # the safety net is temporarily off.
@@ -115,6 +121,8 @@ class RedisRateLimiter:
                 return
 
             if time.time() >= deadline:
+                if self.fail_closed:
+                    raise TimeoutError("Exchange rate-limit budget exhausted; retry the analysis later.")
                 logger.error(
                     f"[RATE LIMITER] Gave up waiting for Binance rate limit budget "
                     f"after {self.max_wait_seconds}s (weight={weight}, result={result}). "
@@ -136,6 +144,8 @@ class RedisRateLimiter:
                     f"(weight={weight}), waiting {wait:.2f}s"
                 )
 
+            if self.fail_closed:
+                wait = min(wait, max(deadline-time.time(), 0.05))
             await asyncio.sleep(max(wait, 0.05))
 
 

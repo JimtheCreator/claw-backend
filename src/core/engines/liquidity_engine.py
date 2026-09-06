@@ -76,6 +76,8 @@ class LiquidityEngine:
         pools.extend(self._cluster(confirmed_highs, tolerance, side="buy_side", pick_extreme=max))
         pools.extend(self._cluster(confirmed_lows, tolerance, side="sell_side", pick_extreme=min))
         pools.sort(key=lambda p: p.level)
+        for pool in pools:
+            pool.confirmed_index = pool.last_index + swing_result.window
 
         logger.debug(
             f"[LiquidityEngine] interval={self.interval} tolerance={tolerance:.6g} "

@@ -8,6 +8,9 @@ from common.logger import logger
 from core.engines.swing_structure_engine import SwingStructureEngine
 from core.engines.market_structure_engine import MarketStructureEngine
 from core.engines.liquidity_engine import LiquidityEngine
+from core.engines.fvg_engine import FVGEngine
+from core.engines.order_block_engine import OrderBlockEngine
+from core.use_cases.market_analysis.setup_evidence import higher_timeframe_zones
 
 
 async def analyze_smc_structure(ohlcv_df: pd.DataFrame, interval: str) -> Dict:
@@ -49,6 +52,11 @@ async def analyze_smc_structure(ohlcv_df: pd.DataFrame, interval: str) -> Dict:
         run_in_threadpool(liquidity_engine.map_liquidity, ohlcv_df, swings),
     )
 
+    fvg, order_blocks = await asyncio.gather(
+        run_in_threadpool(FVGEngine(interval=interval).detect_fvgs, ohlcv_df),
+        run_in_threadpool(OrderBlockEngine(interval=interval).detect_order_blocks, ohlcv_df, structure),
+    )
+    zones = await run_in_threadpool(higher_timeframe_zones, ohlcv_df, interval, order_blocks, fvg)
     logger.debug(
         f"[analyze_smc_structure] interval={interval} "
         f"swings={len(swings.swings)} structure_events={len(structure.events)} "
@@ -60,4 +68,7 @@ async def analyze_smc_structure(ohlcv_df: pd.DataFrame, interval: str) -> Dict:
         "swings": swings,
         "market_structure": structure,
         "liquidity": liquidity,
+        "order_blocks": order_blocks,
+        "fvg": fvg,
+        "poi_zones": zones,
     }

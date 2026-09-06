@@ -1,7 +1,7 @@
 # src/core/domain/entities/LiquidityEntity.py
 
 from pydantic import BaseModel
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 
 class LiquidityPool(BaseModel):
@@ -28,6 +28,7 @@ class LiquidityPool(BaseModel):
     contributing_swing_indices: List[int]
     first_index: int
     last_index: int
+    confirmed_index: Optional[int] = None
 
 
 class LiquidityMapResult(BaseModel):

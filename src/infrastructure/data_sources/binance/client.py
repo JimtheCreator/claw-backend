@@ -11,7 +11,7 @@ import json
 from datetime import datetime, timezone
 import time
 
-from infrastructure.database.redis.rate_limiter import redis_rate_limiter
+from infrastructure.database.redis.rate_limiter import redis_rate_limiter, RedisRateLimiter
 from common.logger import logger
 
 load_dotenv()
@@ -70,13 +70,15 @@ class CircuitBreaker:
 class BinanceMarketData:
     # API endpoint weights (conservative estimates)
     ENDPOINT_WEIGHTS = {
-        'get_klines': 1,
+        'get_klines': 2,
         'get_ticker': 1,
         'get_exchange_info': 10,
         'get_all_tickers': 40,
     }
     
-    def __init__(self):
+    def __init__(self, *, use_pool=True, strict_errors=False):
+        self.use_pool = use_pool
+        self.strict_errors = strict_errors
         self.api_key = os.getenv("BINANCE_API_KEY")
         self.api_secret = os.getenv("BINANCE_API_SECRET")
         self.client = None
@@ -94,6 +96,13 @@ class BinanceMarketData:
         # See infrastructure/database/redis/rate_limiter.py for why this
         # replaced the old in-process singleton.
         self.global_limiter = redis_rate_limiter
+        self._owned_rate_redis = None
+        if strict_errors:
+            import redis.asyncio
+            redis_url = os.getenv("REDIS_URL") or f"redis://{os.getenv('REDIS_HOST', 'claw_redis')}:{os.getenv('REDIS_PORT', '6379')}"
+            self._owned_rate_redis = redis.asyncio.from_url(redis_url, decode_responses=True,
+                                                          socket_connect_timeout=5, socket_timeout=5)
+            self.global_limiter = RedisRateLimiter(redis_client=self._owned_rate_redis, fail_closed=True)
         
         self.circuit_breaker = CircuitBreaker()
         
@@ -108,6 +117,8 @@ class BinanceMarketData:
             if self.client is None:
                 logger.info("[binance] connect: creating main client connection...")
                 try:
+                    if self.strict_errors:
+                        await self.global_limiter.acquire(2)  # AsyncClient's public ping/time handshake.
                     self.client = await asyncio.wait_for(
                         AsyncClient.create(
                             self.api_key, 
@@ -175,6 +186,9 @@ class BinanceMarketData:
            
     async def get_pooled_client(self):
         """Get a client from the pool"""
+        if not self.use_pool:
+            await self.ensure_connected()
+            return self.client
         if not self._connection_pool:
             logger.info("[binance] get_pooled_client: pool empty, initializing...")
             await self.init_connection_pool()
@@ -215,6 +229,8 @@ class BinanceMarketData:
         
         # Close WebSocket connections
         await self._close_all_websockets()
+        if self._owned_rate_redis is not None:
+            await self._owned_rate_redis.aclose()
 
     async def _close_client_safely(self, client, index):
         """Safely close a client connection"""
@@ -296,6 +312,7 @@ class BinanceMarketData:
             )
 
         # Retry logic with exponential backoff
+        last_error = None
         for attempt in range(max_retries):
             try:
                 logger.info(f"Attempt {attempt + 1}/{max_retries}: Fetching {limit} {interval} klines for {symbol}")
@@ -318,7 +335,7 @@ class BinanceMarketData:
                 # Filter out invalid candles
                 valid_klines = [
                     k for k in klines
-                    if len(k) >= 6 and all(float(val) > 0 for val in k[1:6])
+                    if len(k) >= 7 and all(float(val) > 0 for val in k[1:5]) and float(k[5]) >= 0
                 ]
 
                 if not valid_klines:
@@ -329,6 +346,7 @@ class BinanceMarketData:
                 return valid_klines
 
             except Exception as e:
+                last_error = e
                 logger.error(f"Error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
                     # Exponential backoff with jitter
@@ -336,6 +354,8 @@ class BinanceMarketData:
                     await asyncio.sleep(wait_time)
                     continue
         
+        if self.strict_errors and last_error is not None:
+            raise last_error
         return []
 
     async def get_exchange_info(self):

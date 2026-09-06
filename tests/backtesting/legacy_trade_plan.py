@@ -13,7 +13,6 @@ from math import isfinite
 import pandas as pd
 
 from common.utils.indicators import average_true_range
-from core.use_cases.market_analysis.setup_evidence import rank_entry_zones, staged_targets
 
 
 MIN_RISK_REWARD = 1.5
@@ -31,12 +30,8 @@ def build_trade_plan(
     confluence: Any,
     mtfa: Dict[str, Any],
     swings: Any = None,
-    sweeps: Any = None,
-    exit_policy: str = "single",
 ) -> Dict[str, Any]:
     """Return a JSON-safe execution plan; never invent a trade on weak data."""
-    if exit_policy not in {"single", "staged", "staged_no_be"}:
-        raise ValueError(f"Unsupported exit policy: {exit_policy}")
     current_price = _current_price(candles)
     trend = getattr(structure, "trend", None)
     base = {
@@ -55,11 +50,6 @@ def build_trade_plan(
         "reason": None,
         "evidence": {"mtfa": mtfa},
         "primary_scenario": None,
-        "policy_version": "evidence-v2",
-        "validation_status": "experimental_not_validated",
-        "targets": [],
-        "management": None,
-        "chart_evidence": [],
     }
 
     if current_price is None:
@@ -89,38 +79,21 @@ def build_trade_plan(
     expected_zone = "discount" if trend == "bullish" else "premium"
     if not getattr(premium_discount, "range_available", False):
         return _wait(base, "The current dealing range is not confirmed, so price location cannot be assessed.")
-    candidates = rank_entry_zones(candles, trend, order_blocks=order_blocks, fvg=fvg,
-                                 confluence=confluence, structure=structure, sweeps=sweeps,
-                                 swings=swings, mtfa=mtfa)
-    if not candidates:
+    if getattr(premium_discount, "zone", None) != expected_zone:
+        return _wait(
+            base,
+            f"{trend.title()} structure is present, but price is not in {expected_zone}; wait for a retrace.",
+        )
+
+    entry = _select_entry_zone(trend, current_price, confluence, order_blocks, fvg)
+    if entry is None:
         return _wait(base, f"No fresh {trend} entry zone is available at or beyond current price.")
-    entry = candidates[0]
-    base["setup_quality"] = {key: entry[key] for key in ("score", "maximum", "threshold", "groups", "eligible")}
-    base["setup_quality"]["interpretation"] = "Evidence checklist, not a win probability."
-    base["chart_evidence"] = entry["annotations"]
-    base["selected_htf_poi"] = entry["poi"]
-    if not entry["eligible"]:
-        missing = ", ".join(key.replace("_", " ") for key, value in entry["groups"].items() if not value)
-        return _wait(base, f"Setup evidence {entry['score']}/{entry['maximum']}; missing {missing}. No entry approved.")
 
     entry_level = entry["top"] if trend == "bullish" else entry["bottom"]
-    range_top, range_bottom = getattr(premium_discount, "top", None), getattr(premium_discount, "bottom", None)
-    if range_top is None or range_bottom is None or not range_bottom < range_top:
-        return _wait(base, "No valid dealing-range bounds for the proposed entry.")
-    equilibrium = (range_top + range_bottom) / 2
-    # A break naturally moves the current close out of discount/premium.
-    # Evaluate the pending RETRACEMENT entry's location, not the breakout close.
-    in_location = range_bottom <= entry_level < equilibrium if trend == "bullish" else equilibrium < entry_level <= range_top
-    if not in_location:
-        return _wait(base, f"The proposed retracement entry is not inside the confirmed {expected_zone} range.")
     atr = _atr(candles, current_price)
     buffer = max(atr * 0.25, current_price * 0.0005)
     stop = entry["bottom"] - buffer if trend == "bullish" else entry["top"] + buffer
-    targets = staged_targets(trend, entry_level, stop, liquidity, candles)
-    alternative_targets = [dict(t) for t in targets]
-    if exit_policy == "single" and targets:
-        targets = [{**targets[0], "fraction": 1.0}]
-    target = targets[0]["price"] if targets else None
+    target = _select_target(trend, current_price, liquidity, premium_discount, candles)
     if target is None:
         return _wait(base, "No logical opposing-liquidity target is available; risk/reward cannot be evaluated.")
 
@@ -136,11 +109,11 @@ def build_trade_plan(
         )
 
     trigger = (
-        "Bullish structure break is observed. Within 12 candles, require a zone touch and close above entry; "
-        "enter only on a subsequent retest at entry. Cancel at stop or after 12 candles."
+        "Wait for a candle to reject the zone and close back above the entry level "
+        "with a bullish structure confirmation."
         if trend == "bullish"
-        else "Bearish structure break is observed. Within 12 candles, require a zone touch and close below entry; "
-        "enter only on a subsequent retest at entry. Cancel at stop or after 12 candles."
+        else "Wait for a candle to reject the zone and close back below the entry level "
+        "with a bearish structure confirmation."
     )
     base.update({
         "action": "long" if trend == "bullish" else "short",
@@ -151,21 +124,7 @@ def build_trade_plan(
         "risk_per_unit": _round(risk),
         "risk_reward": risk_reward,
         "confirmation_required": trigger,
-        "reason": f"Evidence {entry['score']}/{entry['maximum']}: " + ", ".join(
-            key.replace("_", " ") for key, value in entry["groups"].items() if value) + ". Retest entry is still pending.",
-        "targets": targets,
-        "research_exit_alternative": {
-            "targets": alternative_targets,
-            "status": "not_promoted: staged exits did not improve the tested new entries",
-        },
-        "management": {
-            "mode": exit_policy, "entry_expiry_bars": 12,
-            "stop_after_t1": _round(entry_level) if exit_policy == "staged" and len(targets) > 1 else None,
-            "stop_change_effective": "next_bar_after_t1",
-            "note": ("50% at T1, runner at T2; price breakeven is a loss after costs." if exit_policy == "staged"
-                     else "50% at T1, runner at T2; keep original stop.") if len(targets)>1
-                    else "Exit 100% at T1. Staged management is not enabled or no second target is available.",
-        },
+        "reason": "Directional structure, price location, fresh zone, target, and MTFA context meet the setup rules.",
         "evidence": {**base["evidence"], "premium_discount_zone": expected_zone},
         "primary_scenario": {
             "kind": "conditional_entry", "direction": trend,

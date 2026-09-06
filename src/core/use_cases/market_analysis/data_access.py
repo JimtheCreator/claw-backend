@@ -1,12 +1,10 @@
 # src/core/use_cases/market_analysis/data_access.py
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from common.logger import logger
-import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 from fastapi import BackgroundTasks
 from core.domain.entities.MarketDataEntity import MarketDataEntity
-from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 import re
 
 async def get_ohlcv_from_db(
@@ -29,8 +27,11 @@ async def get_ohlcv_from_db(
         'timestamp': [list]
     }
     """
+    from core.use_cases.market.market_data import fetch_crypto_data_paginated, analysis_binance_client
+    from infrastructure.data_sources.binance.client import BinanceMarketData
+    client = BinanceMarketData(use_pool=False, strict_errors=True)
+    token = analysis_binance_client.set(client)
     try:
-        from core.use_cases.market.market_data import fetch_crypto_data_paginated  # lazy import
         # Convert timeframe to start/end parameters
         start_time = _parse_timeframe(timeframe)
         end_time = datetime.now(timezone.utc)
@@ -47,8 +48,10 @@ async def get_ohlcv_from_db(
 
         # logger.info(f"Formatted OHLCV data: {_format_ohlcv_response(data)}")
 
+        if isinstance(data, dict):
+            raise DataUnavailableError(f"{symbol} {interval}: market-data recovery failed: {data.get('error', 'invalid provider response')}")
         if not data:
-            raise DataUnavailableError("No data available even after refresh attempts")
+            raise DataUnavailableError(f"No candles available for {symbol} {interval} in {timeframe}, including exchange recovery. Check the symbol and listing history.")
         
         # Ensure the data is in the expected format
         if not isinstance(data[0], MarketDataEntity):
@@ -59,11 +62,38 @@ async def get_ohlcv_from_db(
                 logger.error(f"Data conversion failed: {conversion_error}")
                 raise DataUnavailableError("Data format is invalid and cannot be converted.")
 
+        data = sorted({d.timestamp: d for d in data}.values(), key=lambda d: d.timestamp)[-1000:]
+        # Do not turn a failed stale-data refresh into a current forecast.
+        import pandas as pd
+        last_open = pd.Timestamp(data[-1].timestamp)
+        last_open = last_open.tz_localize("UTC") if last_open.tzinfo is None else last_open
+        count, unit = int(interval[:-1]), interval[-1]
+        step = pd.DateOffset(months=count) if unit == "M" else pd.Timedelta(count, unit={"m":"min","h":"h","d":"D","w":"W"}[unit])
+        from math import isfinite
+        for candle in data:
+            values = (candle.open, candle.high, candle.low, candle.close, candle.volume)
+            if (not all(isfinite(v) for v in values) or min(values[:4]) <= 0 or candle.volume < 0
+                    or candle.high < max(candle.open,candle.close,candle.low)
+                    or candle.low > min(candle.open,candle.close,candle.high)):
+                raise DataUnavailableError(f"{symbol} {interval}: invalid OHLCV candle; analysis was not generated.")
+        times = pd.to_datetime([c.timestamp for c in data], utc=True)
+        if any(a + step != b for a,b in zip(times[:-1],times[1:])):
+            raise DataUnavailableError(f"{symbol} {interval}: gaps remain after exchange recovery. No candles were invented to bridge them.")
+        if last_open + step + step <= pd.Timestamp(end_time):
+            raise DataUnavailableError(f"{symbol} {interval}: exchange recovery did not provide current candles. Last candle: {last_open.isoformat()}. No stale forecast was generated.")
         return _format_ohlcv_response(data)
 
+    except DataUnavailableError:
+        raise
     except Exception as e:
         logger.error(f"Failed to get OHLCV data: {str(e)}")
-        raise DataUnavailableError("Could not retrieve market data") from e
+        raise DataUnavailableError(f"Could not retrieve {symbol} {interval} market data ({type(e).__name__}).") from e
+    finally:
+        analysis_binance_client.reset(token)
+        try:
+            await client.disconnect()
+        except Exception:
+            logger.warning("Analysis exchange-client cleanup failed.", exc_info=True)
 
 def _parse_timeframe(timeframe: str) -> datetime:
     """Parse custom timeframe strings like '30m', '2d', '1w'"""

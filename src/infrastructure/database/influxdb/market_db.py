@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 class InfluxDBMarketDataRepository(MarketDataRepository):
     # Updated connection method for production resilience
-    def __init__(self):
+    def __init__(self, *, verify_connection=True, timeout_ms=60_000):
         # Improved connection configuration with better error handling
         self.url = os.getenv("INFLUXDB_URL")
         self.token = os.getenv("INFLUXDB_TOKEN") 
@@ -38,12 +38,13 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             url=self.url,
             token=self.token,
             org=self.org,
-            timeout=60_000,  # Reduced timeout
+            timeout=timeout_ms,
             retries=3,       # Add retries
             enable_gzip=True # Enable compression
         )
         
-        self._verify_connection()
+        if verify_connection:
+            self._verify_connection()
         self.query_api = self.client.query_api()
         self._min_timestamps_cache: Dict[Tuple[str, str], datetime] = {}
 
@@ -268,7 +269,8 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         start_time: datetime,
         end_time: datetime,
         page: int = 1,
-        page_size: int = 1000
+        page_size: int = 1000,
+        *, allow_downsample: bool = True,
     ) -> list[MarketDataEntity]:
         """
         Get historical data in REVERSE order (newest first) with pagination.
@@ -280,7 +282,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             
             # Check if downsampling is appropriate based on the date range
             date_range = end_time - start_time
-            if self._should_downsample(interval, date_range):
+            if allow_downsample and self._should_downsample(interval, date_range):
                 return await self._get_downsampled_data_reverse(symbol, interval, start_time, end_time, page, page_size)
             
             # Build query with reverse ordering (sort by timestamp DESC)

@@ -46,7 +46,7 @@ def _long_plan(mtfa):
     )
 
 
-def test_trade_plan_gives_conditional_levels_for_aligned_setup():
+def test_direction_only_alignment_no_longer_approves_an_entry():
     plan = _long_plan({
         "enabled": True,
         "context": "mtfa",
@@ -54,14 +54,12 @@ def test_trade_plan_gives_conditional_levels_for_aligned_setup():
         "htf_trend_alignment": {"4h": True, "1d": True},
     })
 
-    assert plan["action"] == "long"
+    assert plan["action"] == "wait"
     assert plan["trend_direction"] == "bullish"
-    assert plan["entry_level"] == 98
-    assert plan["stop_loss"] < 96
-    assert plan["take_profit"] == 110
-    assert plan["risk_reward"] >= 1.5
+    assert plan["entry_level"] is None
+    assert plan["setup_quality"]["eligible"] is False
     assert plan["wait_for_confirmation"] is True
-    assert "close back above" in plan["confirmation_required"]
+    assert "missing" in plan["reason"]
 
 
 def test_trade_plan_explains_split_higher_timeframes_without_predicting_reversal():

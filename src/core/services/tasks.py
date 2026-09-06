@@ -39,6 +39,7 @@ from core.engines.imbalance_order_block_engine import ImbalanceOrderBlockEngine
 from core.engines.premium_discount_engine import PremiumDiscountEngine
 from core.use_cases.market_analysis.analyze_with_mtfa import analyze_with_mtfa
 from core.use_cases.market_analysis.trade_plan import build_trade_plan
+from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from core.use_cases.market_analysis.analysis_snapshot import closed_candles
 from core.engines.analysis_chart_presentation import PRESENTATION_VERSION
 from core.config.mtfa_ladder import get_htf_chain
@@ -741,7 +742,7 @@ def _make_candle_fetcher(requested_interval: str, requested_timeframe: str, as_o
     return fetcher
 
 
-@celery_app.task(name="src.core.services.tasks.analyze_smc_task")
+@celery_app.task(name="src.core.services.tasks.analyze_smc_task", throws=(DataUnavailableError,))
 def analyze_smc_task(
     analysis_id: str,
     user_id: str,
@@ -760,13 +761,7 @@ def analyze_smc_task(
     the completed client result is a rendered requested-timeframe chart
     with its analysis overlays and conditional projection.
 
-    NOTE: analyze_smc_structure (core/use_cases/market_analysis/smc.py)
-    is now DEAD CODE - it was the original bundled orchestrator this task
-    superseded, and nothing calls it anymore. analyze_with_mtfa is still
-    live and used below for the MTFA branch. Flagging this here rather
-    than pretending the old orchestrator still has a purpose - it should
-    either be deleted or explicitly repurposed, not left as an unused
-    function with no note explaining why it's still in the codebase.
+    analyze_smc_structure remains live for HTF structure and POI detection.
     """
     logger.info(f"[Celery:SmcTask:{analysis_id}] Starting SMC analysis for {symbol}; renderer={PRESENTATION_VERSION}")
 
@@ -774,8 +769,7 @@ def analyze_smc_task(
         # The worker is a separate process from FastAPI, so it does not share
         # the API process's Redis startup hook. Initialise before data access
         # to keep the Binance rate limiter operating rather than failing open.
-        await redis_cache.initialize()
-        repo = MarketRepository()
+        repo = None
         # +5 for the standalone indicator group (VWAP, Volume Profile,
         # RSI/MACD Divergence, CVD, TSMOM), always run regardless of the
         # MTFA toggle - none of them depend on higher-timeframe data.
@@ -783,6 +777,8 @@ def analyze_smc_task(
         step = 0
 
         try:
+            await redis_cache.initialize()
+            repo = MarketRepository()
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Initializing SMC analysis...")
 
@@ -976,6 +972,8 @@ def analyze_smc_task(
                             for tf, result in mtfa_result["htf"].items()
                         },
                         "htf_trend_alignment": mtfa_result["htf_trend_alignment"],
+                        "htf_zones": [zone for result in mtfa_result["htf"].values()
+                                      for zone in result.get("poi_zones", [])],
                     }
                     send_progress_sync(
                         analysis_id, step, total_steps,
@@ -999,6 +997,8 @@ def analyze_smc_task(
                 confluence=imbalance_result,
                 mtfa=mtfa_summary,
                 swings=swing_result,
+                sweeps=sweep_result,
+                exit_policy=os.getenv("SMC_EXIT_POLICY", "single"),
             )
 
             step += 1
@@ -1073,13 +1073,20 @@ def analyze_smc_task(
             logger.info(f"[Celery:SmcTask:{analysis_id}] Analysis completed successfully")
 
         except Exception as e:
-            logger.error(f"[Celery:SmcTask:{analysis_id}] Analysis failed: {e}", exc_info=True)
+            if isinstance(e, DataUnavailableError):
+                logger.warning(f"[Celery:SmcTask:{analysis_id}] Market data unavailable: {e}")
+            else:
+                logger.error(f"[Celery:SmcTask:{analysis_id}] Analysis failed: {e}", exc_info=True)
 
             error_updates = {
                 "status": "failed",
                 "error_message": str(e)
             }
-            await repo.update_analysis_record(analysis_id, error_updates)
+            try:
+                if repo is not None:
+                    await repo.update_analysis_record(analysis_id, error_updates)
+            except Exception:
+                logger.exception("Could not persist analysis failure; still publishing terminal failure to the client.")
 
             error_data = {
                 "analysis_id": analysis_id,

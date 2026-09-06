@@ -30,6 +30,11 @@ BATCH_SIZES = {
 # where task_status is True if a task is currently running
 ACTIVE_BACKGROUND_TASKS: Dict[Tuple[str, str], bool] = {}
 
+# Celery uses a fresh asyncio loop for each task. Never reuse an aiohttp
+# session created on a previous task's (now closed) event loop.
+from contextvars import ContextVar
+analysis_binance_client = ContextVar("analysis_binance_client", default=None)
+
 
 async def batch_save_market_data(
     repo: InfluxDBMarketDataRepository, 
@@ -146,17 +151,24 @@ async def fetch_crypto_data_paginated(
     When prioritize_recent=False:
     - Traditional behavior: fetch from start_time forwards
     """
+    repo = None
     try:
         if interval not in INTERVAL_MINUTES:
             return {"error": f"Invalid interval: {interval}"}
-        
-        repo = InfluxDBMarketDataRepository()
         
         # Set default times
         if not end_time:
             end_time = datetime.now(timezone.utc)
         if not start_time:
             start_time = calculate_start_time(interval)
+        try:
+            repo = (InfluxDBMarketDataRepository(verify_connection=False, timeout_ms=10_000)
+                    if analysis_binance_client.get() is not None else InfluxDBMarketDataRepository())
+        except Exception:
+            if analysis_binance_client.get() is None:
+                raise
+            logger.warning("Analysis cache unavailable; trying exchange recovery.")
+            return await _fetch_from_binance_chronological(symbol, interval, start_time, end_time, page_size, prioritize_recent)
         
         # Calculate total time range to determine if we should prioritize recent data
         time_range = end_time - start_time
@@ -165,7 +177,7 @@ async def fetch_crypto_data_paginated(
         # If request is large and we're prioritizing recent data, use smart fetching
         should_use_smart_fetch = (
             prioritize_recent and 
-            estimated_candles > page_size * 2 and  # More than 2x the page size
+            (estimated_candles > page_size or analysis_binance_client.get() is not None) and
             page == 1  # Only for first page to avoid complications
         )
         
@@ -174,7 +186,8 @@ async def fetch_crypto_data_paginated(
             
             # Fetch recent data first using reverse method
             recent_data = await repo.get_historical_data_reverse(
-                symbol, interval, start_time, end_time, page, page_size
+                symbol, interval, start_time, end_time, page, page_size,
+                allow_downsample=analysis_binance_client.get() is None,
             )
             
             if recent_data:
@@ -187,16 +200,28 @@ async def fetch_crypto_data_paginated(
                 
                 if latest_candle_time < stale_threshold:
                     logger.info(f"Recent data is stale for {symbol} ({interval}), fetching latest...")
-                    await _fetch_and_save_missing_data(
+                    refreshed = await _fetch_and_save_missing_data(
                         symbol,
                         interval,
                         latest_candle_time,
                         end_time,
                         page_size=page_size
                     )
+                    if isinstance(refreshed, dict):
+                        return refreshed
+                    merged = {c.timestamp: c for c in recent_data}
+                    merged.update({c.timestamp: c for c in refreshed})
+                    recent_data = sorted(merged.values(), key=lambda c: c.timestamp)[-page_size:]
                 
+                if analysis_binance_client.get() is not None:
+                    filled = await _check_and_fill_internal_gaps(recent_data, symbol, interval, page_size)
+                    merged = {c.timestamp: c for c in recent_data}
+                    merged.update({c.timestamp: c for c in filled})
+                    recent_data = sorted(merged.values(), key=lambda c: c.timestamp)[-page_size:]
                 logger.info(f"Returning {len(recent_data)} recent records (chronological order) for {symbol} ({interval})")
                 return recent_data
+            if analysis_binance_client.get() is not None:
+                return await _fetch_from_binance_chronological(symbol, interval, start_time, end_time, page_size, prioritize_recent)
         
         # Standard fetch (either not prioritizing recent, or small request)
         historical = await repo.get_historical_data(
@@ -233,6 +258,12 @@ async def fetch_crypto_data_paginated(
     except Exception as e:
         logger.critical(f"Critical error in fetch_crypto_data_paginated: {str(e)}")
         return {"error": "Internal server error"}
+    finally:
+        if analysis_binance_client.get() is not None and repo is not None:
+            try:
+                repo.client.close()
+            except Exception:
+                logger.warning("Analysis cache-client cleanup failed.", exc_info=True)
 
 
 async def _fetch_from_binance_chronological(
@@ -249,7 +280,7 @@ async def _fetch_from_binance_chronological(
         # Reuse the shared, pooled client - same reasoning as
         # _fetch_and_save_missing_data. Do not disconnect it at the end;
         # it's shared process-wide (also used by the websocket route).
-        binance = shared_binance_client
+        binance = analysis_binance_client.get() or shared_binance_client
         await binance.ensure_connected()
         
         if prioritize_recent:
@@ -280,7 +311,7 @@ async def _fetch_from_binance_chronological(
         entities_to_save = []
         
         for k in klines:
-            if len(k) >= 6 and all(k[1:6]):
+            if len(k) >= 7:
                 entity = MarketDataEntity(
                     symbol=symbol, interval=interval,
                     timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
@@ -297,7 +328,10 @@ async def _fetch_from_binance_chronological(
         if entities_to_save:
             logger.info(f"Dispatching Celery task to save {len(entities_to_save)} fetched records")
             data_to_save_json = [entity.model_dump_json() for entity in entities_to_save]
-            save_market_data_task.delay(data_to_save_json)
+            try:
+                save_market_data_task.delay(data_to_save_json)
+            except Exception:
+                logger.warning("Market candles fetched, but cache persistence could not be queued.", exc_info=True)
         
         return data_entities
         
@@ -392,7 +426,7 @@ async def _fetch_and_save_missing_data(
         # fresh AsyncClient.create() handshake and tearing it down every
         # call - that handshake was the actual cost on this path, not the
         # klines request itself.
-        binance = shared_binance_client
+        binance = analysis_binance_client.get() or shared_binance_client
         await binance.ensure_connected()
         
         missing_data = []
@@ -419,7 +453,7 @@ async def _fetch_and_save_missing_data(
             entities_to_save = []
             
             for k in klines:
-                if len(k) >= 6 and all(k[1:6]):
+                if len(k) >= 7:
                     entity = MarketDataEntity(
                         symbol=symbol, interval=interval,
                         timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
@@ -442,7 +476,10 @@ async def _fetch_and_save_missing_data(
 
             if entities_to_save:
                 missing_data_json = [entity.model_dump_json() for entity in entities_to_save]
-                save_market_data_task.delay(missing_data_json)
+                try:
+                    save_market_data_task.delay(missing_data_json)
+                except Exception:
+                    logger.warning("Refreshed candles available; persistence queue failed.", exc_info=True)
                 logger.info(f"Dispatched Celery task to save {len(entities_to_save)} missing candles.")
             
         return missing_data

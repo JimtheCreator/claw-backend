@@ -89,7 +89,7 @@ class LiquiditySweepEngine:
 
             still_active = []
             for pool in active:
-                if j <= pool.last_index:
+                if j <= (pool.confirmed_index if pool.confirmed_index is not None else pool.last_index):
                     still_active.append(pool)
                     continue
 

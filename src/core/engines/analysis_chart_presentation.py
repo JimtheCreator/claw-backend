@@ -6,7 +6,7 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "scenario-v3"
+PRESENTATION_VERSION = "evidence-v4"
 
 
 def price(value):
@@ -53,12 +53,13 @@ class AnalysisChartPresentation:
         fig.update_layout(template="plotly_dark", width=1600, height=900,
                           paper_bgcolor=self.background, plot_bgcolor=self.background,
                           font=dict(family="Arial, sans-serif", size=23, color="#ecf1f8"),
-                          margin=dict(l=45, r=110, t=220, b=180), showlegend=False,
+                          margin=dict(l=45, r=110, t=220, b=230), showlegend=False,
                           xaxis_rangeslider_visible=False,
                           meta={"presentation_version": PRESENTATION_VERSION})
         bounds = [float(self.visible.low.min()), float(self.visible.high.max())]
         for s in self.scenarios:
             bounds.extend(float(s[k]) for k in ("trigger", "target", "invalidation") if s.get(k) is not None)
+        bounds.extend(t["price"] for t in self.plan.get("targets", []))
         padding = max(max(bounds) - min(bounds), self.span) * 0.19
         fig.update_yaxes(range=[min(bounds) - padding, max(bounds) + padding], autorange=False,
                          side="right", nticks=6, tickformat=",.2f" if self.current >= 10 else ".6g",
@@ -79,6 +80,7 @@ class AnalysisChartPresentation:
                                     decreasing=dict(line=dict(color=self.red, width=2), fillcolor=self.red), name="Price"))
         fig.add_trace(go.Scatter(x=[self.now], y=[self.current], mode="markers",
                                 marker=dict(color="white", size=9), name="Last close"))
+        self.draw_evidence()
         self.draw_scenario()
         self.draw_headings()
         return fig
@@ -86,6 +88,38 @@ class AnalysisChartPresentation:
     def annotation(self, x, y, text, color, *, yref="y", size=23, **kwargs):
         self.fig.add_annotation(x=x, y=y, xref="x", yref=yref, text=text, showarrow=False,
                                 font=dict(size=size, color=color), **kwargs)
+
+    def draw_evidence(self):
+        """At most three selected causal anchors, not the entire detector map."""
+        for i, evidence in enumerate(self.plan.get("chart_evidence", [])[:3]):
+            timestamp = pd.Timestamp(evidence["timestamp"])
+            start, now = pd.Timestamp(self.start), pd.Timestamp(self.now)
+            # ChartEngine can supply naive UTC datetimes; compare consistently.
+            if start.tzinfo is None:
+                timestamp = timestamp.tz_localize(None)
+            elif timestamp.tzinfo is None:
+                timestamp = timestamp.tz_localize(start.tzinfo)
+            if not start <= timestamp <= now:
+                continue
+            reference = evidence.get("reference_timestamp")
+            if reference:
+                ref = pd.Timestamp(reference)
+                if start.tzinfo is None:
+                    ref = ref.tz_localize(None)
+                elif ref.tzinfo is None:
+                    ref = ref.tz_localize(start.tzinfo)
+                self.fig.add_shape(type="line",x0=max(start,ref),x1=timestamp,
+                                   y0=evidence["price"],y1=evidence["price"],
+                                   line=dict(color=self.amber,width=2,dash="dot"))
+            self.fig.add_annotation(x=timestamp, y=evidence["price"], xref="x", yref="y",
+                                    text=f"<b>{chr(65+i)}. {escape(evidence['kind'])}</b>",
+                                    showarrow=True, arrowhead=2, arrowcolor=self.amber,
+                                    ax=-40, ay=-45-i*24, bgcolor=self.background,
+                                    font=dict(size=19, color=self.amber))
+            zone = evidence.get("zone")
+            if zone:
+                self.fig.add_shape(type="rect", x0=timestamp, x1=self.now, y0=zone["bottom"], y1=zone["top"],
+                                   line=dict(color=self.amber, width=1), fillcolor="rgba(255,208,120,0.04)", layer="below")
 
     def draw_scenario(self):
         if not self.scenarios:
@@ -99,17 +133,23 @@ class AnalysisChartPresentation:
         trigger, target, invalidation = s["trigger"], s.get("target"), s["invalidation"]
         duration = self.end - self.now
         t1, t2, t3 = [self.now + duration * f for f in (0.25, 0.51, 0.9)]
+        if setup:
+            # Keep the illustrative rejection/retest inside the plan's 12-bar expiry.
+            t1, t2 = self.now+self.step*4, self.now+self.step*10
         # Overshoot illustrates a candle close, not an additional objective.
         overshoot = min(self.span * 0.06, abs(target - trigger) * 0.2) if target is not None else self.span * 0.06
         confirmed = trigger + (overshoot if bullish else -overshoot)
         xs, ys = [self.now, t1, t2], [self.current, confirmed, trigger]
+        if setup:
+            xs.insert(1,self.now+self.step*2)
+            ys.insert(1,trigger)
         if target is not None:
             xs.append(t3)
             ys.append(target)
         self.fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines+markers", name="Conditional scenario",
                                      line=dict(color=color, width=5, dash="dash"),
                                      marker=dict(size=12, color=color)))
-        self.annotation(t1, confirmed, "1 · Close", color, yshift=28 if bullish else -28, bgcolor=self.background)
+        self.annotation(t1, confirmed, "1 · Reject" if setup else "1 · Close", color, yshift=28 if bullish else -28, bgcolor=self.background)
         self.annotation(t2, trigger, "2 · Retest", color, yshift=-28 if bullish else 28, bgcolor=self.background)
         if target is not None:
             self.fig.add_annotation(x=t3, y=target, ax=-28, ay=32 if bullish else -32,
@@ -124,12 +164,16 @@ class AnalysisChartPresentation:
         labels = [(trigger, f"{'Entry' if setup else 'Confirm'} {price(trigger)}", color),
                   (invalidation, f"{'Stop' if setup else 'Invalid'} {price(invalidation)}", self.red)]
         if target is not None:
-            labels.append((target, f"3 · Target {price(target)}", color))
+            fraction = self.plan.get("targets", [{}])[0].get("fraction", 1) if self.plan.get("targets") else 1
+            labels.append((target, f"T1 {price(target)} · {fraction:.0%}", color))
+        if len(self.plan.get("targets", [])) > 1:
+            second = self.plan["targets"][1]
+            labels.append((second["price"], f"T2 {price(second['price'])} · runner", color))
         lo, hi = self.fig.layout.yaxis.range
         # Separate labels in pixel space without moving their real price levels.
         previous = -100
         for level, label, label_color in sorted(labels):
-            natural = (level - lo) / (hi - lo) * 500
+            natural = (level - lo) / (hi - lo) * 450
             placed = max(natural, previous + 34)
             previous = placed
             self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=level, y1=level,
@@ -165,6 +209,13 @@ class AnalysisChartPresentation:
             text = lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 align="left", text=text, showarrow=False, font=dict(size=22, color="#ecf1f8"))
+        evidence = self.plan.get("chart_evidence", [])[:3]
+        why = " → ".join(e["label"] + (f" {price(e['zone']['bottom'])}–{price(e['zone']['top'])}" if e.get("zone") else "") for e in evidence)
+        if why:
+            why = "Why: " + why + " · "
+        management = self.plan.get("management") or {}
+        if management.get("stop_after_t1") is not None:
+            why += f"After T1: runner stop to {price(management['stop_after_t1'])} (before costs). "
         self.fig.add_annotation(x=0, y=-0.29, xref="paper", yref="paper", xanchor="left", yanchor="top",
-                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Path timing illustrative, not a price/time guarantee · {PRESENTATION_VERSION}",
+                                text=lines(why, 145)+f"<br>Latest {len(self.visible)} of {len(self.candles)} candles · Illustrative path, not a guarantee · Experimental rules · {PRESENTATION_VERSION}",
                                 showarrow=False, font=dict(size=17, color=self.muted))
