@@ -36,12 +36,19 @@ def build_trade_plan(
     exit_policy: str = "single",
     vwap=None, volume_profile=None, divergence=None, cvd=None, tsmom=None,
     evidence_policy: str = "smc_v2",
+    cost_policy: str = "none",
+    minimum_stop_bps: float = 0.0,
 ) -> Dict[str, Any]:
     """Return a JSON-safe execution plan; never invent a trade on weak data."""
     if exit_policy not in {"single", "staged", "staged_no_be"}:
         raise ValueError(f"Unsupported exit policy: {exit_policy}")
     if evidence_policy not in {"smc_v2", "indicators_v1"}:
         raise ValueError(f"Unsupported evidence policy: {evidence_policy}")
+    if cost_policy not in {"none", "minimum_stop_bps"}:
+        raise ValueError(f"Unsupported cost policy: {cost_policy}")
+    minimum_stop_bps = float(minimum_stop_bps)
+    if not isfinite(minimum_stop_bps) or minimum_stop_bps < 0:
+        raise ValueError("minimum_stop_bps must be a finite non-negative number")
     current_price = _current_price(candles)
     # Request boundary: disabled MTFA must not echo stale caller-owned context.
     mtfa = deepcopy(mtfa) if mtfa.get("enabled") is True else {"enabled": False, "context": "disabled"}
@@ -144,6 +151,23 @@ def build_trade_plan(
             base,
             f"Best available setup has only {risk_reward}R reward/risk, below the {MIN_RISK_REWARD}R minimum.",
         )
+    if cost_policy == "minimum_stop_bps":
+        stop_bps = risk / entry_level * 10000
+        passed = stop_bps + 1e-12 >= minimum_stop_bps
+        comparison = "≥" if passed else "<"
+        cost_fact = {
+            "kind": "Mandatory cost gate", "timestamp": pd.Timestamp(candles.timestamp.iloc[-1]).isoformat(),
+            "price": current_price, "label": f"Stop distance {stop_bps:.2f} bps {comparison} {minimum_stop_bps:.2f} bps",
+            "group": "minimum_stop_distance", "status": "passed" if passed else "failed",
+            "mandatory": True, "plot": False,
+        }
+        base["chart_evidence"].append(cost_fact)
+        base["cost_economics"] = {"policy": cost_policy, "stop_distance_bps": round(stop_bps, 4),
+                                  "minimum_stop_bps": float(minimum_stop_bps), "passed": passed,
+                                  "note": "Research friction gate; not a profitability estimate."}
+        if not passed:
+            base["primary_scenario"] = None
+            return _wait(base, f"Stop distance {stop_bps:.2f} bps is below the {minimum_stop_bps:.2f} bps cost floor. No entry approved.")
 
     trigger = (
         "Bullish structure break is observed. Within 12 candles, require a zone touch and close above entry; "

@@ -50,7 +50,11 @@ def test_experimental_off_requires_two_positive_checks():
     data=indicators()
     assert rank_entry_zones(df,"bullish",**facts,**data,evidence_policy="indicators_v1")[0]["eligible"]
     data["volume_profile"]=None
-    assert not rank_entry_zones(df,"bullish",**facts,**data,evidence_policy="indicators_v1")[0]["eligible"]
+    failed=rank_entry_zones(df,"bullish",**facts,**data,evidence_policy="indicators_v1")[0]
+    assert not failed["eligible"]
+    assert {a["group"] for a in failed["annotations"]}==set(failed["groups"])|{"standalone_confirmation_count"}
+    gate=next(a for a in failed["annotations"] if a["group"]=="standalone_confirmation_count")
+    assert gate["status"]=="failed" and gate["mandatory"]
     assert rank_entry_zones(df,"bullish",**facts,**data)[0]["eligible"]
 
 
@@ -82,6 +86,23 @@ def test_default_execution_matches_frozen_baseline():
     new=build_trade_plan(df,**facts,**args,**indicators())
     for key in ("action","entry_zone","entry_level","stop_loss","take_profit","targets","management"):
         assert old[key]==new[key]
+
+
+def test_minimum_stop_policy_is_separate_visible_and_opt_in():
+    df,facts=fixture()
+    args=dict(interval="5m",premium_discount=NS(range_available=True,top=120,bottom=90),
+              liquidity=NS(pools=[NS(side="buy_side",level=108,last_index=2)]),**facts)
+    default=build_trade_plan(df,**args)
+    assert default["action"]=="long"
+    assert not any(e.get("group")=="minimum_stop_distance" for e in default["chart_evidence"])
+    passed=build_trade_plan(df,**args,cost_policy="minimum_stop_bps",minimum_stop_bps=100)
+    fact=next(e for e in passed["chart_evidence"] if e["group"]=="minimum_stop_distance")
+    assert passed["action"]=="long" and fact["status"]=="passed" and fact["mandatory"]
+    failed=build_trade_plan(df,**args,cost_policy="minimum_stop_bps",minimum_stop_bps=200)
+    fact=next(e for e in failed["chart_evidence"] if e["group"]=="minimum_stop_distance")
+    assert failed["action"]=="wait" and fact["status"]=="failed"
+    assert "< 200.00 bps" in fact["label"]
+    assert "cost floor" in failed["reason"] and failed["primary_scenario"] is None
 
 
 def test_mixed_real_and_missing_taker_volume_is_not_fake_selling():

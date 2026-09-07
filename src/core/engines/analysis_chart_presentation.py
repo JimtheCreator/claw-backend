@@ -6,7 +6,7 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "evidence-v4"
+PRESENTATION_VERSION = "evidence-v5"
 
 
 def price(value):
@@ -53,7 +53,7 @@ class AnalysisChartPresentation:
         fig.update_layout(template="plotly_dark", width=1600, height=900,
                           paper_bgcolor=self.background, plot_bgcolor=self.background,
                           font=dict(family="Arial, sans-serif", size=23, color="#ecf1f8"),
-                          margin=dict(l=45, r=110, t=220, b=230), showlegend=False,
+                          margin=dict(l=45, r=110, t=220, b=285), showlegend=False,
                           xaxis_rangeslider_visible=False,
                           meta={"presentation_version": PRESENTATION_VERSION})
         bounds = [float(self.visible.low.min()), float(self.visible.high.max())]
@@ -90,17 +90,27 @@ class AnalysisChartPresentation:
                                 font=dict(size=size, color=color), **kwargs)
 
     def draw_evidence(self):
-        """At most three selected causal anchors, not the entire detector map."""
-        for i, evidence in enumerate(self.plan.get("chart_evidence", [])[:3]):
+        """Plot price-located facts; summarize every material fact below."""
+        start, now = pd.Timestamp(self.start), pd.Timestamp(self.now)
+        located = []
+        for item in self.plan.get("chart_evidence", []):
+            if not item.get("plot", True):
+                continue
+            timestamp = pd.Timestamp(item["timestamp"])
+            if start.tzinfo is None:
+                timestamp = timestamp.tz_localize(None)
+            elif timestamp.tzinfo is None:
+                timestamp = timestamp.tz_localize(start.tzinfo)
+            if start <= timestamp <= now:
+                located.append(item)
+        self.omitted_anchor_count = max(0, len(located) - 5)
+        for i, evidence in enumerate(located[:5]):
             timestamp = pd.Timestamp(evidence["timestamp"])
-            start, now = pd.Timestamp(self.start), pd.Timestamp(self.now)
             # ChartEngine can supply naive UTC datetimes; compare consistently.
             if start.tzinfo is None:
                 timestamp = timestamp.tz_localize(None)
             elif timestamp.tzinfo is None:
                 timestamp = timestamp.tz_localize(start.tzinfo)
-            if not start <= timestamp <= now:
-                continue
             reference = evidence.get("reference_timestamp")
             if reference:
                 ref = pd.Timestamp(reference)
@@ -114,8 +124,9 @@ class AnalysisChartPresentation:
             self.fig.add_annotation(x=timestamp, y=evidence["price"], xref="x", yref="y",
                                     text=f"<b>{chr(65+i)}. {escape(evidence['kind'])}</b>",
                                     showarrow=True, arrowhead=2, arrowcolor=self.amber,
-                                    ax=-40, ay=-45-i*24, bgcolor=self.background,
-                                    font=dict(size=19, color=self.amber))
+                                    ax=-50-(i % 3)*115, ay=-45-(i // 3)*55,
+                                    bgcolor=self.background,
+                                    font=dict(size=18, color=self.amber))
             zone = evidence.get("zone")
             if zone:
                 self.fig.add_shape(type="rect", x0=timestamp, x1=self.now, y0=zone["bottom"], y1=zone["top"],
@@ -209,13 +220,18 @@ class AnalysisChartPresentation:
             text = lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 align="left", text=text, showarrow=False, font=dict(size=22, color="#ecf1f8"))
-        evidence = self.plan.get("chart_evidence", [])[:3]
-        why = " → ".join(e["label"] + (f" {price(e['zone']['bottom'])}–{price(e['zone']['top'])}" if e.get("zone") else "") for e in evidence)
-        if why:
-            why = "Why: " + why + " · "
+        evidence = self.plan.get("chart_evidence", [])
+        icons = {"passed":"✓", "failed":"✕", "unavailable":"?"}
+        facts = [f"{icons.get(e.get('status'),'•')} {e['label']}" +
+                 (" [required]" if e.get("mandatory") and e.get("status") != "passed" else "") for e in evidence]
+        why = "Decision facts: " + " · ".join(facts) if facts else "Decision facts: none available"
+        if getattr(self, "omitted_anchor_count", 0):
+            why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
         management = self.plan.get("management") or {}
         if management.get("stop_after_t1") is not None:
-            why += f"After T1: runner stop to {price(management['stop_after_t1'])} (before costs). "
-        self.fig.add_annotation(x=0, y=-0.29, xref="paper", yref="paper", xanchor="left", yanchor="top",
-                                text=lines(why, 145)+f"<br>Latest {len(self.visible)} of {len(self.candles)} candles · Illustrative path, not a guarantee · Experimental rules · {PRESENTATION_VERSION}",
-                                showarrow=False, font=dict(size=17, color=self.muted))
+            why += f" · After T1: runner stop to {price(management['stop_after_t1'])} (before costs)"
+        self.fig.add_annotation(x=0, y=-0.26, xref="paper", yref="paper", xanchor="left", yanchor="top",
+                                text=lines(why, 150), showarrow=False, font=dict(size=16, color=self.muted))
+        self.fig.add_annotation(x=0, y=-0.46, xref="paper", yref="paper", xanchor="left", yanchor="top",
+                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Observed facts are separate from the illustrative pending path · Experimental rules · {PRESENTATION_VERSION}",
+                                showarrow=False, font=dict(size=15, color=self.muted))

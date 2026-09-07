@@ -30,7 +30,8 @@ def test_scores_distinct_groups_and_ranks_confluence():
     df,facts=fixture();ranked=rank_entry_zones(df,"bullish",**facts)
     assert ranked[0]["source"]=="confluence"
     assert ranked[0]["score"]==4 and ranked[0]["eligible"]
-    assert len(ranked[0]["annotations"])==2
+    assert {a["group"] for a in ranked[0]["annotations"]}==set(ranked[0]["groups"])
+    assert len([a for a in ranked[0]["annotations"] if a["plot"]])==2
     facts["confluence"].zones *= 10
     assert rank_entry_zones(df,"bullish",**facts)[0]["score"]==4
 
@@ -50,6 +51,15 @@ def test_htf_off_has_no_hidden_poi_gate():
     df,facts=fixture();facts["mtfa"]={"enabled":False}
     ranked=rank_entry_zones(df,"bullish",**facts)
     assert ranked[0]["eligible"] and "htf_poi_reaction" not in ranked[0]["groups"]
+    assert "htf_poi_reaction" not in {a["group"] for a in ranked[0]["annotations"]}
+
+
+def test_missing_mandatory_htf_poi_is_visible_to_chart():
+    df,facts=fixture();facts["mtfa"]["htf_zones"]=[]
+    zone=rank_entry_zones(df,"bullish",**facts)[0]
+    item=next(a for a in zone["annotations"] if a["group"]=="htf_poi_reaction")
+    assert not zone["eligible"]
+    assert item["status"]=="failed" and item["mandatory"] and not item["plot"]
 
 
 def test_order_block_available_at_break_close_not_origin():

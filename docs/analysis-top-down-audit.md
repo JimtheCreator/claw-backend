@@ -117,7 +117,7 @@ These sources motivate a workflow, not the particular SMC thresholds below. OB/F
 | `order_block_engine.py` | Last opposite candle before an observed BOS/CHoCH, binary mitigation on first touch. | Preserve detector convention. HTF POIs can be touched-but-not-close-invalidated; do not claim these are fresh untouched OBs. Availability is break CLOSE, not original OB candle time. |
 | `imbalance_order_block_engine.py` | Pure overlap can join zones from unrelated legs. | Give overlap one point only and separately demand a recent linked structure event. Overlap alone cannot pass. |
 | `premium_discount_engine.py` | Latest confirmed high/low range, which can be degenerate or not the trader's intended impulse. | Preserve conservative invalid-range WAIT; evaluate the pending entry inside the selected half of the range. This range heuristic still needs independent testing. |
-| `analysis_chart_presentation.py` | Reduced clutter, but no observed evidence explaining the projected path. | At most three selected evidence anchors (HTF reaction, sweep, BOS/CHoCH); two target labels when supported; distinguish observed facts from an illustrative pending path. No heatmap. |
+| `analysis_chart_presentation.py` | Reduced clutter, but no observed evidence explaining the projected path. | Plot up to five truthful time/price anchors, disclose any omitted anchor count, and list every policy-relevant fact in the decision ledger; distinguish observed facts from an illustrative pending path. No heatmap. |
 | `data_access.py` / `market_data.py` / Binance `client.py` | Empty cache already fell back to Binance. Broad wrapping hid cause; swallowed provider errors looked like empty data; pooled client could belong to an expired Celery event loop; zero-volume candles rejected; recent-priority refresh returned old snapshot; persistence failure could discard usable source candles. | Per-call analysis exchange session on current loop, explicit source errors, accept zero-volume candles, merge refreshed data, reject stale analysis, persistence queue failure does not destroy fetched candles. Exact original upstream failure cannot be inferred from the supplied traceback alone. |
 
 Additional data-integrity findings:
@@ -191,6 +191,44 @@ Spearman rank correlation of score with net R is **-0.098** (30 old trades): no 
 
 The production planner's gross R gate is NOT an account-specific net R calculation. These results show why gross 1.5R can be inadequate with small stop distances. Do not describe the displayed gross R as expected net return; actual venue fee tier, spread, slippage and shorting costs are necessary for a deployable trade policy.
 
+#### Stop distance investigation — 2026-09-07
+
+For every unique single-target selection in the existing June 15–August 15 dataset, stop distance is `abs(entry - initial_stop) / entry × 10,000`. The complete trade-level table is saved as `existing-stop-distance-trades.csv`; no stopped, target or time exit was omitted.
+
+| Planner | Fills | Stop range | Median stop | Pearson stop-bps/net-R | Spearman stop-bps/net-R |
+|---|---:|---:|---:|---:|---:|
+| Frozen old | 30 | 5.47–59.27 bps | 19.69 bps | +0.329 | +0.798 |
+| Evidence v2 | 2 | 5.75–12.40 bps | 9.07 bps | Undefined | Undefined |
+
+Old-planner stop-distance quartiles were: 5.47–11.41 bps, N=8, mean **-3.4367R**; 11.63–19.19 bps, N=7, **-0.6557R**; 20.19–25.81 bps, N=7, **-1.5014R**; and 28.25–59.27 bps, N=8, **-0.1193R**. This strongly supports the tight-stop/cost hypothesis for the old planner in this small sample, though the non-monotonic middle quartiles and observational grouping prevent a causal claim. Evidence v2 cannot confirm it: its 5.75-bps trade won +2.3201R net while its 12.40-bps trade lost -2.9368R net. N=2 is not a relationship test.
+
+At 12 bps per side, approximate round-trip friction is about 24 price bps. Expressed in R it is roughly `24 / stop_bps`, before target-price differences: about 4R for a 6-bps stop, 2R for 12 bps, and 1R for 24 bps. This explains mechanically how a gross-positive strategy can become net-negative without proving which stop floor will preserve useful trades.
+
+No further confirmation-indicator gate is being tested. The cost study's development window is September 1, 2024–March 1, 2025; temporal test is September 1, 2025–March 1, 2026. The six-month gap keeps the test outside every June–August 2025 result already inspected in this project. Symbols are BTC, ETH, BNB, XRP, ADA, DOGE, LINK and LTC USDT; 5m/15m; stride 2; complete 108-bar outcome buffers; independent order state per window and variant; checksum-verified Binance archives. Predeclared candidate floors are 0/12/18/24/30/40/50 bps. One shared floor is chosen using **only old-planner development results** if it has at least 30 fills, retains at least 25% of baseline fills, and improves mean net R by at least 0.25; maximize mean R, then sample size. Otherwise freeze 0 bps (no promoted filter). The selected floor is then applied unchanged to old and evidence-v2 planners in the test. Using the larger old cohort to select and the same threshold on the sparse new planner tests transfer rather than tuning the new planner's few trades. It still cannot make a sparse new sample adequate.
+
+The development rule selected and froze **30 bps**. This was a development selection, not permission to deploy it. The untouched temporal holdout then produced:
+
+| Planner / policy | Dev fills | Dev mean gross R | Dev mean net R | Test fills | Test win rate | Test mean gross R | Test mean net R |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Old, no floor | 193 | +0.1534 | -0.8888 | 220 | 25.00% | +0.1895 | -1.0622 |
+| Old, frozen 30-bps floor | 99 | +0.7211 | +0.2414 | 92 | 30.43% | +0.1201 | -0.3822 |
+| Evidence v2, no floor | 22 | +0.2555 | -0.8840 | 16 | 12.50% | -0.6771 | -1.6815 |
+| Evidence v2, same frozen floor | 9 | +0.3581 | -0.0489 | 9 | 22.22% | -0.4260 | -0.8503 |
+
+**Holdout decision: do not promote the 30-bps policy to the production default.** It reduced the old planner's test loss by 0.6800R and the evidence-v2 loss by 0.8312R, so tight-stop cost amplification is real and persistent. It did not produce positive test expectancy. Evidence v2 has only 16 baseline and nine filtered test fills, which is still plainly inadequate. The old planner's 220 test fills are a useful descriptive expansion, not enough to rescue an economically losing result.
+
+Baseline test stop distance remains positively related to net R: old N=220, median 24.00 bps, Pearson +0.209 and Spearman +0.601; evidence v2 N=16, median 34.93 bps, Pearson +0.842 and Spearman +0.938. Old test stop quartiles had mean gross/net R of **+0.096/-2.456**, **+0.445/-0.826**, **+0.182/-0.601**, and **+0.035/-0.366** from tightest to widest. Thus the tightest old quartile was slightly profitable before costs and catastrophically negative after them, while wider groups still failed to clear realistic friction. Evidence-v2 quartiles were gross-negative in all four buckets, so its holdout failure is not merely a stop-distance problem.
+
+The operational floor replay owns independent pending/trade state: rejecting one tight plan lets a later timestamp become actionable. It is therefore a realistic policy comparison, not a row filter. As a separate matched-baseline diagnostic, retaining only original test fills with stops at least 30 bps gives old N=85 at -0.3113R net and evidence v2 N=8 at -0.7345R. The conclusion is unchanged. About 277,000 scheduled decision closes were examined, but inference is governed by filled-trade counts, not candle count.
+
+The deployable hook is independent of evidence scoring: default `SMC_COST_POLICY=none`; research mode `SMC_COST_POLICY=minimum_stop_bps` reads `SMC_MIN_STOP_BPS`. The latter remains disabled after the failed holdout. Enabled output records the measured stop bps and threshold. Failure returns WAIT before exposing a pending entry scenario; passing setups retain the same stop, entry, target and evidence rules. This filter rejects uneconomic geometry—it does not widen a technically defined invalidation stop.
+
+#### Chart reasoning ledger
+
+`analysis_chart_presentation.py` now separates chart-located observations from the full eligibility ledger. `setup_evidence.py` emits exactly one ledger item for every group active under the chosen evidence policy: structure break, displacement, sweep, OB/FVG overlap, optional HTF POI, and—in `indicators_v1` only—the five standalone groups plus the required standalone-count gate. The scoring and eligibility definitions are unchanged. Each item carries PASSED/FAILED/UNAVAILABLE and whether a failure is mandatory. Missing HTF POI and divergence vetoes therefore remain visible on WAIT charts. The cost policy appends its own mandatory PASS/FAIL item when enabled.
+
+Only observations with truthful price/time coordinates receive arrows. Momentum, divergence availability and count gates are summary facts, not invented points on a candle. Up to five located anchors are drawn to protect candle and forecast readability; if more exist, the chart states how many additional anchors were omitted while listing **all** material facts in the caption. The pending dotted path remains explicitly illustrative and visually separate from observed facts. Presentation version is `evidence-v5`.
+
 ### Coverage and limits that still matter
 
 - This is a reproducible **research harness**, not a validated strategy. It is not proof of live fill quality or profitability. New sample size is plainly inadequate.
@@ -205,6 +243,9 @@ Run from the backend, setting OUTPUT and CACHE to your chosen local directories:
 ```sh
 PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_trade_plans --start 2025-06-15 --end 2025-08-15 --stride 1 --output "$OUTPUT" --cache "$CACHE"
 PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.report_trade_plans "$OUTPUT" "$CACHE"
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.stop_cost_report "$OUTPUT/trades.csv" "$STOP_OUTPUT"
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_stop_cost_study --phase dev --start 2024-09-01 --end 2025-03-01 --stride 2 --cache "$CACHE" --output "$STOP_OUTPUT"
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_stop_cost_study --phase test --start 2025-09-01 --end 2026-03-01 --stride 2 --cache "$CACHE" --output "$STOP_OUTPUT"
 ```
 
-Archive manifests, checksums, configuration, raw trades, matched-exit counterfactuals, fee sensitivity and verified score statistics are written alongside the results. Re-running uses the cached, checksum-verified files. Tests exercise lookahead boundaries, zero-volume candles, source failure, downsample bypass, mandatory evidence gates, exact levels, ambiguous-bar stops and staged execution.
+The stop study writes `existing-stop-distance-trades.csv`, `dev-trades.csv`, `test-trades.csv`, per-policy summaries, stop quartiles and relationships, per-symbol counts, manifests, configuration/source hashes, and `frozen-stop-policy.json`. Archive manifests, checksums, configuration, raw trades, matched-exit counterfactuals, fee sensitivity and verified score statistics are written alongside the earlier results. Re-running uses the cached, checksum-verified files. Tests exercise lookahead boundaries, zero-volume candles, source failure, downsample bypass, mandatory evidence gates, exact levels, ambiguous-bar stops and staged execution.

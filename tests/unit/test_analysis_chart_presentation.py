@@ -86,6 +86,22 @@ def test_disabled_mtfa_heading_does_not_echo_stale_trends():
     assert "1h bullish" not in fig.layout.title.text
 
 
+def test_chart_summarizes_every_material_fact_and_discloses_anchor_cap():
+    candles, analysis, smc = example_data("long")
+    timestamp=candles.timestamp.iloc[-3].isoformat()
+    analysis["trade_plan"]["chart_evidence"]=[
+        dict(kind=f"K{i}",label=f"fact {i}",group=f"g{i}",status="passed" if i else "failed",
+             mandatory=i==0,plot=i<7,timestamp=timestamp,price=100+i*.05)
+        for i in range(9)
+    ]
+    chart=AnalysisChartPresentation(candles,analysis,smc);fig=chart.figure()
+    rendered=" ".join(str(a.text).replace("<br>"," ") for a in fig.layout.annotations)
+    assert all(f"fact {i}" in rendered for i in range(9))
+    assert "[required]" in rendered
+    assert "5 chart anchors shown; 2 additional" in rendered
+    assert len([a for a in fig.layout.annotations if str(a.text).startswith("<b>") and ". K" in str(a.text)])==5
+
+
 @pytest.mark.parametrize("action", ["long", "short"])
 def test_setups_keep_exact_entry_stop_and_target_in_view(action):
     candles, analysis, smc = example_data(action)
@@ -108,7 +124,7 @@ def test_image_path_serializes_dates_and_uses_focused_chart():
     payload = renderer.call_args.args[0]
     orjson.dumps(payload, option=orjson.OPT_SERIALIZE_NUMPY)
     assert renderer.call_args.kwargs["height"] == 900
-    assert payload["layout"]["meta"]["presentation_version"] == "evidence-v4"
+    assert payload["layout"]["meta"]["presentation_version"] == "evidence-v5"
     candle_trace = next(t for t in payload["data"] if t["type"] == "candlestick")
     assert len(candle_trace["x"]) == 60
     assert "2026-09-06" in candle_trace["x"][0]

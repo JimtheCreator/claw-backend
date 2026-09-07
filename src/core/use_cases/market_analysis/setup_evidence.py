@@ -178,14 +178,55 @@ def rank_entry_zones(candles, direction, *, order_blocks, fvg, confluence, struc
             if poi:
                 evidence.append({"kind": "HTF POI", "timestamp": poi["touch_timestamp"],
                                  "price": poi["touch_price"],
-                                 "label": f'{poi["timeframe"]} {poi["source"]} reaction', "zone": poi})
+                                 "label": f'{poi["timeframe"]} {poi["source"]} reaction', "zone": poi,
+                                 "group": "htf_poi_reaction", "status": "passed", "plot": True})
             if sweep:
                 evidence.append({"kind": "Sweep", "timestamp": pd.Timestamp(sweep.timestamp).isoformat(),
-                                 "price": float(sweep.wick_price), "label": f'Sweep of {sweep.pool_level:g}'})
+                                 "price": float(sweep.wick_price), "label": f'Sweep of {sweep.pool_level:g}',
+                                 "group": "preceding_sweep", "status": "passed", "plot": True})
             if event:
                 evidence.append({"kind": event.kind, "timestamp": pd.Timestamp(event.timestamp).isoformat(),
                                  "reference_timestamp": pd.Timestamp(candles.timestamp.iloc[getattr(event,"reference_swing_index",event.index)]).isoformat(),
-                                 "price": float(event.level), "label": f'{event.kind} close {direction}' + (" + displacement" if displacement else "")})
+                                 "price": float(event.level), "label": f'{event.kind} close {direction}',
+                                 "group": "recent_structure_break", "status": "passed", "plot": True})
+            # One ledger item for every group that actually influenced this
+            # policy. Price-located facts above may be plotted; the rest are
+            # explicit observed summaries so the renderer never implies a
+            # synthetic chart coordinate for momentum/profile facts.
+            covered = {item["group"] for item in evidence}
+            required = {"recent_structure_break", "displacement"}
+            if active_htf:
+                required.add("htf_poi_reaction")
+            if evidence_policy == "indicators_v1" and indicators["no_opposing_divergence"]["passed"] is False:
+                required.add("no_opposing_divergence")
+            labels = {
+                "recent_structure_break": "Recent structure break",
+                "displacement": "Directional displacement",
+                "preceding_sweep": "Preceding liquidity sweep",
+                "ob_fvg_overlap": "OB/FVG overlap",
+                "htf_poi_reaction": "HTF POI reaction",
+                "vwap_side": "Price on directional VWAP side",
+                "volume_profile_side": "Price on directional POC side",
+                "tsmom_alignment": "TSMOM aligned",
+                "cvd_break_confirmation": "Real CVD confirms break",
+                "no_opposing_divergence": "No opposing RSI/MACD divergence",
+            }
+            for name, value in groups.items():
+                if name in covered:
+                    next(item for item in evidence if item["group"] == name)["mandatory"] = name in required
+                    continue
+                state = "unavailable" if value is None else "passed" if value else "failed"
+                evidence.append({"kind": "Decision fact", "timestamp": pd.Timestamp(candles.timestamp.iloc[-1]).isoformat(),
+                                 "price": price, "label": f'{labels.get(name,name.replace("_"," "))}: {state.upper()}',
+                                 "group": name, "status": state, "mandatory": name in required, "plot": False})
+            if evidence_policy == "indicators_v1":
+                positive = sum(indicators[k]["passed"] is True for k in
+                               ("vwap_side","volume_profile_side","tsmom_alignment","cvd_break_confirmation"))
+                needed = 1 if active_htf else 2
+                evidence.append({"kind": "Mandatory gate", "timestamp": pd.Timestamp(candles.timestamp.iloc[-1]).isoformat(),
+                                 "price": price, "label": f'Standalone confirmations: {positive}/{needed}',
+                                 "group": "standalone_confirmation_count",
+                                 "status": "passed" if positive >= needed else "failed", "mandatory": True, "plot": False})
             ranked.append({"bottom": bottom, "top": top, "source": source,
                            "formed_index": formed, "score": score, "maximum": len(groups),
                            "groups": groups, "eligible": bool(mandatory and score >= threshold),

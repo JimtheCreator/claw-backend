@@ -1002,6 +1002,8 @@ def analyze_smc_task(
                 vwap=vwap_result, volume_profile=volume_profile_result,
                 divergence=divergence_result, cvd=cvd_result, tsmom=tsmom_result,
                 evidence_policy=os.getenv("SMC_EVIDENCE_POLICY", "smc_v2"),
+                cost_policy=os.getenv("SMC_COST_POLICY", "none"),
+                minimum_stop_bps=float(os.getenv("SMC_MIN_STOP_BPS", "0")),
             )
 
             step += 1
