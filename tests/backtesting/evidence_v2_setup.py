@@ -36,67 +36,18 @@ def higher_timeframe_zones(candles, interval, order_blocks, fvg):
     return result
 
 
-def indicator_evidence(candles, direction, *, vwap=None, volume_profile=None,
-                       divergence=None, cvd=None, tsmom=None, break_index=None):
-    """As-of-signal checks, NOT claims about an unobserved future entry candle.
-
-    None means unavailable and never earns a point. Separate checks are
-    inspectable features, not a claim of statistical independence.
-    """
-    sign = 1 if direction == "bullish" else -1
-    price = float(candles.close.iloc[-1])
-    result = {}
-    def put(name, value, reason):
-        result[name] = {"passed": None if value is None else bool(value),
-                        "available": value is not None, "reason": reason,
-                        "signal_bar_open": pd.Timestamp(candles.timestamp.iloc[-1]).isoformat(),
-                        "timing": "evaluated_after_signal_bar_close"}
-    points = getattr(vwap, "points", [])
-    latest = points[-1] if points else None
-    valid = latest is not None and latest.index == len(candles)-1 and isfinite(latest.vwap)
-    put("vwap_side", sign*(price-latest.vwap)>0 if valid else None,
-        "Last closed price versus session VWAP; not a reclaim trigger.")
-    poc = getattr(volume_profile, "poc_price", None)
-    valid = getattr(volume_profile, "profile_available", False) and poc is not None and isfinite(poc)
-    put("volume_profile_side", sign*(price-poc)>0 if valid else None,
-        "Price versus window POC; OHLCV-distributed profile, not trade-level volume at price.")
-    available = getattr(tsmom, "signal_available", False)
-    momentum = getattr(tsmom, "combined_signal", None)
-    put("tsmom_alignment", sign*momentum>0 if available and momentum is not None and isfinite(momentum) else None,
-        "Configured same-timeframe return horizons; insufficient history is unavailable.")
-    points = {p.index:p for p in getattr(cvd, "points", [])}
-    delta = points.get(break_index)
-    real = delta is not None and delta.delta_source == "taker_buy_volume" and isfinite(delta.delta)
-    put("cvd_break_confirmation", sign*delta.delta>0 if real else None,
-        "Actual taker-buy minus taker-sell volume on the structure-break candle; price proxy excluded.")
-    # The live divergence engine uses two right-hand bars for confirmation.
-    # Do not count events whose second pivot cannot yet have been confirmed.
-    last = len(candles)-1
-    ready = len(candles)>=35 and all(v is not None and isfinite(v) for v in
-            (getattr(divergence,"latest_rsi",None),getattr(divergence,"latest_macd_histogram",None)))
-    opposing = any(e.direction != direction and last-12 <= e.second_swing_index+2 <= last
-                   for e in getattr(divergence,"events",[]))
-    put("no_opposing_divergence", not opposing if ready else None,
-        "No opposing RSI/MACD divergence confirmed in the last 12 bars; absence is not positive pressure.")
-    return result
-
-
-def rank_entry_zones(candles, direction, *, order_blocks, fvg, confluence, structure, sweeps, swings, mtfa,
-                     vwap=None, volume_profile=None, divergence=None, cvd=None, tsmom=None,
-                     evidence_policy="smc_v2"):
+def rank_entry_zones(candles, direction, *, order_blocks, fvg, confluence, structure, sweeps, swings, mtfa):
     """Rank actual candidates by independent evidence groups, then distance.
 
     HTF alignment is not awarded once per timeframe; OB+FVG is one group,
     never another point for every overlapping detector output.
     """
-    if evidence_policy not in {"smc_v2", "indicators_v1"}:
-        raise ValueError(f"Unsupported evidence policy: {evidence_policy}")
     price = float(candles.close.iloc[-1])
     bullish = direction == "bullish"
     atr = average_true_range(candles, period=14)
     events = [e for e in getattr(structure, "events", []) if e.direction == direction
               and 0 <= e.index < len(candles) and len(candles) - 1 - e.index <= 12]
-    active_htf = mtfa.get("enabled") is True and mtfa.get("context") != "no_higher_timeframe"
+    active_htf = mtfa.get("enabled") and mtfa.get("context") != "no_higher_timeframe"
     ranked, seen = [], set()
     for source, zones in (("confluence", getattr(confluence, "zones", [])),
                           ("order_block", getattr(order_blocks, "zones", [])),
@@ -161,19 +112,6 @@ def rank_entry_zones(candles, direction, *, order_blocks, fvg, confluence, struc
             score = sum(groups.values())
             mandatory = event is not None and displacement and (not active_htf or poi is not None)
             threshold = 4 if active_htf else 3
-            indicators = indicator_evidence(candles, direction, vwap=vwap, volume_profile=volume_profile,
-                                            divergence=divergence, cvd=cvd, tsmom=tsmom,
-                                            break_index=event.index if event else None)
-            smc_eligible = mandatory and score >= threshold
-            if evidence_policy == "indicators_v1":
-                groups.update({k:v["passed"] for k,v in indicators.items()})
-                positive = sum(v["passed"] is True for k,v in indicators.items() if k != "no_opposing_divergence")
-                # Preserve every old SMC gate; absent divergence cannot substitute
-                # for a positive standalone confirmation, especially with MTFA off.
-                mandatory = smc_eligible and positive >= (1 if active_htf else 2)
-                mandatory = mandatory and indicators["no_opposing_divergence"]["passed"] is not False
-                threshold += 1 if active_htf else 2
-                score = sum(value is True for value in groups.values())
             evidence = []
             if poi:
                 evidence.append({"kind": "HTF POI", "timestamp": poi["touch_timestamp"],
@@ -189,8 +127,7 @@ def rank_entry_zones(candles, direction, *, order_blocks, fvg, confluence, struc
             ranked.append({"bottom": bottom, "top": top, "source": source,
                            "formed_index": formed, "score": score, "maximum": len(groups),
                            "groups": groups, "eligible": bool(mandatory and score >= threshold),
-                           "threshold": threshold, "poi": poi, "annotations": evidence,
-                           "indicator_evidence": indicators})
+                           "threshold": threshold, "poi": poi, "annotations": evidence})
     return sorted(ranked, key=lambda z: (-z["eligible"], -z["score"],
                   abs(price-(z["top"] if bullish else z["bottom"])), -z["formed_index"], z["source"]))
 

@@ -77,6 +77,15 @@ def test_chart_caps_historical_clutter_and_keeps_requested_timeframe():
     assert len(candles) == 180  # Selection must not discard analyzed history.
 
 
+def test_disabled_mtfa_heading_does_not_echo_stale_trends():
+    candles, analysis, smc = example_data("long")
+    analysis["trade_plan"]["evidence"]["mtfa"]["enabled"] = False
+    fig = AnalysisChartPresentation(candles, analysis, smc).figure()
+    assert "MTFA OFF" in fig.layout.title.text
+    assert "15m bullish" not in fig.layout.title.text
+    assert "1h bullish" not in fig.layout.title.text
+
+
 @pytest.mark.parametrize("action", ["long", "short"])
 def test_setups_keep_exact_entry_stop_and_target_in_view(action):
     candles, analysis, smc = example_data(action)

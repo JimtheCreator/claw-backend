@@ -185,7 +185,7 @@ class AnalysisChartPresentation:
         p = self.plan
         interval = "1 month" if p.get("interval") == "1M" else p.get("interval", "")
         mtfa = p.get("evidence", {}).get("mtfa", {})
-        htf = " · ".join(f"{tf} {trend or 'unconfirmed'}" for tf, trend in mtfa.get("htf_trends", {}).items())
+        htf = " · ".join(f"{tf} {trend or 'unconfirmed'}" for tf, trend in mtfa.get("htf_trends", {}).items()) if mtfa.get("enabled") is True else ""
         context = f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
         title = self.scenarios[0]["title"] if self.scenarios else "Wait for a valid scenario"
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"

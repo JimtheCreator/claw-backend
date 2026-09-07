@@ -53,8 +53,10 @@ class CVDEngine:
         has_taker_buy = "taker_buy_volume" in df.columns and df["taker_buy_volume"].notna().any()
 
         if has_taker_buy:
-            taker_buy = df["taker_buy_volume"].fillna(0)
-            delta = 2 * taker_buy - df["volume"]
+            taker_buy = pd.to_numeric(df["taker_buy_volume"], errors="coerce")
+            valid = np.isfinite(taker_buy) & (taker_buy >= 0) & (taker_buy <= df["volume"])
+            proxy = np.sign(df["close"] - df["open"]) * df["volume"]
+            delta = (2 * taker_buy - df["volume"]).where(valid, proxy)
             source = "taker_buy_volume"
         else:
             logger.info(
@@ -74,7 +76,7 @@ class CVDEngine:
                 timestamp=df["timestamp"].iloc[i].to_pydatetime(),
                 delta=float(delta.iloc[i]),
                 cumulative_delta=float(cumulative.iloc[i]),
-                delta_source=source,
+                delta_source=source if not has_taker_buy or bool(valid.iloc[i]) else "candle_direction_approximation",
             )
             for i in range(len(df))
         ]

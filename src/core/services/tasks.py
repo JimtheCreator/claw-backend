@@ -999,6 +999,9 @@ def analyze_smc_task(
                 swings=swing_result,
                 sweeps=sweep_result,
                 exit_policy=os.getenv("SMC_EXIT_POLICY", "single"),
+                vwap=vwap_result, volume_profile=volume_profile_result,
+                divergence=divergence_result, cvd=cvd_result, tsmom=tsmom_result,
+                evidence_policy=os.getenv("SMC_EVIDENCE_POLICY", "smc_v2"),
             )
 
             step += 1

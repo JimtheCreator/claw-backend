@@ -9,12 +9,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 from math import isfinite
-from copy import deepcopy
 
 import pandas as pd
 
 from common.utils.indicators import average_true_range
-from core.use_cases.market_analysis.setup_evidence import rank_entry_zones, staged_targets
+from tests.backtesting.evidence_v2_setup import rank_entry_zones, staged_targets
 
 
 MIN_RISK_REWARD = 1.5
@@ -34,17 +33,11 @@ def build_trade_plan(
     swings: Any = None,
     sweeps: Any = None,
     exit_policy: str = "single",
-    vwap=None, volume_profile=None, divergence=None, cvd=None, tsmom=None,
-    evidence_policy: str = "smc_v2",
 ) -> Dict[str, Any]:
     """Return a JSON-safe execution plan; never invent a trade on weak data."""
     if exit_policy not in {"single", "staged", "staged_no_be"}:
         raise ValueError(f"Unsupported exit policy: {exit_policy}")
-    if evidence_policy not in {"smc_v2", "indicators_v1"}:
-        raise ValueError(f"Unsupported evidence policy: {evidence_policy}")
     current_price = _current_price(candles)
-    # Request boundary: disabled MTFA must not echo stale caller-owned context.
-    mtfa = deepcopy(mtfa) if mtfa.get("enabled") is True else {"enabled": False, "context": "disabled"}
     trend = getattr(structure, "trend", None)
     base = {
         "interval": interval,
@@ -62,7 +55,7 @@ def build_trade_plan(
         "reason": None,
         "evidence": {"mtfa": mtfa},
         "primary_scenario": None,
-        "policy_version": "evidence-v2" if evidence_policy == "smc_v2" else "indicators-v1",
+        "policy_version": "evidence-v2",
         "validation_status": "experimental_not_validated",
         "targets": [],
         "management": None,
@@ -98,15 +91,12 @@ def build_trade_plan(
         return _wait(base, "The current dealing range is not confirmed, so price location cannot be assessed.")
     candidates = rank_entry_zones(candles, trend, order_blocks=order_blocks, fvg=fvg,
                                  confluence=confluence, structure=structure, sweeps=sweeps,
-                                 swings=swings, mtfa=mtfa, vwap=vwap, volume_profile=volume_profile,
-                                 divergence=divergence, cvd=cvd, tsmom=tsmom, evidence_policy=evidence_policy)
+                                 swings=swings, mtfa=mtfa)
     if not candidates:
         return _wait(base, f"No fresh {trend} entry zone is available at or beyond current price.")
     entry = candidates[0]
     base["setup_quality"] = {key: entry[key] for key in ("score", "maximum", "threshold", "groups", "eligible")}
     base["setup_quality"]["interpretation"] = "Evidence checklist, not a win probability."
-    base["setup_quality"]["indicator_evidence"] = entry["indicator_evidence"]
-    base["setup_quality"]["evidence_policy"] = evidence_policy
     base["chart_evidence"] = entry["annotations"]
     base["selected_htf_poi"] = entry["poi"]
     if not entry["eligible"]:

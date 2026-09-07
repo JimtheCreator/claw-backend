@@ -1,5 +1,93 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Standalone evidence extension — 2026-09-07
+
+### Decision and data audit
+
+`tasks.py` previously computed all five standalone engines but omitted their results from `build_trade_plan`. It now passes each result separately. `trade_plan.py` forwards them to `setup_evidence.py`; every selected candidate exposes `indicator_evidence` with a separate nullable `passed`, `available`, reason and snapshot timestamp. These are closed-signal observations, **not observations of the future entry candle**. The existing rejection-then-retest remains pending; no claim that future order flow or divergence has already been checked.
+
+| Group | Exact predeclared check | Important limitation |
+|---|---|---|
+| `vwap_side` | Last closed price strictly above daily-UTC VWAP for longs, below for shorts | Side-of-VWAP, not a detected reclaim; correlated with price direction |
+| `volume_profile_side` | Last closed price strictly above window POC for longs, below for shorts | Engine distributes OHLCV volume over each candle's range; not actual trade-by-price data |
+| `tsmom_alignment` | Available combined return-horizon signal has the trade's sign | Default 5m needs at least 6,049 bars; 15m at least 2,017. Never shrink horizons to manufacture availability |
+| `cvd_break_confirmation` | Real taker-buy minus taker-sell delta has the trade's sign on the linked break candle | Candle-direction proxy cannot earn this point; ordinary analysis OHLCV currently drops taker-buy data |
+| `no_opposing_divergence` | Valid RSI/MACD readings, at least 35 bars, and no opposing event whose second pivot became confirmed within the last 12 bars | Uses the live detector's two-right-bar confirmation. Absence of an event is not positive buying/selling pressure |
+
+Unknown inputs remain `null`, never a free point or an assertion that an indicator disagrees. Equal VWAP/POC or zero momentum/delta does not agree. Separate feature names enable separate tests; they do not establish statistical independence. `CVDEngine` also needed a correctness fix: a missing taker-buy value in a partially populated column must not become zero buying and therefore falsely imply pure selling. Invalid/missing rows now use an explicitly tagged proxy, excluded from decision confirmation.
+
+Binance archives contain genuine taker-buy base volume as field 9 (zero-based); the ordinary six-column history loader and live formatter omit it. [Binance archive specification](https://github.com/binance/binance-public-data). Research with richer archived inputs must be labeled separately from deployment-equivalent inputs. Adding a predictor does not repair a missing ingestion field.
+
+### Opt-in policy, declared before looking at this run's outcomes
+
+`SMC_EVIDENCE_POLICY=smc_v2` remains the production default. It measures the new groups but preserves old ranking, score, threshold and eligibility. `SMC_EXIT_POLICY` remains independent and defaults to `single`.
+
+`SMC_EVIDENCE_POLICY=indicators_v1` is experimental:
+
+- MTFA active: preserve old mandatory linked break, displacement, HTF POI reaction and at least 4/5 SMC groups; additionally require at least **one positive** standalone group. Minimum total 5/10.
+- MTFA inactive: preserve linked break, displacement and at least 3/4 local SMC groups; additionally require at least **two positive** standalone groups. Minimum total 5/9. This is deliberately stricter than merely removing HTF confirmation.
+- Positive groups are VWAP, profile, TSMOM and genuine CVD. Absence of opposing divergence cannot satisfy that positive-evidence gate. An observed opposing divergence vetoes the experimental setup; unavailable divergence is disclosed and is neither a point nor a veto.
+- The maximum includes unavailable standalone checks to expose missing coverage; unknowns do not lower thresholds. The HTF POI group, by contrast, is completely absent when HTF is inactive. An enabled interval with no higher ladder also uses the standalone requirements.
+- No new threshold or exit default is promoted on a small or non-independent sample. There are no LLM calls or automatic order execution.
+
+### MTFA isolation, call site through output
+
+`tasks.py` constructs a fresh summary per request and fetches HTF data only inside `if mtfa_enabled`. The planner previously echoed the caller's entire dictionary, allowing stale fields to leak into the result despite not selecting from them. It now replaces disabled context at the boundary with exactly `{"enabled": false, "context": "disabled"}` and deep-copies enabled context to prevent later caller mutation.
+
+All HTF touches reviewed: `_market_context` returns local before trend/alignment access when disabled; pullback/intermediate confirmation is reachable only with active HTF context; `rank_entry_zones` gates POI iteration and HTF evidence insertion with strict boolean activation; candidate enumeration uses only the provided requested-timeframe confluence/OB/FVG entities, never `htf_zones`. No HTF zone is copied into the entry list. Disabled output has `selected_htf_poi: null`, no HTF annotation, no HTF evidence group or score contribution, and no echoed HTF trends/zones. The chart heading additionally ignores HTF fields when disabled. Local engine inputs remain the caller's requested-timeframe entities, as wired by the task.
+
+Tests run the same setup ON then OFF with deliberately retained stale trends and zones, compare OFF to a clean OFF request under both policies, assert no HTF-derived output, and verify no mutation of input or prior output. Other tests cover independent real/proxy CVD, missing coverage, two-positive OFF requirements, causal divergence confirmation and unchanged default execution versus a frozen planner.
+
+### Reproducibility and study limits
+
+Frozen baseline: repository commit `054067c552cf80e196a769c0a708355ee6eaf87d`, copied into `tests/backtesting/evidence_v2_trade_plan.py` and `evidence_v2_setup.py` (only the planner's evidence import redirects to the frozen helper). SHA-256 respectively `2db437a0b9b5b5dce27660f7cdbaac4a9d034194b5fbc529c1e6ab30b18c861e` and `21e74b8f6fc9755f41f3188233c41d3246bef9892c25460e8e5027d94e998b49`. The older pre-SMC baseline remains untouched.
+
+`tests.backtesting.run_indicator_evidence` compares frozen v2 and indicator policy with MTFA ON/OFF, identical single-target management and existing conservative simulator/cost assumptions. Each feature is measured on the actual selected zone of frozen-baseline fills, not a different candidate or only the successful experimental subset. Reports include separate true/false/unavailable counts, mean realized R, win rate and point-biserial correlation. Correlation is undefined without feature variation or sufficient observations, not zero. No overlapping positions/pending orders within a strategy/market. Development and test are independent runs with fresh order state, and the final 108 possible future bars are buffered at each window end: development outcomes cannot consume test-period prices. Stride 3 samples analysis opportunities rather than every candle; results are specific to that sampling schedule. Per-symbol/window checkpoints allow reporting to be rebuilt with `--summarize-only` without recomputing detections.
+
+Development: June 15–July 15, 2025; temporal test: July 15–August 15, 2025; BTC/ETH/SOL, 5m/15m. These windows reuse previously inspected history and **are not an untouched confirmation set**. Rules were fixed before examining this extension's results; no threshold sweep. The 1,000-bar deployment-equivalent research snapshot leaves CVD and low-TF TSMOM unavailable. `enrich_indicator_cohort` separately replays and verifies each frozen fill before measuring genuine archived CVD and longer-history TSMOM. Those shadow covariates do not change the deployable-input policy backtest and cannot justify enabling unavailable inputs in production.
+
+### Completed indicator study: do not promote the new gate
+
+The final run used independent window state and boundary buffers. BTC/ETH/SOL, 5m/15m; development June 15–July 15, temporal test July 15–August 15, 2025; every third analysis opportunity, 1,000-bar snapshots, 10 bps fees plus 2 bps adverse slippage per side. Figures are net of those modeled costs.
+
+| Window | MTFA | Policy | Fills | Net win rate | Mean realized R |
+|---|---|---|---:|---:|---:|
+| Development | OFF | Frozen v2 | 19 | 10.53% | -2.0872 |
+| Development | OFF | Indicators v1 | 6 | 0% | -2.1997 |
+| Development | ON | Frozen v2 | 1 | 0% | -2.9359 |
+| Development | ON | Indicators v1 | 1 | 0% | -2.9359 |
+| Test | OFF | Frozen v2 | 16 | 31.25% | -1.2119 |
+| Test | OFF | Indicators v1 | 4 | 0% | -3.1808 |
+| Test | ON | Frozen v2 | 1 | 100% | +2.3201 |
+| Test | ON | Indicators v1 | 1 | 100% | +2.3201 |
+
+**Decision: reject promotion of the new mandatory indicator gate.** The OFF result is worse in both windows; its test sample retained four losses and did not retain the baseline's winners. ON selected the same single fill in each window and supplies essentially no statistical evidence. Neither policy has demonstrated profitability or professional-grade reliability. Keep `smc_v2` as default; retain `indicators_v1` only as an explicitly requested research mode. Do not silently invert failed filters after seeing test results.
+
+#### Each feature versus actual frozen-baseline outcomes
+
+OFF is the only cohort large enough even for descriptive comparisons (19 development, 16 test fills). Correlations are point-biserial correlations of each boolean with net R, not causal effects, calibrated probabilities, or significance claims. Pooling symbols/timeframes and examining multiple features adds confounding and selection risk.
+
+| Feature | Dev correlation | Test correlation | Test TRUE: N / mean R | Test FALSE: N / mean R | Interpretation |
+|---|---:|---:|---|---|---|
+| VWAP side | +0.1010 | -0.4118 | 10 / -2.0777 | 6 / +0.2310 | Weak positive development association did not persist; no demonstrated positive predictive value |
+| Volume profile side | -0.3209 | -0.1200 | 10 / -1.4642 | 6 / -0.7914 | Passing was associated with worse returns in both windows; do not make it mandatory by default |
+| No opposing divergence | -0.0961 | -0.1992 | 10 / -1.6308 | 6 / -0.5138 | This particular absence/veto rule did not improve selection |
+| Genuine CVD on break, richer-input shadow | -0.0321 | Undefined | 16 / -1.2119 | 0 / undefined | Every test break passed, so this check had no discriminating variation; no added predictive value demonstrated |
+| TSMOM alignment, longer-history shadow | -0.2239 | -0.3683 | 5 / -2.6945 | 11 / -0.5380 | Alignment did not identify better outcomes in this sample; not promoted |
+
+In the deployment-equivalent study CVD and TSMOM were unavailable for **every** baseline fill, not false. The richer-input shadow study reconstructed all 37 frozen fills (35 OFF, 2 ON) and verified their realized R before attaching authentic archive delta and longer-history momentum. It did not change entries or exits, nor rerun the experimental policy with richer data. Actual TSMOM history lengths and available horizons are recorded per fill; they are longer than current deployment-equivalent snapshots, so those results do not establish live availability. ON feature correlations are undefined in each window because N=1.
+
+Full artifacts are in `outputs/indicator-evidence-v1` under the Codex workspace: `summary.csv`, `trades.csv`, `per-feature.csv`, `richer-input-shadow-trades.csv`, `richer-input-shadow-features.csv`, source/checksum manifests and six per-window checkpoints. The first attempt had a report-comprehension error and produced no usable saved results; the final checkpointed rerun is the source of every number in this section. A reporting-recovery regression test now covers that path.
+
+Focused validation covers data recovery, old and new trade-plan gates, MTFA isolation, chart presentation, historical snapshot handling, frozen hashes, real/proxy CVD and report reconstruction. An adequate untouched forward/holdout study is still required before any promotion. No worker was restarted and no environment default was changed.
+
+Reproduce from the backend root (replace the two absolute directory arguments for another machine):
+
+```sh
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_indicator_evidence --cache /Users/apple/Documents/Codex/2026-09-05/meticulously-check-the-added-analysis-feature-2/outputs/market-history --output /Users/apple/Documents/Codex/2026-09-05/meticulously-check-the-added-analysis-feature-2/outputs/indicator-evidence-v1 --start 2025-06-15 --split 2025-07-15 --end 2025-08-15 --stride 3
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.enrich_indicator_cohort --cache /Users/apple/Documents/Codex/2026-09-05/meticulously-check-the-added-analysis-feature-2/outputs/market-history --output /Users/apple/Documents/Codex/2026-09-05/meticulously-check-the-added-analysis-feature-2/outputs/indicator-evidence-v1
+```
+
 ## Verdict before validation
 
 The original pipeline is deterministic, not random-number-based. Its apparently arbitrary output comes from weak selection and missing evidence propagation. The detectors encode price-action heuristics; they do not establish institutional intent or predictive profitability. No result in this document should be called professional-grade or a calibrated forecast without independent validation.
