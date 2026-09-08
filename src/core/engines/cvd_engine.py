@@ -22,8 +22,8 @@ class CVDEngine:
         sell_volume = total_volume - taker_buy_volume
         delta = buy_volume - sell_volume = 2*taker_buy_volume - total_volume
 
-    Falls back to a candle-direction approximation ONLY when that column
-    is absent: full volume counted as buy pressure on a bullish candle
+    Falls back per candle when taker-buy volume is missing or invalid:
+    full volume counted as buy pressure on a bullish candle
     (close > open), full volume as sell pressure on a bearish candle
     (close < open), zero delta on a doji (close == open, no directional
     assumption forced either way). This is a coarse, well-known stand-in
@@ -59,6 +59,7 @@ class CVDEngine:
             delta = (2 * taker_buy - df["volume"]).where(valid, proxy)
             source = "taker_buy_volume"
         else:
+            valid = pd.Series(False, index=df.index)
             logger.info(
                 "[CVDEngine] No taker_buy_volume column found - falling back to the "
                 "close-vs-open candle-direction approximation, which is meaningfully "
@@ -69,6 +70,7 @@ class CVDEngine:
             source = "candle_direction_approximation"
 
         cumulative = delta.cumsum()
+        genuine_count = valid.astype(int).cumsum()
 
         points = [
             DeltaPoint(
@@ -77,9 +79,12 @@ class CVDEngine:
                 delta=float(delta.iloc[i]),
                 cumulative_delta=float(cumulative.iloc[i]),
                 delta_source=source if not has_taker_buy or bool(valid.iloc[i]) else "candle_direction_approximation",
+                cumulative_delta_source=("taker_buy_volume" if genuine_count.iloc[i] == i+1 else
+                                         "candle_direction_approximation" if genuine_count.iloc[i] == 0 else "mixed"),
             )
             for i in range(len(df))
         ]
 
         logger.debug(f"[CVDEngine] interval={self.interval} source={source} produced {len(points)} points")
-        return CVDResult(interval=self.interval, points=points)
+        return CVDResult(interval=self.interval, points=points,
+                         genuine_point_count=int(valid.sum()), approximate_point_count=int((~valid).sum()))

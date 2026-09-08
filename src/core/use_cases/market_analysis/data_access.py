@@ -81,6 +81,7 @@ async def get_ohlcv_from_db(
             raise DataUnavailableError(f"{symbol} {interval}: gaps remain after exchange recovery. No candles were invented to bridge them.")
         if last_open + step + step <= pd.Timestamp(end_time):
             raise DataUnavailableError(f"{symbol} {interval}: exchange recovery did not provide current candles. Last candle: {last_open.isoformat()}. No stale forecast was generated.")
+        data = await _recover_taker_buy_volume(data, client, symbol, interval, end_time, step)
         return _format_ohlcv_response(data)
 
     except DataUnavailableError:
@@ -123,5 +124,41 @@ def _format_ohlcv_response(data: List[MarketDataEntity]) -> Dict[str, list]:
         'low': [d.low for d in data],
         'close': [d.close for d in data],
         'volume': [d.volume for d in data],
+        'taker_buy_volume': [d.taker_buy_volume for d in data],
         'timestamp': [d.timestamp for d in data]
     }
+
+
+async def _recover_taker_buy_volume(data, client, symbol, interval, now, step):
+    """One bounded raw-kline read repairs optional flow on old cache snapshots.
+
+    Attach field 9 only to exactly matching OHLCV observations. Provider failure
+    leaves explicit missing flow; it must not fabricate buying or abort OHLCV.
+    """
+    import pandas as pd
+    import asyncio
+    missing = [d for d in data if d.taker_buy_volume is None]
+    if not missing:
+        return data
+    try:
+        rows = await asyncio.wait_for(client.get_klines(symbol=symbol, interval=interval,
+            start_time=int(pd.Timestamp(data[0].timestamp).timestamp()*1000),
+            end_time=int(pd.Timestamp(now).timestamp()*1000), limit=min(1000, len(data)),
+            max_retries=1), timeout=15)
+        lookup = {int(k[0]): k for k in rows if len(k) > 9}
+        recovered = []
+        for d in missing:
+            k = lookup.get(int(pd.Timestamp(d.timestamp).timestamp()*1000))
+            if k is None or tuple(map(float, k[1:6])) != (d.open, d.high, d.low, d.close, d.volume):
+                continue
+            checked = MarketDataEntity(**{**d.model_dump(), 'taker_buy_volume': k[9]})
+            if checked.taker_buy_volume is not None:
+                d.taker_buy_volume = checked.taker_buy_volume
+                if pd.Timestamp(d.timestamp)+step <= pd.Timestamp(now):
+                    recovered.append(d)
+        if recovered:
+            from core.use_cases.market.market_data import save_market_data_task
+            save_market_data_task.delay([d.model_dump_json() for d in recovered])
+    except Exception:
+        logger.warning(f"{symbol} {interval}: optional taker-volume recovery incomplete; missing flow remains unavailable.")
+    return data

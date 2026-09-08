@@ -17,6 +17,8 @@ class DeltaPoint(BaseModel):
     delta: float
     cumulative_delta: float
     delta_source: Literal["taker_buy_volume", "candle_direction_approximation"]
+    # A real delta after a missing candle does not make its cumulative sum real.
+    cumulative_delta_source: Literal["taker_buy_volume", "candle_direction_approximation", "mixed", "unknown"] = "unknown"
 
 
 class CVDResult(BaseModel):
@@ -24,3 +26,5 @@ class CVDResult(BaseModel):
     a single present-tense value."""
     interval: str
     points: List[DeltaPoint] = []
+    genuine_point_count: int = 0
+    approximate_point_count: int = 0

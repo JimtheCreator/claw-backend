@@ -1,5 +1,60 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Taker-volume ingestion and rejected-gate containment — 2026-09-08
+
+Confirmed gap: real Binance taker-buy volume was discarded before CVDEngine.
+There is no live `data_loader.py` in this repository. The actual path is
+`market_data.py`/background backfills/websocket persistence -> MarketDataEntity
+-> InfluxDB -> `data_access.py` -> closed-candle DataFrame -> CVDEngine.
+
+That path now preserves nullable `taker_buy_volume`: REST kline **index 9** and
+websocket kline **V**, both base-asset volume (not index 10 / quote volume).
+[Binance kline reference](https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints).
+Real per-candle delta remains `2 * taker_buy_volume - volume`. Invalid, negative,
+over-total and missing values become unknown, not zero. Genuine zero is valid.
+Influx writes the field when known and both raw chronological/reverse queries
+retrieve it. Analysis bypasses downsampling; legacy display-only downsampled
+records do not claim genuine taker totals.
+
+Existing Influx records are not magically repaired by a schema change. Analysis
+now makes at most one optional exchange read (<=1000 candles, one retry attempt,
+15-second bound) when its requested snapshot lacks flow. It only attaches values
+to identical timestamp/OHLCV observations and queues recovered closed records
+through the existing persistence task. Failed/mismatched recovery leaves unknown
+flow and does not turn an optional feature into a failed OHLCV request. No bulk
+database deletion or historical full-store migration was performed.
+
+CVDEngine continues to label any price-direction fallback explicitly. Result
+metadata counts genuine versus approximate points; each cumulative point now
+also records real/proxy/mixed provenance. A real delta after a missing candle
+must not make a mixed cumulative sum look genuine. `indicator_evidence` still
+excludes proxies from CVD confirmation.
+
+The archive helper `download_month(..., include_taker_buy=True)` provides the
+same field for future richer-input studies. Resampling sums it only with complete
+coverage; missing constituent flow produces missing aggregate flow, not a partial
+total. Default six-column historical reads remain unchanged to preserve previous
+study input contracts. Previous hourly research had no CVD feature and no ML
+training, so its negative results were not trained on a CVD proxy. They have not
+been relabelled or rerun as richer-data results.
+
+Gate audit: `analyze_smc_structure.py` only orchestrates structural detectors;
+it has no VWAP veto. Under default `smc_v2`, VWAP/Profile are shadow evidence and
+cannot alter ranking, eligibility, score or mandatory count. They contributed to
+an extra standalone-count gate only in the rejected `indicators_v1` experiment;
+neither was individually mandatory. The live task now explicitly selects
+`smc_v2`, ignoring `SMC_EVIDENCE_POLICY` so an environment override cannot enable
+that rejected gate. Explicit offline research calls retain `indicators_v1`
+unchanged for reproducibility. No unspecified ML decision path was added.
+
+Regression coverage includes REST cold fetch and refresh, websocket persistence,
+Influx line-protocol/readback, formatter-to-CVD, optional cache recovery and failure,
+archive field 9 and partial-resample semantics, proxy exclusion, and unchanged
+default eligibility with VWAP/Profile agreeing, disagreeing or unavailable.
+A read-only live Binance BNBUSDT smoke check verified three closed 1h candles:
+three genuine CVD points, zero proxy points, all matching the field-9 formula.
+This validates ingestion correctness, not CVD predictive value or profitability.
+
 ## Strategy recovery research — 2026-09-08: no profitable replacement found
 
 The user correctly identified that delivery infrastructure is not a trading

@@ -32,8 +32,10 @@ def normalize_binance_data(klines: list) -> pd.DataFrame:
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     df['close_time'] = pd.to_datetime(df['close_time'], unit='ms')
     
-    # Keep essential columns
-    return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+    df = df.rename(columns={'taker_buy_base': 'taker_buy_volume'})
+    valid = df.taker_buy_volume.between(0, df.volume) & df.taker_buy_volume.notna()
+    df['taker_buy_volume'] = df.taker_buy_volume.where(valid)
+    return df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'taker_buy_volume']]
 
 def downsample_sparkline(data: list, points: int = 20) -> list:
     """Reduce data points for efficient sparkline rendering"""

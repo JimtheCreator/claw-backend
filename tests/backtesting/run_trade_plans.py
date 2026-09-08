@@ -29,7 +29,7 @@ from core.use_cases.market_analysis.trade_plan import build_trade_plan
 from tests.backtesting.legacy_trade_plan import build_trade_plan as old_plan
 
 
-def download_month(symbol, interval, month, cache):
+def download_month(symbol, interval, month, cache, *, include_taker_buy=False):
     name = f"{symbol}-{interval}-{month}.zip"
     url = f"https://data.binance.vision/data/spot/monthly/klines/{symbol}/{interval}/{name}"
     target = cache / name
@@ -46,8 +46,12 @@ def download_month(symbol, interval, month, cache):
     if hashlib.sha256(payload).hexdigest() != target.with_suffix(".sha256").read_text().strip():
         raise ValueError(f"Corrupt cached archive: {target}")
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
-        df = pd.read_csv(archive.open(archive.namelist()[0]), header=None, usecols=range(6))
-    df.columns = ["timestamp", "open", "high", "low", "close", "volume"]
+        df = pd.read_csv(archive.open(archive.namelist()[0]), header=None,
+                         usecols=list(range(6))+([9] if include_taker_buy else []))
+    df.columns = ["timestamp", "open", "high", "low", "close", "volume"]+(["taker_buy_volume"] if include_taker_buy else [])
+    if include_taker_buy:
+        v = pd.to_numeric(df.taker_buy_volume, errors="coerce")
+        df["taker_buy_volume"] = v.where(v.between(0, df.volume))
     unit = "us" if df.timestamp.iloc[0] > 10**14 else "ms"
     df.timestamp = pd.to_datetime(df.timestamp, unit=unit, utc=True)
     return df, {"url": url, "sha256": hashlib.sha256(payload).hexdigest(), "rows": len(df)}
@@ -57,7 +61,12 @@ def resample_closed(frame, rule, expected):
     indexed = frame.set_index("timestamp")
     group = indexed.resample(rule, origin="epoch", label="left", closed="left")
     result = group.agg({"open":"first", "high":"max", "low":"min", "close":"last", "volume":"sum"})
-    return result[group.close.count() == expected].dropna().reset_index()
+    if "taker_buy_volume" in frame:
+        # A partial sum is not the taker-buy total for the resampled candle.
+        valid = indexed.taker_buy_volume.between(0, indexed.volume)
+        flow = indexed.taker_buy_volume.where(valid).resample(rule, origin="epoch", label="left", closed="left")
+        result["taker_buy_volume"] = flow.sum(min_count=expected).where(flow.count() == expected)
+    return result[group.close.count() == expected].dropna(subset=["open", "high", "low", "close", "volume"]).reset_index()
 
 
 def detect(df, tf, full=True):

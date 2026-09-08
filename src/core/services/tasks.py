@@ -283,7 +283,8 @@ async def process_request_batch(binance, symbol, interval, requests):
                     timestamp=datetime.fromtimestamp(kline[0]/1000, tz=timezone.utc),
                     open=float(kline[1]), high=float(kline[2]), 
                     low=float(kline[3]), close=float(kline[4]), 
-                    volume=float(kline[5])
+                    volume=float(kline[5]),
+                    taker_buy_volume=kline[9] if len(kline) > 9 else None,
                 ))
         
         return entities
@@ -401,7 +402,8 @@ async def verify_symbol_data(symbol: str, interval: str):
                     symbol=symbol, interval=interval,
                     timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
                     open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                    close=float(k[4]), volume=float(k[5])
+                    close=float(k[4]), volume=float(k[5]),
+                    taker_buy_volume=k[9] if len(k) > 9 else None,
                 ))
                 
             # Progress logging every 100 backfills
@@ -1001,7 +1003,9 @@ def analyze_smc_task(
                 exit_policy=os.getenv("SMC_EXIT_POLICY", "single"),
                 vwap=vwap_result, volume_profile=volume_profile_result,
                 divergence=divergence_result, cvd=cvd_result, tsmom=tsmom_result,
-                evidence_policy=os.getenv("SMC_EVIDENCE_POLICY", "smc_v2"),
+                # indicators_v1 failed validation: research calls only, never
+                # activate its extra gates through a production environment.
+                evidence_policy="smc_v2",
                 cost_policy=os.getenv("SMC_COST_POLICY", "none"),
                 minimum_stop_bps=float(os.getenv("SMC_MIN_STOP_BPS", "0")),
                 # Restore original decisions; shortening the image is a presentation change.

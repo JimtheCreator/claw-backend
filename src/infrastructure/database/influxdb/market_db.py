@@ -94,7 +94,8 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
                 'high': float(record.values.get('high', 0.0)) if record.values.get('high') is not None else 0.0,
                 'low': float(record.values.get('low', 0.0)) if record.values.get('low') is not None else 0.0,
                 'close': float(record.values.get('close', 0.0)) if record.values.get('close') is not None else 0.0,
-                'volume': float(record.values.get('volume', 0.0)) if record.values.get('volume') is not None else 0.0
+                'volume': float(record.values.get('volume', 0.0)) if record.values.get('volume') is not None else 0.0,
+                'taker_buy_volume': record.values.get('taker_buy_volume'),
             }
         except Exception as e:
             logger.error(f"Failed to parse InfluxDB record: {str(e)}")
@@ -235,7 +236,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         |> filter(fn: (r) => r._measurement == "market_data")
         |> filter(fn: (r) => r.symbol == "{symbol}")
         |> filter(fn: (r) => r.interval == "{interval}")
-        |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
+        |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume" or r._field == "taker_buy_volume")
         |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
         |> sort(columns: ["_time"], desc: false)
         |> limit(n: {page_size}, offset: {offset})
@@ -292,7 +293,7 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             |> filter(fn: (r) => r._measurement == "market_data")
             |> filter(fn: (r) => r.symbol == "{symbol}")
             |> filter(fn: (r) => r.interval == "{interval}")
-            |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
+            |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume" or r._field == "taker_buy_volume")
             |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
             |> sort(columns: ["_time"], desc: true)
             |> limit(n: {page_size}, offset: {offset})
@@ -519,6 +520,9 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
                     .time(entity.timestamp)
                     for entity in data_list
                 ]
+                for point, entity in zip(points, data_list):
+                    if entity.taker_buy_volume is not None:
+                        point.field("taker_buy_volume", entity.taker_buy_volume)
                 write_api.write(bucket=self.bucket, record=points)
         except Exception as e:
             logger.error(f"InfluxDB bulk write error: {str(e)}")

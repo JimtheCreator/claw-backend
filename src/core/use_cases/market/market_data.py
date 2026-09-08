@@ -316,7 +316,8 @@ async def _fetch_from_binance_chronological(
                     symbol=symbol, interval=interval,
                     timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
                     open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                    close=float(k[4]), volume=float(k[5])
+                    close=float(k[4]), volume=float(k[5]),
+                    taker_buy_volume=k[9] if len(k) > 9 else None,
                 )
                 data_entities.append(entity)
                 # --- FIX: Only queue the candle for InfluxDB if it has fully closed ---
@@ -458,7 +459,8 @@ async def _fetch_and_save_missing_data(
                         symbol=symbol, interval=interval,
                         timestamp=datetime.fromtimestamp(k[0]/1000, tz=timezone.utc),
                         open=float(k[1]), high=float(k[2]), low=float(k[3]),
-                        close=float(k[4]), volume=float(k[5])
+                        close=float(k[4]), volume=float(k[5]),
+                        taker_buy_volume=k[9] if len(k) > 9 else None,
                     )
                     batch_entities.append(entity)
                     # --- FIX: Only queue closed candles ---

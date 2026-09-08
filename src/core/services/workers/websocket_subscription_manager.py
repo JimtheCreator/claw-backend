@@ -652,6 +652,7 @@ class WebsocketSubscriptionManager:
                     low=candle_data["low"],
                     close=candle_data["close"],
                     volume=candle_data["volume"],
+                    taker_buy_volume=kline.get('V'),
                     timestamp=datetime.fromtimestamp(open_time_ms / 1000, tz=timezone.utc)
                 )
                 save_market_data_task.delay([entity.model_dump_json()])
@@ -788,4 +789,4 @@ class WebsocketSubscriptionManager:
 
 if __name__ == "__main__":
     manager = WebsocketSubscriptionManager()
-    asyncio.run(manager.run()) 
+    asyncio.run(manager.run())

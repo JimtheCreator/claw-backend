@@ -715,6 +715,7 @@ class BinanceMarketData:
                         "close": float(kline.get('c', 0)),
                         "volume": float(kline.get('v', 0)),
                         "quote_volume": float(kline.get('q', 0)),
+                        "taker_buy_volume": float(kline['V']) if kline.get('V') is not None else None,
                         "trades": kline.get('n', 0),
                         "timestamp": msg.get('E')
                     }
