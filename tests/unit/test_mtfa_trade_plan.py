@@ -107,6 +107,24 @@ def test_countertrend_is_a_conditional_resumption_watch_not_a_trade(direction):
     assert "retest" in plan["confirmation_required"]
 
 
+@pytest.mark.parametrize("direction", ["bullish", "bearish"])
+def test_real_pullback_plan_renders_a_watch_not_an_approach_trade(direction):
+    from copy import deepcopy
+    from core.engines.analysis_chart_presentation import AnalysisChartPresentation
+
+    plan = _pullback_plan(direction)
+    original = deepcopy(plan)
+    fig = AnalysisChartPresentation(_candles(), {"symbol": "TEST", "trade_plan": plan}, {}).figure()
+    captions = " ".join(a.text.replace("<br>", " ") for a in fig.layout.annotations)
+    assert "WAIT · NO ENTRY CONFIRMED" in captions
+    assert "not a profit target or a trade toward it" in captions
+    assert "retest" in captions  # The prerequisite is not silently erased.
+    assert "NEXT PROJECTED MOVE" not in captions
+    assert not any(t.type == "scatter" and "lines" in (t.mode or "") for t in fig.data)
+    assert f"Local: {plan['trend_direction']}" in fig.layout.title.text
+    assert plan == original
+
+
 def test_provisional_pivot_cannot_confirm_a_reversal():
     assert _pullback_plan(confirmed=False)["primary_scenario"] is None
 

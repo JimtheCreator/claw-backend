@@ -6,7 +6,7 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "first-leg-v1"
+PRESENTATION_VERSION = "checkpoint-v2"
 NEXT_MOVE_PRESENTATION_VERSION = "next-move-v1"
 
 
@@ -83,7 +83,7 @@ class AnalysisChartPresentation:
                       xref="x", yref="y domain", line=dict(color=self.muted, width=1, dash="dot"))
         self.annotation(self.now, 1.035, "NOW", self.muted, yref="y domain", size=18)
         self.annotation(self.now + (self.end - self.now) * 0.58, 1.035,
-                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "FIRST LEG · PROJECTION ENDS AT LEVEL",
+                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "WATCH LEVEL · ARRIVAL NOT FORECAST",
                         self.muted, yref="y domain", size=18)
         fig.add_trace(go.Candlestick(x=self.visible.timestamp.astype(str), open=self.visible.open,
                                     high=self.visible.high, low=self.visible.low, close=self.visible.close,
@@ -150,29 +150,21 @@ class AnalysisChartPresentation:
         self.draw_first_leg()
 
     def draw_first_leg(self):
-        """Display only the existing scenario's approach to its trigger.
+        """Show the pending checkpoint, never invent a trade toward it.
 
-        Do not change planner eligibility or reinterpret a pending entry as an
-        approved trade in the opposite direction. The scenario remains intact.
+        The retest planner's long/short actions describe conditional setups,
+        not filled or confirmed entries. Trigger geometry is not move evidence.
         """
         if not self.scenarios:
             self.annotation(self.now + (self.end - self.now) / 2, 0.5,
-                            "<b>No supported path yet</b><br>Wait for confirmed structure<br>and complete context.",
+                            "<b>WAIT</b><br>No supported checkpoint yet<br>No entry confirmed.",
                             self.amber, yref="y domain", size=25)
             return
         s = self.scenarios[0]
         trigger = s["trigger"]
-        bullish = trigger > self.current
-        color = self.green if bullish else self.red
-        duration = self.end - self.now
-        endpoint = self.now + duration * .85
-        self.fig.add_trace(go.Scatter(x=[self.now, endpoint], y=[self.current, trigger],
-                                     mode="lines+markers", name="Conditional scenario",
-                                     line=dict(color=color, width=5, dash="dash"),
-                                     marker=dict(size=12, color=color)))
         self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=trigger, y1=trigger,
-                           line=dict(color=color, width=1, dash="dot"))
-        self.annotation(self.end, trigger, f"Next level {price(trigger)}", color,
+                           line=dict(color=self.amber, width=2, dash="dot"))
+        self.annotation(self.end, trigger, f"Watch {price(trigger)}", self.amber,
                         xanchor="right", yshift=28, bgcolor=self.background)
 
     def draw_headings(self):
@@ -184,20 +176,21 @@ class AnalysisChartPresentation:
         mtfa = p.get("evidence", {}).get("mtfa", {})
         htf = " · ".join(f"{tf} {trend or 'unconfirmed'}" for tf, trend in mtfa.get("htf_trends", {}).items()) if mtfa.get("enabled") is True else ""
         context = f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
-        title = (f"{'UP' if self.scenarios[0]['trigger'] > self.current else 'DOWN'} toward {price(self.scenarios[0]['trigger'])}"
-                 if self.scenarios else "Wait for a valid scenario")
+        pending_setup = bool(self.scenarios and self.scenarios[0].get("setup")
+                             and p.get("action") in {"long", "short"})
+        status = f"{p['action'].upper()} SETUP · CONFIRMATION PENDING" if pending_setup else "WAIT · NO ENTRY CONFIRMED"
+        title = (f"Watch {price(self.scenarios[0]['trigger'])}" if self.scenarios else "No supported checkpoint")
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"
                                               f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction', 'undetermined'))} · {escape(context)}</span>",
                                           x=0.03, y=0.95, xanchor="left", yanchor="top", font=dict(size=34)))
         reason = p.get("reason") or p.get("context_summary") or ""
-        if self.scenarios:
-            reason = reason.replace(". Retest entry is still pending.", ".")
         self.fig.add_annotation(x=0, y=1.22, xref="paper", yref="paper", xanchor="left", yanchor="top", align="left",
-                                text=f"<b>{'NEXT PROJECTED MOVE' if self.scenarios else 'WAIT'} · {escape(title)}</b><br>" + lines(reason, 116),
+                                text=f"<b>{escape(status)} · {escape(title)}</b><br>" + lines(reason, 116),
                                 showarrow=False, font=dict(size=23, color=self.amber))
         if self.scenarios:
             s = self.scenarios[0]
-            text = lines(f"Projection ends at {price(s['trigger'])}. Reassess there. This is the existing scenario's first leg; timing and arrival are unconfirmed.", 120)
+            confirmation = p.get("confirmation_required") or s.get("confirmation") or "Wait for confirmed structure before entry."
+            text = lines(f"Checkpoint, not a profit target or a trade toward it. {confirmation}", 120)
         else:
             text = lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
@@ -209,10 +202,10 @@ class AnalysisChartPresentation:
         why = "Decision facts: " + " · ".join(facts) if facts else "Decision facts: none available"
         if getattr(self, "omitted_anchor_count", 0):
             why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
-        self.fig.add_annotation(x=0, y=-0.26, xref="paper", yref="paper", xanchor="left", yanchor="top",
+        self.fig.add_annotation(x=0, y=-0.39, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 text=lines(why, 150), showarrow=False, font=dict(size=16, color=self.muted))
-        self.fig.add_annotation(x=0, y=-0.46, xref="paper", yref="paper", xanchor="left", yanchor="top",
-                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Observed facts are separate from the illustrative pending path · Experimental rules · {PRESENTATION_VERSION}",
+        self.fig.add_annotation(x=0, y=-0.65, xref="paper", yref="paper", xanchor="left", yanchor="top",
+                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Checkpoints are conditions, not predicted moves · Experimental rules · {PRESENTATION_VERSION}",
                                 showarrow=False, font=dict(size=15, color=self.muted))
 
     def draw_next_move(self):

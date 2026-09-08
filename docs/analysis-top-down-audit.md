@@ -1,5 +1,102 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Strategy recovery research — 2026-09-08: no profitable replacement found
+
+The user correctly identified that delivery infrastructure is not a trading
+edge. This study changes neither the UI nor production decisions. It adds a
+fast, reproducible research path for entry mechanisms, reusing the existing
+SwingStructureEngine and MarketStructureEngine. Its rules and rejection criteria
+were written in `docs/strategy-research-protocol-2026-09-08.md` before results.
+
+### Research interpretation
+
+[IG's top-down worked example](https://www.ig.com/sg/trading-strategies/introduction-to-multi-time-frame-analysis-220929)
+uses higher-timeframe location and a subsequent lower-timeframe event. It does
+not establish that price will recover merely because a higher chart is bullish.
+[CME's support/resistance discussion](https://www.cmegroup.com/education/courses/trading-and-analysis/support-and-resistance.hideSubnav.educationIframe.html)
+treats pivots and trendlines as possible reaction areas, not certain destinations.
+These suggest testable rules, not verified crypto returns.
+
+The existing planner combines detections into a pending setup, but does not
+observe the subsequent live entry/exit lifecycle. SMC vocabulary, a confluence
+count, or a persuasive forecast image cannot bridge that gap. This experiment
+therefore measures actual next-open entries and subsequent stop/target/time
+outcomes. It tests reduced structural, sweep-reclaim and trendline models—not
+every discretionary SMC/ICT interpretation, not a new OB/FVG combination, and
+not a wholesale replacement of the original pipeline.
+
+### Fixed comparison
+
+- BTC, ETH, BNB, XRP, ADA, DOGE, LINK, LTC USDT; 1h execution / 4h context;
+  every hourly close (stride 1). MTFA ON requires direction AND structural POI
+  location; OFF has neither dependency. Each of three entry models has ON/OFF.
+- Development calendar 2024; validation calendar 2025; final holdout March–August
+  2026. Earlier studies inspected portions of development/validation. The final
+  window is beyond their cutoff, but is now consumed by this experiment.
+- Next-open fills, original structural invalidation plus 0.25 ATR buffer,
+  fixed signal-time 2R target (not invented liquidity), 1.5R remaining minimum
+  after an opening gap, maximum 48 hours. No retracement order, BE or staged exit.
+- Costs: 10bps commission plus 2bps adverse slippage per side. Stress: 10+5bps
+  per side plus 5bps/day carry. Spot history shorts remain hypothetical; no actual
+  futures funding, leverage liquidation, borrow or exchange fill validation.
+- Six policies only. Development selection required >=100 fills, positive mean
+  net R and weekly-cluster lower bound, PF >=1.10 and 5/8 positive symbols.
+  **NONE qualified.** That decision was persisted with source/protocol hashes
+  before later-window simulation. No holdout winner was substituted.
+
+### Final holdout results (March 1–September 1, 2026, exclusive end)
+
+| Entry model | MTFA | Trades | Net win rate | Mean gross R | Mean net R | Profit factor | Stress net R |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Structure break | OFF | 831 | 39.4% | +0.032 | -0.100 | 0.826 | -0.160 |
+| Structure break | ON | 541 | 40.9% | +0.077 | -0.046 | 0.915 | -0.105 |
+| Sweep then reclaim | OFF | 867 | 38.3% | +0.037 | -0.162 | 0.774 | -0.239 |
+| Sweep then reclaim | ON | 329 | 39.2% | +0.121 | -0.091 | 0.871 | -0.170 |
+| Trendline break | OFF | 845 | 39.8% | +0.040 | -0.174 | 0.743 | -0.255 |
+| Trendline break | ON | 442 | 37.6% | +0.050 | -0.213 | 0.711 | -0.305 |
+
+**Reject all six for production promotion.** All were net-negative in development,
+validation AND final holdout. MTFA improves some final-window comparisons but
+not consistently: structure ON worsened validation (-0.149R versus OFF -0.102R).
+Trendlines did not supply a profitable fix. Larger samples address the earlier
+N=2/N=16 problem but do not imply independence across markets or policy arms.
+
+Median holdout stop distances were 126–232bps across these arms. Despite much
+wider typical stops than the earlier low-timeframe study, costs still exceed
+the small average gross gains; widening the sampling timeframe alone did not
+create sufficient edge. Structure ON's holdout mean-R weekly 95% bootstrap
+interval is [-0.194, +0.106], not a confidently positive edge. Sweep ON's is
+[-0.232, +0.047]. Other full statistics, positive-symbol counts, monthly results
+and observed long/short fill subsets are in the report. Direction subsets are
+descriptive, not separate operational long-only/short-only backtests.
+
+These entry/execution rules differ from production's retest rules. Do not call
+their less-negative R an apples-to-apples improvement over prior SMC backtests.
+No profitability percentage, account return, or automatic trading permission
+follows from this study. A new hypothesis needs a new preregistration and fresh
+confirmation data; do not adjust these rules until this holdout looks good.
+
+### Artifacts and verification
+
+`tests/backtesting/research_entry_models.py` contains causal feature availability,
+independent entry models, HTF POI checks and execution replay.
+`tests/backtesting/run_entry_research.py` downloads checksum-verified archives,
+persists selection, writes every simulated trade and reports clustered bounds.
+Outputs are under the Codex workspace's `outputs/hourly-strategy-research-v1`:
+`report.md`, `summary.json`, `frozen-selection.json`, `decision.json`, per-symbol
+development/later checkpoints, and shared-engine/data-loader source provenance.
+
+New tests verify prefix/full-history agreement, no unfinished 4h leakage,
+poisoned-HTF OFF isolation, next-open entry, stop-first ambiguous bars, adverse
+gaps, fees, 48-hour expiry and non-overlapping/window-contained outcomes.
+Combined focused suite: **78 passed**. No production default, evidence policy,
+MTFA isolation rule, renderer, worker or iOS behavior changed in this study.
+
+```sh
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_entry_research --phase dev --cache "$CACHE" --output "$OUTPUT"
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_entry_research --phase later --cache "$CACHE" --output "$OUTPUT"
+```
+
 ## Standalone evidence extension — 2026-09-07
 
 ### Decision and data audit
@@ -99,17 +196,29 @@ The live analysis task now explicitly calls the original `retest` planner again;
 `SMC_EXECUTION_POLICY=next_move` no longer changes that task. The experimental
 module remains available only for explicit code-level research calls.
 
-The live renderer is now `first-leg-v1`: preserve the complete original plan,
-draw exactly two points (latest close -> existing scenario trigger), and stop
-there. Remove the drawn rejection/retest, overshoot, subsequent T1/T2 path, and
-post-entry management labels. Future targets no longer expand the image scale.
-The approach color/direction follows current price to the trigger, so a projected
-rise into a short-entry area is drawn upward even though the later setup is short.
-The heading says NEXT PROJECTED MOVE when a scenario exists, including a
-conditional watch whose original action is WAIT. Genuine no-scenario results
-still show WAIT. This is a presentation-only truncation, not new evidence that
-the approach itself is an approved BUY/SELL trade. Original evidence thresholds,
-entry/stop/target calculations, and MTFA rules are unchanged.
+### Misleading approach projection corrected (2026-09-08)
+
+`first-leg-v1` was defective: it chose UP/DOWN from `trigger > current_price`
+and replaced WAIT with NEXT PROJECTED MOVE. A pending short entry above price,
+or a bullish recovery condition in a local downtrend, consequently looked like
+a supported buy toward that level. Geometry-only tests initially encoded this
+incorrect behavior; passing them did not validate the forecast's reasoning.
+
+The replacement `checkpoint-v2` retains the shortened chart but draws only a
+neutral horizontal watch level. It does not draw a current-price-to-trigger
+trajectory, assign that approach a direction, or label the checkpoint as a
+profit target. WAIT stays WAIT; original long/short actions are explicitly
+labelled conditional setups with confirmation pending (the retest planner does
+not verify entry execution). The original reason and confirmation requirement
+remain visible, along with local structural trend and separate HTF context.
+There is still no drawn retest or subsequent target path. Original evidence
+thresholds, entry/stop/target calculations, and MTFA rules are unchanged.
+
+Regression coverage includes both bullish and bearish real planner pullback
+results, WAIT checkpoints, and pending short-above-price/long-below-price
+entries. No such result may produce an approach arrow or a NEXT PROJECTED MOVE
+headline. Inputs must remain unchanged. Existing saved PNGs are immutable;
+request a fresh analysis after the worker loads this renderer.
 
 Prior experiment: the analysis task defaulted to `SMC_EXECUTION_POLICY=next_move`. This is a new,
 explicitly experimental execution policy, implemented in `next_move_plan.py` and
