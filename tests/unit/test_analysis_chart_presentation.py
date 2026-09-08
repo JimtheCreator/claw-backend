@@ -57,9 +57,10 @@ def test_wait_uses_only_the_plan_scenario_not_the_opposing_local_trend():
     assert chart.scenarios[0]["direction"] == "bullish"
     assert chart.scenarios[0]["target"] == 105
     assert not chart.scenarios[0]["setup"]
-    assert any("Close above" in a.text for a in fig.layout.annotations)
-    assert not any("Close below" in a.text for a in fig.layout.annotations)
-    assert any("WAIT" in a.text for a in fig.layout.annotations)
+    assert any("UP toward 102.80" in a.text for a in fig.layout.annotations)
+    path = next(t for t in fig.data if t.name == "Conditional scenario")
+    assert list(path.y) == [candles.close.iloc[-1], 102.8]
+    assert not any("Retest" in a.text or "T1 " in a.text for a in fig.layout.annotations)
     assert analysis == original
     assert (chart.end - chart.now) / (chart.end - chart.start) > 0.30
 
@@ -103,8 +104,9 @@ def test_chart_summarizes_every_material_fact_and_discloses_anchor_cap():
 
 
 @pytest.mark.parametrize("action", ["long", "short"])
-def test_setups_keep_exact_entry_stop_and_target_in_view(action):
+def test_first_leg_preserves_plan_but_only_displays_its_checkpoint(action):
     candles, analysis, smc = example_data(action)
+    original = deepcopy(analysis)
     chart = AnalysisChartPresentation(candles, analysis, smc)
     fig = chart.figure()
     assert len(chart.scenarios) == 1
@@ -112,8 +114,11 @@ def test_setups_keep_exact_entry_stop_and_target_in_view(action):
     assert chart.scenarios[0]["invalidation"] == analysis["trade_plan"]["stop_loss"]
     assert chart.scenarios[0]["target"] == analysis["trade_plan"]["take_profit"]
     low, high = fig.layout.yaxis.range
-    assert low < chart.scenarios[0]["invalidation"] < high
-    assert low < chart.scenarios[0]["target"] < high
+    assert low < chart.scenarios[0]["trigger"] < high
+    path = next(t for t in fig.data if t.name == "Conditional scenario")
+    assert list(path.y) == [candles.close.iloc[-1], analysis["trade_plan"]["entry_level"]]
+    assert not any("T1 " in a.text or "T2 " in a.text or "Retest" in a.text for a in fig.layout.annotations)
+    assert analysis == original
 
 
 def test_image_path_serializes_dates_and_uses_focused_chart():
@@ -124,7 +129,7 @@ def test_image_path_serializes_dates_and_uses_focused_chart():
     payload = renderer.call_args.args[0]
     orjson.dumps(payload, option=orjson.OPT_SERIALIZE_NUMPY)
     assert renderer.call_args.kwargs["height"] == 900
-    assert payload["layout"]["meta"]["presentation_version"] == "evidence-v5"
+    assert payload["layout"]["meta"]["presentation_version"] == "first-leg-v1"
     candle_trace = next(t for t in payload["data"] if t["type"] == "candlestick")
     assert len(candle_trace["x"]) == 60
     assert "2026-09-06" in candle_trace["x"][0]
@@ -138,14 +143,27 @@ def test_missing_plan_scenario_is_not_replaced_with_an_invented_forecast():
     assert any("No supported path" in a.text for a in chart.figure().layout.annotations)
 
 
-def test_unknown_target_stops_path_at_retest():
+def test_unknown_later_target_does_not_hide_the_first_leg():
     candles, analysis, smc = example_data()
     analysis["trade_plan"]["primary_scenario"]["target"] = None
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()
     path = next(t for t in fig.data if t.name == "Conditional scenario")
-    assert len(path.x) == 3
+    assert len(path.x) == 2
     assert path.y[-1] == analysis["trade_plan"]["primary_scenario"]["trigger"]
-    assert any("No unswept target" in a.text for a in fig.layout.annotations)
+    assert any("Projection ends at 102.80" in a.text for a in fig.layout.annotations)
+
+
+def test_approach_to_short_entry_points_up_when_entry_is_above_price():
+    candles, analysis, smc = example_data("short")
+    analysis["trade_plan"]["entry_level"] = 102.8
+    analysis["trade_plan"]["primary_scenario"]["trigger"] = 102.8
+    original = deepcopy(analysis)
+    fig = AnalysisChartPresentation(candles, analysis, smc).figure()
+    path = next(t for t in fig.data if t.name == "Conditional scenario")
+    assert list(path.y) == [candles.close.iloc[-1], 102.8]
+    assert path.line.color == AnalysisChartPresentation.green
+    assert any("UP toward 102.80" in a.text for a in fig.layout.annotations)
+    assert analysis == original
 
 
 def test_mtfa_off_does_not_require_higher_timeframe_confirmation_in_watch_labels():

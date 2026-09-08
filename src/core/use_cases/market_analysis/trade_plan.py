@@ -38,8 +38,23 @@ def build_trade_plan(
     evidence_policy: str = "smc_v2",
     cost_policy: str = "none",
     minimum_stop_bps: float = 0.0,
+    execution_policy: str = "retest",
+    fee_bps_per_side: float = 10.0,
+    slippage_bps_per_side: float = 2.0,
 ) -> Dict[str, Any]:
     """Return a JSON-safe execution plan; never invent a trade on weak data."""
+    if execution_policy == "next_move":
+        from core.use_cases.market_analysis.next_move_plan import build_next_move_plan
+        return build_next_move_plan(
+            candles, interval=interval, structure=structure, premium_discount=premium_discount,
+            liquidity=liquidity, fvg=fvg, order_blocks=order_blocks, confluence=confluence,
+            mtfa=mtfa, swings=swings, sweeps=sweeps, vwap=vwap, volume_profile=volume_profile,
+            divergence=divergence, cvd=cvd, tsmom=tsmom, evidence_policy=evidence_policy,
+            cost_policy=cost_policy, minimum_stop_bps=minimum_stop_bps,
+            fee_bps_per_side=fee_bps_per_side, slippage_bps_per_side=slippage_bps_per_side,
+        )
+    if execution_policy != "retest":
+        raise ValueError(f"Unsupported execution policy: {execution_policy}")
     if exit_policy not in {"single", "staged", "staged_no_be"}:
         raise ValueError(f"Unsupported exit policy: {exit_policy}")
     if evidence_policy not in {"smc_v2", "indicators_v1"}:

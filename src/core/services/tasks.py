@@ -41,7 +41,7 @@ from core.use_cases.market_analysis.analyze_with_mtfa import analyze_with_mtfa
 from core.use_cases.market_analysis.trade_plan import build_trade_plan
 from common.custom_exceptions.data_unavailable_error import DataUnavailableError
 from core.use_cases.market_analysis.analysis_snapshot import closed_candles
-from core.engines.analysis_chart_presentation import PRESENTATION_VERSION
+from core.engines.analysis_chart_presentation import PRESENTATION_VERSION, presentation_version
 from core.config.mtfa_ladder import get_htf_chain
 
 # --- Previously orphaned standalone engines - now wired into the pipeline ---
@@ -1004,6 +1004,8 @@ def analyze_smc_task(
                 evidence_policy=os.getenv("SMC_EVIDENCE_POLICY", "smc_v2"),
                 cost_policy=os.getenv("SMC_COST_POLICY", "none"),
                 minimum_stop_bps=float(os.getenv("SMC_MIN_STOP_BPS", "0")),
+                # Restore original decisions; shortening the image is a presentation change.
+                execution_policy="retest",
             )
 
             step += 1
@@ -1037,7 +1039,7 @@ def analyze_smc_task(
             # dump of detector JSON the iOS client cannot faithfully overlay.
             rendered_result = {
                 "presentation": "rendered_chart",
-                "presentation_version": PRESENTATION_VERSION,
+                "presentation_version": presentation_version(trade_plan),
                 "as_of": snapshot_time.isoformat(),
                 "interval": interval,
                 "chart_url": chart_url,

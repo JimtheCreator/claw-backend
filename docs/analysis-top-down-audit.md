@@ -90,6 +90,99 @@ PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.enrich_indicator_cohort -
 
 ## Verdict before validation
 
+### Next-move execution and presentation (2026-09-07)
+
+**Superseded after user testing:** the new execution policy below introduced
+additional entry restrictions and caused excessive WAIT results. The requested
+change was to shorten the existing chart, not replace the trade selection rules.
+The live analysis task now explicitly calls the original `retest` planner again;
+`SMC_EXECUTION_POLICY=next_move` no longer changes that task. The experimental
+module remains available only for explicit code-level research calls.
+
+The live renderer is now `first-leg-v1`: preserve the complete original plan,
+draw exactly two points (latest close -> existing scenario trigger), and stop
+there. Remove the drawn rejection/retest, overshoot, subsequent T1/T2 path, and
+post-entry management labels. Future targets no longer expand the image scale.
+The approach color/direction follows current price to the trigger, so a projected
+rise into a short-entry area is drawn upward even though the later setup is short.
+The heading says NEXT PROJECTED MOVE when a scenario exists, including a
+conditional watch whose original action is WAIT. Genuine no-scenario results
+still show WAIT. This is a presentation-only truncation, not new evidence that
+the approach itself is an approved BUY/SELL trade. Original evidence thresholds,
+entry/stop/target calculations, and MTFA rules are unchanged.
+
+Prior experiment: the analysis task defaulted to `SMC_EXECUTION_POLICY=next_move`. This is a new,
+explicitly experimental execution policy, implemented in `next_move_plan.py` and
+dispatched by `build_trade_plan`. `SMC_EXECUTION_POLICY=retest` retains the prior
+planner for comparisons and rollback. The frozen old/evidence-v2 backtests still
+refer to their original entry rules; their performance numbers do **not** validate
+this execution change. No old backtest was relabelled as a next-move result.
+
+The product now evaluates a trade from the latest closed price to the nearest
+relevant exit. It no longer draws a future journey to an entry level followed by
+a separate trade. Each MTFA mode computes its own result from its snapshot.
+Levels are never averaged or copied between ON/OFF requests.
+
+The reasoning sequence is explicit:
+
+1. Preserve local structure. A recent observed BOS/CHoCH supplies the candidate
+   direction; HTF bias alone cannot generate a reversal or an approach arrow.
+2. Find the nearest untouched liquidity/pivot or fresh opposing OB/FVG near edge.
+   Active, available HTF obstacles can shorten this exit. Never skip a nearby
+   obstacle to obtain better reward/risk. These are inferred chart levels, not
+   a claim that actual orders exist there or that price must reach/stop there.
+3. Apply the existing `smc_v2`/`indicators_v1` evidence definitions unchanged.
+   Require the selected zone's evidence to belong to the current structure event.
+   MTFA context and POI requirements still apply only when enabled.
+4. Require an observed entry event on the latest **closed** candle: either the
+   displacement break itself, or a directional touch/rejection of its broken
+   level after the break. Closes must have held on the correct side since the
+   break. An older confirmation, a possible future bounce, or proximity to an
+   attractive exit is insufficient. This is an explicit entry rule, not a newly
+   optimized indicator checklist.
+5. Evaluate current entry location within the existing discount/premium range.
+   Stop goes beyond both the originating zone and signal candle, plus the
+   existing ATR/price buffer. The stop is never tightened to force approval.
+6. Require reward/risk of at least 1.5 **after modeled costs**. Favorable net
+   reward is `direction × (target-entry) - (entry+target) × friction`; adverse
+   risk is `abs(entry-stop) + (entry+stop) × friction`. Defaults remain estimates:
+   `SMC_FEE_BPS_PER_SIDE=10`, `SMC_SLIPPAGE_BPS_PER_SIDE=2`. This is a conservative
+   economic eligibility requirement, not a threshold proven profitable by the
+   previous study. The rejected minimum-stop experiment remains separately
+   opt-in under `SMC_COST_POLICY`; its default is still `none`.
+7. If qualified, show BUY/SELL, last-close entry reference, structural stop, and
+   one 100% exit. End the illustrative line there. If blocked, show WAIT, the
+   watch level if available, and failed facts; draw no directional approach.
+
+`next-move-v1` charts retain the complete policy evidence ledger, including
+mandatory failures. Local BOS/CHoCH remains visible when HTF context blocks a
+trade. Chart horizontal spacing is schematic; it does not forecast arrival time.
+The entry reference is a closed snapshot, not a live executable quote, and the
+app does not place orders. Price/cost changes require reassessment before entry.
+
+This workflow follows the use of support/resistance as potential entry and exit
+levels described by [IG](https://www.ig.com/en/trading-strategies/support-and-resistance-levels-explained-181219),
+and structural invalidation/risk budgeting discussed by
+[CME](https://www.cmegroup.com/education/courses/trade-and-risk-management/proper-position-size).
+Those sources support the reasoning framework, not these particular thresholds
+or SMC heuristics. There is no meaningful basis for a “90–99% professional”
+rating. Remaining limits include uncalibrated evidence, venue costs, live quotes,
+portfolio sizing, execution latency, and unvalidated outcomes for the new policy.
+Mixed HTF context still returns WAIT; this does not represent every trader's
+approach to countertrend trades. The existing indicator policy and MTFA isolation
+implementations were preserved.
+
+Focused tests cover BUY/SELL symmetry, latest-close entry, single exit, nearest
+obstacle selection, old/future triggers, net cost rejection, disabled stale HTF
+data, ON/OFF local evidence, and absence of a WAIT projection. A bounded smoke
+check evaluates and repeats 200 BTC/ETH historical 5m snapshots for deterministic,
+JSON-safe output. It is **not an outcome backtest**. Synthetic BUY/WAIT image
+fixtures and a historical chart are saved alongside `next-move-smoke.json` in
+the workspace outputs for visual review.
+All 200 smoke snapshots returned WAIT (zero executed setups); therefore this
+check provides no realized-return evidence. Synthetic fixtures verify that both
+BUY and SELL can qualify, but do not establish real-market signal frequency.
+
 The original pipeline is deterministic, not random-number-based. Its apparently arbitrary output comes from weak selection and missing evidence propagation. The detectors encode price-action heuristics; they do not establish institutional intent or predictive profitability. No result in this document should be called professional-grade or a calibrated forecast without independent validation.
 
 ## Research: what top-down analysis actually contributes

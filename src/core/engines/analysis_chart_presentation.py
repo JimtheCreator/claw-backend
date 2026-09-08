@@ -6,7 +6,12 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "evidence-v5"
+PRESENTATION_VERSION = "first-leg-v1"
+NEXT_MOVE_PRESENTATION_VERSION = "next-move-v1"
+
+
+def presentation_version(plan):
+    return NEXT_MOVE_PRESENTATION_VERSION if plan.get("execution_policy") == "next_move" else PRESENTATION_VERSION
 
 
 def price(value):
@@ -24,6 +29,7 @@ class AnalysisChartPresentation:
     def __init__(self, candles, analysis, smc):
         self.candles, self.analysis, self.smc = candles, analysis, smc
         self.plan = analysis["trade_plan"]
+        self.next_move = self.plan.get("execution_policy") == "next_move"
         self.visible = candles.tail(60)
         self.start, self.now = self.visible.timestamp.iloc[0], self.visible.timestamp.iloc[-1]
         deltas = self.visible.timestamp.diff().dropna()
@@ -57,9 +63,13 @@ class AnalysisChartPresentation:
                           xaxis_rangeslider_visible=False,
                           meta={"presentation_version": PRESENTATION_VERSION})
         bounds = [float(self.visible.low.min()), float(self.visible.high.max())]
+        if self.next_move and self.plan.get("decision_level"):
+            bounds.append(self.plan["decision_level"]["price"])
         for s in self.scenarios:
-            bounds.extend(float(s[k]) for k in ("trigger", "target", "invalidation") if s.get(k) is not None)
-        bounds.extend(t["price"] for t in self.plan.get("targets", []))
+            keys = ("trigger", "target", "invalidation") if self.next_move else ("trigger",)
+            bounds.extend(float(s[k]) for k in keys if s.get(k) is not None)
+        if self.next_move:
+            bounds.extend(t["price"] for t in self.plan.get("targets", []))
         padding = max(max(bounds) - min(bounds), self.span) * 0.19
         fig.update_yaxes(range=[min(bounds) - padding, max(bounds) + padding], autorange=False,
                          side="right", nticks=6, tickformat=",.2f" if self.current >= 10 else ".6g",
@@ -73,7 +83,8 @@ class AnalysisChartPresentation:
                       xref="x", yref="y domain", line=dict(color=self.muted, width=1, dash="dot"))
         self.annotation(self.now, 1.035, "NOW", self.muted, yref="y domain", size=18)
         self.annotation(self.now + (self.end - self.now) * 0.58, 1.035,
-                        "CONDITIONAL PATH · NOT A PREDICTION", self.muted, yref="y domain", size=18)
+                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "FIRST LEG · PROJECTION ENDS AT LEVEL",
+                        self.muted, yref="y domain", size=18)
         fig.add_trace(go.Candlestick(x=self.visible.timestamp.astype(str), open=self.visible.open,
                                     high=self.visible.high, low=self.visible.low, close=self.visible.close,
                                     increasing=dict(line=dict(color=self.green, width=2), fillcolor=self.green),
@@ -133,89 +144,60 @@ class AnalysisChartPresentation:
                                    line=dict(color=self.amber, width=1), fillcolor="rgba(255,208,120,0.04)", layer="below")
 
     def draw_scenario(self):
+        if self.next_move:
+            self.draw_next_move()
+            return
+        self.draw_first_leg()
+
+    def draw_first_leg(self):
+        """Display only the existing scenario's approach to its trigger.
+
+        Do not change planner eligibility or reinterpret a pending entry as an
+        approved trade in the opposite direction. The scenario remains intact.
+        """
         if not self.scenarios:
             self.annotation(self.now + (self.end - self.now) / 2, 0.5,
                             "<b>No supported path yet</b><br>Wait for confirmed structure<br>and complete context.",
                             self.amber, yref="y domain", size=25)
             return
         s = self.scenarios[0]
-        bullish, setup = s["direction"] == "bullish", s.get("setup", False)
+        trigger = s["trigger"]
+        bullish = trigger > self.current
         color = self.green if bullish else self.red
-        trigger, target, invalidation = s["trigger"], s.get("target"), s["invalidation"]
         duration = self.end - self.now
-        t1, t2, t3 = [self.now + duration * f for f in (0.25, 0.51, 0.9)]
-        if setup:
-            # Keep the illustrative rejection/retest inside the plan's 12-bar expiry.
-            t1, t2 = self.now+self.step*4, self.now+self.step*10
-        # Overshoot illustrates a candle close, not an additional objective.
-        overshoot = min(self.span * 0.06, abs(target - trigger) * 0.2) if target is not None else self.span * 0.06
-        confirmed = trigger + (overshoot if bullish else -overshoot)
-        xs, ys = [self.now, t1, t2], [self.current, confirmed, trigger]
-        if setup:
-            xs.insert(1,self.now+self.step*2)
-            ys.insert(1,trigger)
-        if target is not None:
-            xs.append(t3)
-            ys.append(target)
-        self.fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines+markers", name="Conditional scenario",
+        endpoint = self.now + duration * .85
+        self.fig.add_trace(go.Scatter(x=[self.now, endpoint], y=[self.current, trigger],
+                                     mode="lines+markers", name="Conditional scenario",
                                      line=dict(color=color, width=5, dash="dash"),
                                      marker=dict(size=12, color=color)))
-        self.annotation(t1, confirmed, "1 · Reject" if setup else "1 · Close", color, yshift=28 if bullish else -28, bgcolor=self.background)
-        self.annotation(t2, trigger, "2 · Retest", color, yshift=-28 if bullish else 28, bgcolor=self.background)
-        if target is not None:
-            self.fig.add_annotation(x=t3, y=target, ax=-28, ay=32 if bullish else -32,
-                                    xref="x", yref="y", text="", showarrow=True, arrowhead=3,
-                                    arrowsize=1.3, arrowwidth=4, arrowcolor=color)
-        # Highlight only the selected execution zone, not every detected zone.
-        zone = self.plan.get("entry_zone") if setup else None
-        if zone:
-            self.fig.add_shape(type="rect", x0=self.now - self.step * 5, x1=t2,
-                               y0=zone["bottom"], y1=zone["top"], xref="x", yref="y",
-                               line=dict(color=self.amber, width=1), fillcolor="rgba(255,208,120,0.08)", layer="below")
-        labels = [(trigger, f"{'Entry' if setup else 'Confirm'} {price(trigger)}", color),
-                  (invalidation, f"{'Stop' if setup else 'Invalid'} {price(invalidation)}", self.red)]
-        if target is not None:
-            fraction = self.plan.get("targets", [{}])[0].get("fraction", 1) if self.plan.get("targets") else 1
-            labels.append((target, f"T1 {price(target)} · {fraction:.0%}", color))
-        if len(self.plan.get("targets", [])) > 1:
-            second = self.plan["targets"][1]
-            labels.append((second["price"], f"T2 {price(second['price'])} · runner", color))
-        lo, hi = self.fig.layout.yaxis.range
-        # Separate labels in pixel space without moving their real price levels.
-        previous = -100
-        for level, label, label_color in sorted(labels):
-            natural = (level - lo) / (hi - lo) * 450
-            placed = max(natural, previous + 34)
-            previous = placed
-            self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=level, y1=level,
-                               line=dict(color=label_color, width=1, dash="dot"))
-            self.annotation(self.end, level, label, label_color, xanchor="right",
-                            yshift=placed - natural, bgcolor=self.background, borderpad=3)
+        self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=trigger, y1=trigger,
+                           line=dict(color=color, width=1, dash="dot"))
+        self.annotation(self.end, trigger, f"Next level {price(trigger)}", color,
+                        xanchor="right", yshift=28, bgcolor=self.background)
 
     def draw_headings(self):
+        if self.next_move:
+            self.draw_next_headings()
+            return
         p = self.plan
         interval = "1 month" if p.get("interval") == "1M" else p.get("interval", "")
         mtfa = p.get("evidence", {}).get("mtfa", {})
         htf = " · ".join(f"{tf} {trend or 'unconfirmed'}" for tf, trend in mtfa.get("htf_trends", {}).items()) if mtfa.get("enabled") is True else ""
         context = f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
-        title = self.scenarios[0]["title"] if self.scenarios else "Wait for a valid scenario"
+        title = (f"{'UP' if self.scenarios[0]['trigger'] > self.current else 'DOWN'} toward {price(self.scenarios[0]['trigger'])}"
+                 if self.scenarios else "Wait for a valid scenario")
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"
                                               f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction', 'undetermined'))} · {escape(context)}</span>",
                                           x=0.03, y=0.95, xanchor="left", yanchor="top", font=dict(size=34)))
+        reason = p.get("reason") or p.get("context_summary") or ""
+        if self.scenarios:
+            reason = reason.replace(". Retest entry is still pending.", ".")
         self.fig.add_annotation(x=0, y=1.22, xref="paper", yref="paper", xanchor="left", yanchor="top", align="left",
-                                text=f"<b>WAIT FOR CONFIRMATION · {escape(title)}</b><br>" + lines(p.get("reason") or p.get("context_summary") or "", 116),
+                                text=f"<b>{'NEXT PROJECTED MOVE' if self.scenarios else 'WAIT'} · {escape(title)}</b><br>" + lines(reason, 116),
                                 showarrow=False, font=dict(size=23, color=self.amber))
         if self.scenarios:
             s = self.scenarios[0]
-            direction = "above" if s["direction"] == "bullish" else "below"
-            confirmation = f"Close {direction} {price(s['trigger'])}; retest must hold. "
-            confirmation += "Conditional entry only after rejection + structure confirmation." if s.get("setup") else "No entry or stop approved yet; reassess risk after confirmation."
-            if s.get("extra_confirmation"):
-                confirmation += " " + s["extra_confirmation"]
-            alternative = f"If {price(s['invalidation'])} breaks first, cancel this scenario and reassess."
-            if s.get("target") is None:
-                alternative += " No unswept target mapped; projection stops at the retest."
-            text = "<b>1 → 2:</b> " + lines(confirmation, 113) + "<br><b>Invalidation:</b> " + lines(alternative, 113)
+            text = lines(f"Projection ends at {price(s['trigger'])}. Reassess there. This is the existing scenario's first leg; timing and arrival are unconfirmed.", 120)
         else:
             text = lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
@@ -227,11 +209,75 @@ class AnalysisChartPresentation:
         why = "Decision facts: " + " · ".join(facts) if facts else "Decision facts: none available"
         if getattr(self, "omitted_anchor_count", 0):
             why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
-        management = self.plan.get("management") or {}
-        if management.get("stop_after_t1") is not None:
-            why += f" · After T1: runner stop to {price(management['stop_after_t1'])} (before costs)"
         self.fig.add_annotation(x=0, y=-0.26, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 text=lines(why, 150), showarrow=False, font=dict(size=16, color=self.muted))
         self.fig.add_annotation(x=0, y=-0.46, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Observed facts are separate from the illustrative pending path · Experimental rules · {PRESENTATION_VERSION}",
                                 showarrow=False, font=dict(size=15, color=self.muted))
+
+    def draw_next_move(self):
+        """A qualified move ends at its exit; WAIT has no approach arrow."""
+        p = self.plan
+        level = p.get("decision_level")
+        if p.get("action") not in {"long", "short"} or not self.scenarios:
+            wait_position = .5
+            if level:
+                y = level["price"]
+                lo,hi=self.fig.layout.yaxis.range
+                wait_position = .72 if (y-lo)/(hi-lo)<.5 else .28
+                self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=y, y1=y,
+                                   line=dict(color=self.amber,width=2,dash="dot"))
+                self.annotation(self.end,y,f"Watch {price(y)}",self.amber,xanchor="right",yshift=22,
+                                bgcolor=self.background)
+            self.annotation(self.now+(self.end-self.now)*.5,wait_position,
+                            "<b>WAIT</b><br>No entry confirmed<br>No approach forecast",self.amber,
+                            yref="y domain",size=24)
+            return
+        s = self.scenarios[0]
+        color = self.green if p["action"] == "long" else self.red
+        end = self.now+(self.end-self.now)*.88
+        self.fig.add_trace(go.Scatter(x=[self.now,end],y=[s["trigger"],s["target"]],
+            mode="lines+markers",name="Next move to exit",line=dict(color=color,width=5,dash="dash"),
+            marker=dict(size=11,color=color)))
+        labels=[(s["target"],f"EXIT 100% · {price(s['target'])}",color),
+                (s["trigger"],f"Entry reference {price(s['trigger'])}",self.muted),
+                (s["invalidation"],f"STOP {price(s['invalidation'])}",self.red)]
+        lo,hi=self.fig.layout.yaxis.range
+        previous=-100
+        for value,label,tint in sorted(labels):
+            natural=(value-lo)/(hi-lo)*395
+            placed=max(natural,previous+32);previous=placed
+            self.fig.add_shape(type="line",x0=self.now,x1=self.end,y0=value,y1=value,
+                               line=dict(color=tint,width=1,dash="dot"))
+            self.annotation(self.end,value,label,tint,xanchor="right",yshift=placed-natural,
+                            bgcolor=self.background,size=21)
+
+    def draw_next_headings(self):
+        p=self.plan
+        interval="1 month" if p.get("interval")=="1M" else p.get("interval","")
+        mtfa=p.get("evidence",{}).get("mtfa",{})
+        htf=" · ".join(f"{tf} {trend or 'unconfirmed'}" for tf,trend in mtfa.get("htf_trends",{}).items()) if mtfa.get("enabled") is True else ""
+        context=f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
+        self.fig.update_layout(meta={"presentation_version":presentation_version(p)},
+            title=dict(text=f"<b>{escape(self.analysis.get('symbol',''))} · {escape(interval)} chart</b>"
+                f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction','undetermined'))} · {escape(context)}</span>",
+                x=.03,y=.96,xanchor="left",yanchor="top",font=dict(size=32)))
+        tint=self.green if p.get("action")=="long" else self.red if p.get("action")=="short" else self.amber
+        self.fig.add_annotation(x=0,y=1.23,xref="paper",yref="paper",xanchor="left",yanchor="top",align="left",
+            text=lines(p.get("reason","WAIT"),108),showarrow=False,font=dict(size=22,color=tint))
+        note=("Entry uses the last closed candle. Recheck live price and costs before entry. Exit at the marked level; reassess there."
+              if p.get("action") in {"long","short"} else "The marked level is a place to reassess. It does not establish a trade toward it.")
+        self.fig.add_annotation(x=0,y=-.13,xref="paper",yref="paper",xanchor="left",yanchor="top",align="left",
+            text=lines(note,130),showarrow=False,font=dict(size=18,color="#ecf1f8"))
+        icons={"passed":"✓","failed":"✕","unavailable":"?"}
+        facts=[f"{icons.get(e.get('status'),'•')} {e['label']}"+
+               (" [required]" if e.get("mandatory") and e.get("status")!="passed" else "")
+               for e in p.get("chart_evidence",[])]
+        ledger="Decision facts: "+" · ".join(facts) if facts else "Decision facts: no confirmed setup"
+        if getattr(self,"omitted_anchor_count",0):
+            ledger+=f" · 5 chart anchors shown; {self.omitted_anchor_count} more summarized here"
+        self.fig.add_annotation(x=0,y=-.27,xref="paper",yref="paper",xanchor="left",yanchor="top",align="left",
+            text=lines(ledger,160),showarrow=False,font=dict(size=16,color=self.muted))
+        self.fig.add_annotation(x=0,y=-.67,xref="paper",yref="paper",xanchor="left",yanchor="top",
+            text=f"Last {len(self.visible)} of {len(self.candles)} closed candles · Dashed line is an illustrative route, not a timing forecast · next-move-v1",
+            showarrow=False,font=dict(size=14,color=self.muted))
