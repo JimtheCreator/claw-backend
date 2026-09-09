@@ -15,6 +15,7 @@ import pandas as pd
 
 from common.utils.indicators import average_true_range
 from core.use_cases.market_analysis.setup_evidence import rank_entry_zones, staged_targets
+from core.use_cases.market_analysis.market_read import build_market_read
 
 
 MIN_RISK_REWARD = 1.5
@@ -89,6 +90,8 @@ def build_trade_plan(
         "targets": [],
         "management": None,
         "chart_evidence": [],
+        # An entry rejection must not discard the market analysis itself.
+        "market_read": build_market_read(candles, interval, structure, swings) if current_price is not None else None,
     }
 
     if current_price is None:

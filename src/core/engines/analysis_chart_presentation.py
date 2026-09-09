@@ -6,7 +6,7 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "checkpoint-v2"
+PRESENTATION_VERSION = "market-read-v3"
 NEXT_MOVE_PRESENTATION_VERSION = "next-move-v1"
 
 
@@ -40,6 +40,11 @@ class AnalysisChartPresentation:
         self.current = float(self.visible.close.iloc[-1])
         self.span = max(float(self.visible.high.max() - self.visible.low.min()), abs(self.current) * 0.0001, 1e-8)
         self.scenarios = self.build_scenarios()
+        self.market_read = self.plan.get("market_read") or {}
+        # Keep distant context in the caption instead of crushing candle scale.
+        self.context_levels = {side: item for side in ("support", "resistance")
+                               if (item := self.market_read.get(side))
+                               and abs(item["price"]-self.current) <= 3*self.span}
 
     def build_scenarios(self):
         # The decision layer owns forecasts. Never draw an unrelated breakout
@@ -63,6 +68,8 @@ class AnalysisChartPresentation:
                           xaxis_rangeslider_visible=False,
                           meta={"presentation_version": PRESENTATION_VERSION})
         bounds = [float(self.visible.low.min()), float(self.visible.high.max())]
+        if not self.next_move:
+            bounds.extend(item["price"] for item in self.context_levels.values())
         if self.next_move and self.plan.get("decision_level"):
             bounds.append(self.plan["decision_level"]["price"])
         for s in self.scenarios:
@@ -92,6 +99,8 @@ class AnalysisChartPresentation:
         fig.add_trace(go.Scatter(x=[self.now], y=[self.current], mode="markers",
                                 marker=dict(color="white", size=9), name="Last close"))
         self.draw_evidence()
+        if not self.next_move:
+            self.draw_market_read()
         self.draw_scenario()
         self.draw_headings()
         return fig
@@ -104,7 +113,11 @@ class AnalysisChartPresentation:
         """Plot price-located facts; summarize every material fact below."""
         start, now = pd.Timestamp(self.start), pd.Timestamp(self.now)
         located = []
-        for item in self.plan.get("chart_evidence", []):
+        evidence_items = list(self.plan.get("chart_evidence", []))
+        observed = self.market_read.get("last_break")
+        if observed and not any(e.get("timestamp") == observed["timestamp"] and e.get("kind") == observed["kind"] for e in evidence_items):
+            evidence_items.insert(0, observed)
+        for item in evidence_items:
             if not item.get("plot", True):
                 continue
             timestamp = pd.Timestamp(item["timestamp"])
@@ -149,6 +162,15 @@ class AnalysisChartPresentation:
             return
         self.draw_first_leg()
 
+    def draw_market_read(self):
+        for side, item in self.context_levels.items():
+            y = item["price"]
+            self.fig.add_shape(type="line", x0=self.start, x1=self.now, y0=y, y1=y,
+                               line=dict(color=self.muted, width=1, dash="dot"))
+            self.annotation(self.start, y, f"{side.title()} {price(y)}", self.muted,
+                            xanchor="left", yshift=-18 if side == "support" else 18,
+                            size=19, bgcolor=self.background)
+
     def draw_first_leg(self):
         """Show the pending checkpoint, never invent a trade toward it.
 
@@ -157,7 +179,8 @@ class AnalysisChartPresentation:
         """
         if not self.scenarios:
             self.annotation(self.now + (self.end - self.now) / 2, 0.5,
-                            "<b>WAIT</b><br>No supported checkpoint yet<br>No entry confirmed.",
+                            (f"<b>{escape(self.market_read.get('trend_direction', 'undetermined').title())} structure</b><br>Entry criteria not met<br>See next check below."
+                             if self.market_read else "<b>WAIT</b><br>No supported checkpoint yet<br>No entry confirmed."),
                             self.amber, yref="y domain", size=25)
             return
         s = self.scenarios[0]
@@ -178,7 +201,8 @@ class AnalysisChartPresentation:
         context = f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
         pending_setup = bool(self.scenarios and self.scenarios[0].get("setup")
                              and p.get("action") in {"long", "short"})
-        status = f"{p['action'].upper()} SETUP · CONFIRMATION PENDING" if pending_setup else "WAIT · NO ENTRY CONFIRMED"
+        status = (f"{p['action'].upper()} SETUP · CONFIRMATION PENDING" if pending_setup else
+                  f"{self.market_read['trend_direction'].upper()} STRUCTURE · NO ENTRY CONFIRMED" if self.market_read else "WAIT · NO ENTRY CONFIRMED")
         title = (f"Watch {price(self.scenarios[0]['trigger'])}" if self.scenarios else "No supported checkpoint")
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"
                                               f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction', 'undetermined'))} · {escape(context)}</span>",
@@ -192,14 +216,22 @@ class AnalysisChartPresentation:
             confirmation = p.get("confirmation_required") or s.get("confirmation") or "Wait for confirmed structure before entry."
             text = lines(f"Checkpoint, not a profit target or a trade toward it. {confirmation}", 120)
         else:
-            text = lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
+            text = lines("Next check: " + self.market_read["next_check"], 112) if self.market_read else lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 align="left", text=text, showarrow=False, font=dict(size=22, color="#ecf1f8"))
         evidence = self.plan.get("chart_evidence", [])
         icons = {"passed":"✓", "failed":"✕", "unavailable":"?"}
         facts = [f"{icons.get(e.get('status'),'•')} {e['label']}" +
                  (" [required]" if e.get("mandatory") and e.get("status") != "passed" else "") for e in evidence]
-        why = "Decision facts: " + " · ".join(facts) if facts else "Decision facts: none available"
+        why = "Entry checklist: " + " · ".join(facts) if facts else "Entry checklist not reached; see blocking reason above."
+        if self.market_read:
+            levels = [f"{side.title()} {price(item['price'])}" + (" (outside view)" if side not in self.context_levels else "")
+                      for side in ("support", "resistance") if (item := self.market_read.get(side))]
+            observed = self.market_read.get("last_break")
+            if observed:
+                levels.append(f"Last {observed['direction']} {observed['kind']}: {observed['bars_ago']} bars ago")
+            if levels:
+                why = "Local context: " + " · ".join(levels) + " · " + why
         if getattr(self, "omitted_anchor_count", 0):
             why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
         self.fig.add_annotation(x=0, y=-0.39, xref="paper", yref="paper", xanchor="left", yanchor="top",

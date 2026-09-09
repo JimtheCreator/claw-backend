@@ -1,5 +1,39 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Entry rejection no longer erases market context — 2026-09-09
+
+Read-only inspection of saved September 8 results confirmed three different
+causes, not a broken SSE stream: ETH 1m exited on mixed HTF context before any
+scenario existed; BTC 1h/4h exited on local/HTF disagreement; BTC MTFA OFF failed
+the local setup evidence checklist. The previous renderer also deliberately
+removed unsupported approach projections. Together these left users with WAIT
+and little visual explanation. This was a usability regression, not evidence
+that a directional trade should have been approved.
+
+`market_read.py` now builds requested-timeframe observations before the planner's
+entry-gate returns: nearest unbroken confirmed swing support/resistance, latest
+observed BOS/CHoCH and its age, structural direction, and the next structural
+check. No HTF data enters this local read. Provisional pivots and already-broken
+levels are excluded. Missing levels remain missing rather than invented.
+
+`market-read-v3` plots at most those two local levels and the last observed break,
+even when an incomplete/mixed HTF gate prevents the entry checklist from running.
+It keeps the blocking reason visible and distinguishes local trend from entry
+permission. Very distant local levels are disclosed in the caption rather than
+flattening the candles; existing evidence-anchor caps remain disclosed.
+It does not turn a structural checkpoint into a BUY/SELL target or draw an
+unsupported approach arrow. No entry threshold, HTF rule, indicator policy or
+trade economics changed. This is not a profitable-strategy fix.
+
+Live public-data diagnostics covered BTCUSDT, ETHUSDT and BNBUSDT, 1h, with MTFA
+ON and OFF, using 750 requested bars per timeframe (not an exact replay of each
+saved app request). All SIX remained entry-WAIT under the unchanged rules; all
+retained market context. An actual ETH PNG was rendered and visually inspected.
+Artifacts: workspace `outputs/market-read-v3-smoke.json` and
+`outputs/market-read-v3-eth.png`. New tests cover early-gate returns, observed
+levels, unconfirmed/broken pivot exclusion, unchanged entry rejection and MTFA
+OFF isolation. Subscriber-ready trading signals remain unvalidated.
+
 ## Taker-volume ingestion and rejected-gate containment — 2026-09-08
 
 Confirmed gap: real Binance taker-buy volume was discarded before CVDEngine.

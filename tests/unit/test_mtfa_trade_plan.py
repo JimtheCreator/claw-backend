@@ -116,7 +116,7 @@ def test_real_pullback_plan_renders_a_watch_not_an_approach_trade(direction):
     original = deepcopy(plan)
     fig = AnalysisChartPresentation(_candles(), {"symbol": "TEST", "trade_plan": plan}, {}).figure()
     captions = " ".join(a.text.replace("<br>", " ") for a in fig.layout.annotations)
-    assert "WAIT · NO ENTRY CONFIRMED" in captions
+    assert "STRUCTURE · NO ENTRY CONFIRMED" in captions
     assert "not a profit target or a trade toward it" in captions
     assert "retest" in captions  # The prerequisite is not silently erased.
     assert "NEXT PROJECTED MOVE" not in captions
