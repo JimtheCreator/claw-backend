@@ -1,5 +1,122 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Independent regime-aware brain — implemented and tested, 2026-09-09
+
+The attached Architecture B proposal is implemented as a separate deterministic
+strategy pool, **not a rewrite or another indicator gate on the old planner**.
+The exact preregistration is `docs/regime-brain-protocol-2026-09-09.md`.
+Its causal stories are hypotheses; the attachment's assertion that every
+detector is correct is not an independent certification of that claim.
+
+### What changed
+
+| File | Responsibility |
+|---|---|
+| `strategy_brain.py` | Independent HTF-location SMC, momentum/flow, and missing-context local fallback; each has its own eligibility ledger. Conflict always yields WAIT. |
+| `strategy_features.py` | Shared causal features for live/replay; existing pivot/BOS/OB/FVG detectors, own 20-bar momentum trigger, true taker delta, UTC VWAP, three-job anchor/middle/local context. |
+| `regime_engine.py` | Wilder ADX14 and trailing relative-ATR percentile; regime separate from MTFA availability. |
+| `strategy_risk.py` | Structural stop + 0.25 ATR, declared 30/60bps floors, target source, gross/cost/net target R; no account sizing or automatic trades. |
+| `momentum_history.py` | Persistent, same-interval SQLite cache, closed-snapshot cutoff, contiguous full horizons, bounded async exchange recovery. |
+| `brain_shadow.py` / `tasks.py` | Opt-in diagnostics attached as `trade_plan.brain_shadow`; cannot replace the existing plan/chart. OFF ignores HTF inputs. |
+| `scripts/data/warm_momentum_history.py` | Explicit resumable prewarm for longer histories, using the shared Binance rate limiter. |
+| `tests/backtesting/run_brain_research.py` | Isolated strategies first; frozen dev selection, five diagnostic arms, per-fill evidence and archive/source hashes. |
+
+SMC uses the first two higher rungs: middle reaction at an already-available
+anchor OB/FVG, followed by a current local displacement break. It does NOT demand
+universal timeframe-direction agreement. Momentum can enter the research pool
+with MTFA ON or OFF and does NOT require BOS; it requires its own channel-break
+trigger, all configured horizon signs agreeing, directional UTC VWAP, and genuine
+trigger/three-bar taker delta. These are this experiment's rules, not validated
+institutional behavior. Divergence/Profile are not new vetoes. Tier 3 requires
+all four declared local checks and a 60bps floor, only with MTFA OFF and complete
+momentum unavailable. Mixed momentum is not missing history and cannot unlock it.
+
+Risk targets for SMC/fallback are confirmed opposing pivots, not a claim to know
+resting orders. Momentum's 2R target is labeled a risk multiple, not liquidity.
+The old planner, `indicators_v1`, evidence policy and MTFA isolation code were
+not modified. New research cannot be promoted through an environment variable.
+
+### History recovery verified
+
+Real public Binance BTC/ETH/BNB 1h caches were warmed to **6,049 closed contiguous
+bars each**, including real field-9 taker-buy volume. All three needed six pages
+beyond the initial snapshot. Subsequent ON/OFF adapter checks reused the cache
+with zero additional historical pages. Each strategy's momentum reading was
+identical ON/OFF. All six current snapshots still rejected entry; a working
+history cache is not evidence of a profitable strategy or an always-on signal.
+
+Foreground history recovery is bounded at eight pages / 30 seconds. A 1m full
+horizon needs 362,881 bars; it is NOT covered by eight pages, and requires the
+explicit prewarm command. Short listings/gaps/budget exhaustion remain explicit
+unavailability. No window is silently shortened or replaced with an HTF series.
+The old horizons represent 21/63/252 days, not literal calendar months in 24/7
+crypto. The new strategy requires all three; the legacy engine's partial-horizon
+behavior remains unchanged.
+
+### Frozen research results: no promotion
+
+Eight symbols, hourly stride 1, development 2024, evaluation 2025, reused
+diagnostic March–August 2026. Costs 10bps fee + 2bps slippage **per side**; stress
+10+5bps plus 5bps/day carry. No outcome-driven threshold changes. Development
+selection **NONE** was persisted before later-window simulation.
+
+| Independent strategy | 2024 N / mean net R | 2025 N / mean net R | Reused 2026 N / mean net R |
+|---|---:|---:|---:|
+| HTF-location SMC | 6 / −0.906 | 15 / −0.686 | 4 / −0.480 |
+| Momentum/flow | 402 / +0.048 | 443 / −0.007 | 226 / −0.219 |
+| Local fallback, forced missing-momentum stress | 5 / +0.341 | 8 / −0.200 | 3 / −0.025 |
+
+Momentum's developmental improvement does not establish an edge: its weekly
+95% interval was [−0.091, +0.183]R, then the mean turned negative in both later
+windows. It failed the predeclared eligibility bar. SMC and fallback remain
+**drastically under-sampled**; positive fallback development R from five fills
+is not validation. Do not relax gates after seeing these outcomes and call the
+same windows an untouched test.
+
+Arbitration ON averaged +0.037R / −0.022R / −0.223R across those windows; OFF
+matched standalone momentum because complete horizons were available and Tier3
+was naturally disabled. Combining strategies did not rescue them. The ADX rule
+is a deterministic routing implementation, not an empirically validated router.
+See per-regime/symbol/direction breakdowns and every simulated fill in workspace
+`outputs/independent-brain-v1/{report.md,summary.json,dev-*.json,later-*.json}`.
+Independent samples must not be added to overlapping arbitration arms as if
+those were new trades. Forced fallback stress is not natural fallback coverage.
+
+All these historical periods have been inspected before. **No genuinely untouched
+holdout exists in this run.** Historical features expand from contiguous 2023
+warmup; the live adapter keeps the user's local chart lookback and extends only
+momentum history. This is not an exact replay of an individual app request.
+The March 2023 archive gap was handled by restarting warmup after it, not by
+fabricating missing candles. No evaluation-window gaps were bridged.
+
+### Operation and verification
+
+`SMC_BRAIN_POLICY` defaults to `legacy` (no additional fetch or changed decision).
+`shadow_v1` enables stored diagnostic candidates after a normal worker restart;
+there is deliberately no unvalidated production mode. This turn did not change
+the running worker's policy or restart it. The user-facing chart still uses the
+existing planner. An optional shadow failure cannot prevent chart delivery.
+
+From the backend root, explicit cache warmup:
+
+```sh
+PYTHONPATH=src:. .venv/bin/python -m scripts.data.warm_momentum_history --symbols BTCUSDT ETHUSDT BNBUSDT --interval 1h
+```
+
+Replay with the same `--cache` and `--output` directories, first `--phase dev`,
+then `--phase later`, via `python -m tests.backtesting.run_brain_research`.
+Code/protocol hashes must match the frozen selection and checkpoints.
+
+New tests cover prefix equivalence, actual HTF reactions known only after middle
+closes, poisoned HTF OFF isolation, no-BOS momentum, proxy/partial CVD exclusion,
+Wilder initialization, persistent history/cursors/gaps/timeouts, gap-fill risk
+revalidation and agreement/conflict arbitration. The full unit suite currently
+has an unrelated collection failure in `test_price_alert_manager.py` importing
+the nonexistent `infrastructure.notifications`; excluding that legacy file
+allows the remaining tests to run. The failing alert import was not changed.
+Final verification: **128 tests passed** with that one collection-broken file
+excluded; compilation and `git diff --check` also passed.
+
 ## Entry rejection no longer erases market context — 2026-09-09
 
 Read-only inspection of saved September 8 results confirmed three different

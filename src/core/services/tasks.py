@@ -775,12 +775,17 @@ def analyze_smc_task(
         # +5 for the standalone indicator group (VWAP, Volume Profile,
         # RSI/MACD Divergence, CVD, TSMOM), always run regardless of the
         # MTFA toggle - none of them depend on higher-timeframe data.
+        from core.use_cases.market_analysis.brain_shadow import brain_policy, analyze_brain_shadow
+        brain_mode = "legacy"
         total_steps = 20 if mtfa_enabled else 19
         step = 0
+        brain_htf_frames = {}
 
         try:
             await redis_cache.initialize()
             repo = MarketRepository()
+            brain_mode = brain_policy(os.getenv("SMC_BRAIN_POLICY", "legacy"))
+            total_steps += 1 if brain_mode == "shadow_v1" else 0
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Initializing SMC analysis...")
 
@@ -950,11 +955,16 @@ def analyze_smc_task(
                         f"Resolving MTFA context against {', '.join(htf_chain)}..."
                     )
                     fetcher = _make_candle_fetcher(interval, timeframe, snapshot_time)
+                    async def brain_aware_fetcher(fetch_symbol, fetch_interval):
+                        frame = await fetcher(fetch_symbol, fetch_interval)
+                        if brain_mode == "shadow_v1":
+                            brain_htf_frames[fetch_interval] = frame
+                        return frame
                     mtfa_result = await analyze_with_mtfa(
                         symbol,
                         interval,
                         mtfa_enabled=True,
-                        candle_fetcher=fetcher,
+                        candle_fetcher=brain_aware_fetcher,
                         requested_result={
                             "interval": interval,
                             "swings": swing_result,
@@ -1011,6 +1021,30 @@ def analyze_smc_task(
                 # Restore original decisions; shortening the image is a presentation change.
                 execution_policy="retest",
             )
+
+            if brain_mode == "shadow_v1":
+                # Independent research candidates are persisted, never promoted
+                # into this user's execution plan or chart by an env switch.
+                step += 1
+                send_progress_sync(analysis_id, step, total_steps,
+                                   "Checking independent research strategies (does not change the trade decision)...")
+                from infrastructure.data_sources.binance.client import BinanceMarketData
+                history_client = None
+                try:
+                    history_client = BinanceMarketData(use_pool=False, strict_errors=True)
+                    trade_plan["brain_shadow"] = await analyze_brain_shadow(
+                        symbol, interval, df, mtfa_enabled=mtfa_enabled,
+                        htf_frames=brain_htf_frames, fetch_page=history_client.get_klines)
+                except Exception as error:
+                    logger.warning(f"Independent brain shadow unavailable: {type(error).__name__}")
+                    trade_plan["brain_shadow"] = {"mode": "shadow", "status": "unavailable",
+                                                  "reason": type(error).__name__, "production_promoted": False}
+                finally:
+                    if history_client is not None:
+                        try:
+                            await history_client.disconnect()
+                        except Exception as cleanup_error:
+                            logger.warning(f"Shadow history client cleanup failed: {type(cleanup_error).__name__}")
 
             step += 1
             send_progress_sync(
