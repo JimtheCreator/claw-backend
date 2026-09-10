@@ -785,7 +785,7 @@ def analyze_smc_task(
             await redis_cache.initialize()
             repo = MarketRepository()
             brain_mode = brain_policy(os.getenv("SMC_BRAIN_POLICY", "legacy"))
-            total_steps += 1 if brain_mode == "shadow_v1" else 0
+            total_steps += 1 if brain_mode in {"shadow_v1", "shadow_v2"} else 0
             step += 1
             send_progress_sync(analysis_id, step, total_steps, "Initializing SMC analysis...")
 
@@ -1022,7 +1022,7 @@ def analyze_smc_task(
                 execution_policy="retest",
             )
 
-            if brain_mode == "shadow_v1":
+            if brain_mode in {"shadow_v1", "shadow_v2"}:
                 # Independent research candidates are persisted, never promoted
                 # into this user's execution plan or chart by an env switch.
                 step += 1
@@ -1032,9 +1032,15 @@ def analyze_smc_task(
                 history_client = None
                 try:
                     history_client = BinanceMarketData(use_pool=False, strict_errors=True)
-                    trade_plan["brain_shadow"] = await analyze_brain_shadow(
-                        symbol, interval, df, mtfa_enabled=mtfa_enabled,
-                        htf_frames=brain_htf_frames, fetch_page=history_client.get_klines)
+                    if brain_mode == "shadow_v2":
+                        from core.use_cases.market_analysis.execution_tier import analyze_shape_shadow
+                        trade_plan["brain_shadow"] = await analyze_shape_shadow(
+                            symbol, interval, df, as_of=snapshot_time, fetch_page=history_client.get_klines,
+                            htf_mode=os.getenv("SMC_SHAPE_MTFA_MODE", "auto"))
+                    else:
+                        trade_plan["brain_shadow"] = await analyze_brain_shadow(
+                            symbol, interval, df, mtfa_enabled=mtfa_enabled,
+                            htf_frames=brain_htf_frames, fetch_page=history_client.get_klines)
                 except Exception as error:
                     logger.warning(f"Independent brain shadow unavailable: {type(error).__name__}")
                     trade_plan["brain_shadow"] = {"mode": "shadow", "status": "unavailable",

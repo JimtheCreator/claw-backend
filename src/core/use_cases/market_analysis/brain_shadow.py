@@ -8,8 +8,8 @@ from core.use_cases.market_analysis.momentum_history import load_momentum_histor
 
 
 def brain_policy(value):
-    if value not in {'legacy', 'shadow_v1'}:
-        raise ValueError('SMC_BRAIN_POLICY must be legacy or shadow_v1; no strategy is promoted.')
+    if value not in {'legacy', 'shadow_v1', 'shadow_v2'}:
+        raise ValueError('SMC_BRAIN_POLICY must be legacy, shadow_v1 or shadow_v2; no strategy is promoted.')
     return value
 
 

@@ -1,5 +1,143 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Master vision: independent shapes + real execution tier — 2026-09-11
+
+Implemented the supplied `claw-backend-master-vision-spec.md` as **opt-in
+`SMC_BRAIN_POLICY=shadow_v2`**, without changing the live decision default.
+Part 3.6 explicitly prohibits replacing it before untouched validation. That
+also defers removing the existing public MTFA toggle from iOS. The new shadow
+adapter does not read that toggle: it uses automatic availability, with
+`SMC_SHAPE_MTFA_MODE=auto|off` solely for internal QA. No worker was restarted,
+no environment default was changed, and no orders or position sizing were added.
+
+### What changed, file by file
+
+| File | Responsibility / boundary |
+|---|---|
+| `shape_brain.py` | Separate `smc_location_v1`, `tsmom_v1`, `vwap_reversion_v1` candidates, each with its own signal, risk, availability and evidence. Old momentum bundle/fallback excluded from this pool. Separate frozen conflict/agreement handling; no blended signals. |
+| `shape_features.py` | Adds declared session weighted-price variance and individual own-return horizons using existing causal features. Does not edit a detection engine. |
+| `execution_ladder.py` | Explicit nearest-first finer-data ladder, separate from the upward HTF ladder. No requested-interval fallback. 1m explicitly has no supported finer tier. |
+| `execution_tier.py` | Fetches actual closed finer candles, filters open/stale/gapped data, evaluates the trigger there, and fetches macro context independently. Extended momentum history is on that same finer interval, with no shortened horizons. Momentum cache/provider failure does not erase independent VWAP/SMC availability; context failure disables only SMC. |
+| `brain_shadow.py`, `tasks.py` | Add the opt-in v2 dispatch. Only `trade_plan.brain_shadow` receives the research pool; it cannot overwrite the live action or chart. Preserve v1 for baseline reproduction. |
+| `run_shape_research.py` | Immutable source/protocol fingerprint, development selection before later data, independent paper execution per arm, exact signal/fill times, fees, slippage and duration-scaled stress. |
+| `preview_shape_research.py` | Research PNGs: requested 4h chart plus actual 1h execution view, Long/Short badges (no forecast arrow), reference entry/SL/TP, every decision fact, numeric momentum horizons or VWAP stretch, and explicitly optional CVD. Uses the earliest development fill per shape, not a chosen winner. No future candles in previews. |
+
+`strategy_brain.py` (old v1), all detection engines, `trade_plan.py`,
+`setup_evidence.py`, and the live renderer are unchanged. The attachment's
+claim that every detector is proven correct is not independently certified here.
+
+### Frozen rules, not another indicator checklist
+
+The complete preregistration is [master-vision-protocol-2026-09-11.md](master-vision-protocol-2026-09-11.md).
+For this study the three roles are **1d macro → requested 4h intermediate →
+actual 1h execution**. SMC retains its prior predicate: macro POI, completed
+intermediate reaction, then finer displacement break. Those are separate candles;
+the reaction must close before the trigger candle opens.
+
+TSMOM's entire signal is unanimity of its existing own-return horizons, with a
+2-ATR stop and 2R target. No channel, SMC, VWAP, CVD or HTF vote can veto it.
+VWAP reversion's entire signal is a stretch of at least ±2 weighted-price SD
+from a complete UTC session VWAP; fixed target back to signal-time VWAP and a
+stop beyond the farther 3SD/current-price boundary plus 0.25 ATR. It expires at
+session end. Both retain the declared risk contract (30bps minimum stop, 1.5R
+minimum gross target); a risk rejection is reported separately from a signal
+that did not fire. CVD is diagnostic only; divergence is not used.
+
+Standalone momentum/VWAP do **not** require an SMC-style macro zone. Adding one
+would contradict Rule A. Their finer triggers use their own rules, not an extra
+BOS gate. A missing finer series means unavailable. Multiple agreeing eligible
+shapes retain their complete separate plans but no single ranked winner;
+opposed directions surface a conflict. No regime or confidence ranking is
+invented to select a trade.
+
+These are project-specific crypto hypotheses. AQR's published TSMOM uses a
+12-month return and monthly holding, not this agreement/ATR/short-hold adaptation.
+TradingView documents VWAP mechanics, not positive expectancy for our particular
+reversion rule; our weighted typical-price SD is not claimed identical to its
+documented bands. Sources and exact differences are in the preregistration.
+
+### Completed results — no promotion
+
+Eight symbols (BTC, ETH, BNB, XRP, ADA, DOGE, LINK, LTC USDT), checksum-verified
+hourly Binance archives, 2023 warmup, every hourly decision. Development: 2024.
+Separate evaluation: 2025. Reused diagnostic: March–August 2026. **Every period
+was inspected in prior project research; none is a genuinely untouched holdout.**
+Fees 10bps + slippage 2bps each side. Next-open fills; fixed signal SL/TP;
+gap risk rechecked; both-hit bar stops first; no favorable TP-gap benefit.
+Shorts are hypothetical directional tests, not a claim of spot short availability.
+
+| Shape | Dev N | Dev net R | Eval N | Eval win % | Eval gross R | Eval net R | Eval PF | 2026 diagnostic N / net R |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| SMC location | 6 | −0.906 | 15 | 13.3 | −0.591 | −0.686 | 0.278 | 4 / −0.480 |
+| Standalone TSMOM | 1,564 | −0.125 | 1,546 | 37.0 | +0.031 | −0.094 | 0.861 | 828 / −0.148 |
+| Standalone VWAP reversion | 3,359 | −0.387 | 3,496 | 34.2 | −0.019 | −0.407 | 0.531 | 1,299 / −0.405 |
+| Unblended arbitration (diagnostic) | 3,315 | −0.292 | 3,441 | 35.1 | −0.015 | −0.288 | 0.635 | 1,462 / −0.270 |
+
+All R values are **means per simulated fill**, not portfolio returns. Arbitration
+overlaps the isolated arms and must not be added to them as new independent
+observations. Development froze **NONE**. No evaluation replacement was selected.
+Evaluation mean stress R (10+5bps per side plus 5bps/day carry) was −0.727 SMC,
+−0.146 TSMOM, −0.512 VWAP, and −0.370 arbitration. TSMOM's weekly-cluster 95%
+mean-net-R interval was [−0.210, +0.043]; VWAP's was [−0.473, −0.337]. No positive
+edge is established. SMC's 15 evaluation fills are still too few to validate it.
+
+The unbundled hypotheses fire much more often; that does not make them profitable.
+TSMOM's development gross mean was −0.004R and evaluation +0.031R: even with
+median stops around 217/230bps, there is little gross edge for costs to consume.
+VWAP's development gross mean was +0.007R and evaluation −0.019R. This is not
+evidence that one more confirmation gate or cosmetic forecast will fix the brain.
+No stop, threshold or holding-period tuning followed these results.
+
+### Optional CVD is not proven confidence
+
+| Shape / period | CVD aligned N / mean net R | CVD opposed N / mean net R |
+|---|---|---|
+| TSMOM development | 766 / −0.081 | 798 / −0.167 |
+| TSMOM evaluation | 777 / −0.071 | 769 / −0.117 |
+| TSMOM 2026 diagnostic | 500 / −0.178 | 328 / −0.102 |
+| VWAP development | 626 / −0.422 | 2,733 / −0.379 |
+| VWAP evaluation | 707 / −0.520 | 2,789 / −0.378 |
+| VWAP 2026 diagnostic | 276 / −0.506 | 1,023 / −0.378 |
+
+TSMOM's small aligned advantage reverses in 2026; VWAP aligned cohorts do worse.
+These are observational cohorts with overlapping market exposure, not a causal
+ablation or calibrated probability. Do not interpret +1 optional confirmation as
+a validated improvement in win chance. It affects neither eligibility nor
+arbitration. There were no neutral/unavailable-flow fills in these full-source
+archives; their outcome statistics are undefined, not zero. Missing/proxy flow
+behavior is covered by tests instead.
+
+### Verification and reproducibility
+
+**174 unit tests passed**, excluding the existing unrelated
+`test_price_alert_manager.py` import failure. Tests cover standalone independence,
+optional/missing/opposed CVD, unchanged SMC predicate/risk, finer-only discovery,
+closed/stale/gapped candles, request-scoped QA isolation, backfill failure,
+permutation-invariant arbitration, causal feature prefixes, fill costs/gaps,
+and chart evidence/current-candle boundaries. Three actual historical PNGs
+(SMC short, TSMOM long, VWAP long) were rendered and visually inspected.
+
+Workspace results are in `outputs/master-vision-shapes-v2/`: `report.md`,
+`summary.json`, immutable `source-freeze.json`, `frozen-selection.json`,
+`decision.json`, per-symbol checkpoints containing every fill and data checksum,
+and three `preview-*.png`/JSON pairs. Decision source/protocol hashes remained
+identical through development, evaluation and preview reconstruction.
+
+Run from the backend with chosen output/cache paths:
+
+```sh
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_shape_research --phase dev --cache "$CACHE" --output "$OUTPUT"
+PYTHONPATH=src:. .venv/bin/python -m tests.backtesting.run_shape_research --phase later --cache "$CACHE" --output "$OUTPUT"
+PYTHONPATH=src:. .venv/bin/python scripts/preview_shape_research.py --cache "$CACHE" --study "$OUTPUT"
+```
+
+The source freeze refuses changed decision rules; it is not a license to tune
+and reuse the evaluation. The prospective October–December 2026 window in the
+protocol has **not run or been scheduled**. There is currently no selected
+candidate eligible for promotion into it. Historical expanding feature warmup
+also differs from an arbitrary app lookback; exchange latency, intrabar fills,
+borrow availability, and live forward performance remain unvalidated.
+
 ## Long/Short candle badges, no projection arrow — 2026-09-10
 
 `conditional-forecast-v7` removes the directional projection line and arrow
