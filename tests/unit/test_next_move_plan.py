@@ -28,8 +28,11 @@ def test_buy_is_at_current_close_and_exits_at_first_obstacle():
     assert plan["stop_loss"]<99 and plan["wait_for_confirmation"] is False
     assert plan["cost_economics"]["net_reward_risk"]>=1.5
     fig=AnalysisChartPresentation(df,{"trade_plan":plan,"symbol":"TEST"},{}).figure()
-    trace=next(t for t in fig.data if t.name=="Next move to exit")
-    assert list(trace.y)==[df.close.iloc[-1],110]
+    badge=next(a for a in fig.layout.annotations if a.name=="Forecast direction label")
+    assert badge.text == "<b>Long ▲</b>"
+    assert pd.Timestamp(badge.x) == df.timestamp.iloc[-1]
+    assert badge.showarrow is False
+    assert not any(t.name == "Next move to exit" for t in fig.data)
     assert not any("Retest" in a.text or "T2" in a.text for a in fig.layout.annotations)
 
 

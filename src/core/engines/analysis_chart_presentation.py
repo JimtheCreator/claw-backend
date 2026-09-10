@@ -6,8 +6,8 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "market-read-v3"
-NEXT_MOVE_PRESENTATION_VERSION = "next-move-v1"
+PRESENTATION_VERSION = "conditional-forecast-v7"
+NEXT_MOVE_PRESENTATION_VERSION = "next-move-v3"
 
 
 def presentation_version(plan):
@@ -49,22 +49,49 @@ class AnalysisChartPresentation:
     def build_scenarios(self):
         # The decision layer owns forecasts. Never draw an unrelated breakout
         # guess just because the result says WAIT.
-        scenario = self.plan.get("primary_scenario")
+        scenario = self.plan.get("primary_scenario") or self.plan.get("forecast_scenario")
         if not scenario:
             return []
         levels = [scenario.get(key) for key in ("trigger", "invalidation", "target")]
         if scenario.get("direction") not in {"bullish", "bearish"} or levels[0] is None or levels[1] is None:
             return []
-        if any(not isfinite(float(v)) for v in levels if v is not None):
+        try:
+            invalid = any(not isfinite(float(v)) or float(v) <= 0 for v in levels if v is not None)
+        except (ValueError, TypeError):
             return []
-        return [dict(scenario)]
+        if invalid:
+            return []
+        return [{**scenario, **{k: float(scenario[k]) if scenario.get(k) is not None else None
+                               for k in ("trigger", "target", "invalidation")}}]
+
+    def complete_forecast(self):
+        if not self.scenarios:
+            return False
+        s = self.scenarios[0]
+        target = s.get("target")
+        if target is None:
+            return False
+        return (s["invalidation"] < s["trigger"] < target if s["direction"] == "bullish"
+                else target < s["trigger"] < s["invalidation"])
+
+    def reference_forecast_issue(self):
+        """Do not draw a current-price reward box backwards or past invalidation."""
+        if not self.complete_forecast():
+            return "Target / invalidation unavailable<br>No complete forecast can be drawn"
+        s = self.scenarios[0]
+        bullish = s["direction"] == "bullish"
+        if (self.current <= s["invalidation"] if bullish else self.current >= s["invalidation"]):
+            return "Latest close is beyond scenario invalidation<br>Reassess; no active forecast"
+        if (self.current >= s["target"] if bullish else self.current <= s["target"]):
+            return "Latest close has reached or passed the target<br>Reassess; no remaining forecast"
+        return None
 
     def figure(self):
         fig = self.fig = go.Figure()
         fig.update_layout(template="plotly_dark", width=1600, height=900,
                           paper_bgcolor=self.background, plot_bgcolor=self.background,
                           font=dict(family="Arial, sans-serif", size=23, color="#ecf1f8"),
-                          margin=dict(l=45, r=110, t=220, b=285), showlegend=False,
+                          margin=dict(l=45, r=110, t=195, b=250), showlegend=False,
                           xaxis_rangeslider_visible=False,
                           meta={"presentation_version": PRESENTATION_VERSION})
         bounds = [float(self.visible.low.min()), float(self.visible.high.max())]
@@ -73,7 +100,7 @@ class AnalysisChartPresentation:
         if self.next_move and self.plan.get("decision_level"):
             bounds.append(self.plan["decision_level"]["price"])
         for s in self.scenarios:
-            keys = ("trigger", "target", "invalidation") if self.next_move else ("trigger",)
+            keys = ("trigger", "target", "invalidation") if self.next_move or self.complete_forecast() else ("trigger",)
             bounds.extend(float(s[k]) for k in keys if s.get(k) is not None)
         if self.next_move:
             bounds.extend(t["price"] for t in self.plan.get("targets", []))
@@ -90,7 +117,7 @@ class AnalysisChartPresentation:
                       xref="x", yref="y domain", line=dict(color=self.muted, width=1, dash="dot"))
         self.annotation(self.now, 1.035, "NOW", self.muted, yref="y domain", size=18)
         self.annotation(self.now + (self.end - self.now) * 0.58, 1.035,
-                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "WATCH LEVEL · ARRIVAL NOT FORECAST",
+                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "CONDITIONAL FORECAST · TIMING NOT ESTIMATED",
                         self.muted, yref="y domain", size=18)
         fig.add_trace(go.Candlestick(x=self.visible.timestamp.astype(str), open=self.visible.open,
                                     high=self.visible.high, low=self.visible.low, close=self.visible.close,
@@ -160,7 +187,7 @@ class AnalysisChartPresentation:
         if self.next_move:
             self.draw_next_move()
             return
-        self.draw_first_leg()
+        self.draw_forecast()
 
     def draw_market_read(self):
         for side, item in self.context_levels.items():
@@ -171,24 +198,128 @@ class AnalysisChartPresentation:
                             xanchor="left", yshift=-18 if side == "support" else 18,
                             size=19, bgcolor=self.background)
 
-    def draw_first_leg(self):
-        """Show the pending checkpoint, never invent a trade toward it.
+    def draw_direction_badge(self, direction):
+        """Reference-style Long/Short candle badge; never a projection line."""
+        bullish = direction == "bullish"
+        fill = "#00bd83" if bullish else "#ff4e64"
+        text = "Long ▲" if bullish else "Short ▼"
+        lo, hi = self.fig.layout.yaxis.range
+        layout = self.fig.layout
+        width = layout.width - layout.margin.l - layout.margin.r
+        height = layout.height - layout.margin.t - layout.margin.b
+        xmin, xmax = (pd.Timestamp(x) for x in layout.xaxis.range)
+        x = (self.now-xmin)/(xmax-xmin)
+        candle = self.visible.iloc[-1]
+        anchor = float(candle.low if bullish else candle.high)
+        sign = -1 if bullish else 1
+        tip = (anchor-lo)/(hi-lo) + sign*6/height
+        near, far = tip+sign*6/height, tip+sign*32/height
+        left, right, notch = x-43/width, x+43/width, 6/width
+        self.fig.add_shape(type="path", name="Forecast direction badge",
+                           xref="x domain", yref="y domain", fillcolor=fill, line_width=0,
+                           path=f"M {x},{tip} L {x+notch},{near} L {right},{near} L {right},{far} L {left},{far} L {left},{near} L {x-notch},{near} Z")
+        self.fig.add_annotation(name="Forecast direction label", x=self.now,
+                                y=lo+(near+far)/2*(hi-lo), xref="x", yref="y",
+                                text=f"<b>{text}</b>", showarrow=False,
+                                font=dict(size=18, color="white"))
 
-        The retest planner's long/short actions describe conditional setups,
-        not filled or confirmed entries. Trigger geometry is not move evidence.
+    def draw_forecast_price_tags(self, labels):
+        """Left-pointing price flags, with leaders preserving exact price anchors.
+
+        Pixel-spaced tags can separate almost identical TP/confirmation levels
+        without moving their prices or changing the actual reward/risk geometry.
+        """
+        lo, hi = self.fig.layout.yaxis.range
+        height = self.fig.layout.height - self.fig.layout.margin.t - self.fig.layout.margin.b
+        placed, previous = [], -100
+        for value, text, fill, key in sorted(labels):
+            natural = (value-lo)/(hi-lo)*height
+            center = max(natural, previous+34, 18)
+            placed.append((value, text, fill, key, natural, center))
+            previous = center
+        overflow = max(0, placed[-1][-1] - (height-18))
+        for value, text, fill, key, natural, center in placed:
+            y, actual = (center-overflow)/height, natural/height
+            half = 13/height
+            # A short angled leader is necessary only when tags would overlap.
+            self.fig.add_shape(type="line", name=f"Forecast {key} leader",
+                               xref="x domain", yref="y domain",
+                               x0=.745, x1=.77, y0=actual, y1=y,
+                               line=dict(color=fill, width=1.5))
+            self.fig.add_shape(type="path", name=f"Forecast {key} tag",
+                               xref="x domain", yref="y domain",
+                               path=f"M .77,{y} L .78,{y+half} L .985,{y+half} L .985,{y-half} L .78,{y-half} Z",
+                               fillcolor=fill, line_width=0)
+            self.fig.add_annotation(name=f"Forecast {key} label", x=.785, y=y,
+                                    xref="x domain", yref="y domain", xanchor="left", yanchor="middle",
+                                    text=f"<b>{escape(text)}</b>", showarrow=False,
+                                    font=dict(size=18, color="white"))
+
+    def draw_forecast(self):
+        """Visualize supplied conditional direction, target and invalidation.
+
+        Future x coordinates are layout space, NOT predicted arrival times.
+        Shading and the illustrative direction start at the last closed candle.
+        This reference is NOT an entry; the separate activation and original
+        confirmation requirements remain unchanged. No fabricated retest legs.
         """
         if not self.scenarios:
             self.annotation(self.now + (self.end - self.now) / 2, 0.5,
                             (f"<b>{escape(self.market_read.get('trend_direction', 'undetermined').title())} structure</b><br>Entry criteria not met<br>See next check below."
-                             if self.market_read else "<b>WAIT</b><br>No supported checkpoint yet<br>No entry confirmed."),
+                             if self.market_read else "<b>No supported forecast</b><br>Missing structural levels<br>No entry confirmed."),
                             self.amber, yref="y domain", size=25)
             return
         s = self.scenarios[0]
         trigger = s["trigger"]
-        self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=trigger, y1=trigger,
-                           line=dict(color=self.amber, width=2, dash="dot"))
-        self.annotation(self.end, trigger, f"Watch {price(trigger)}", self.amber,
-                        xanchor="right", yshift=28, bgcolor=self.background)
+        issue = self.reference_forecast_issue()
+        if issue:
+            self.fig.add_shape(type="line", x0=self.now, x1=self.end, y0=trigger, y1=trigger,
+                               line=dict(color=self.amber, width=2, dash="dot"))
+            self.annotation(self.end, trigger, f"Activation {price(trigger)}", self.amber,
+                            xanchor="right", yshift=25, bgcolor=self.background)
+            self.annotation(self.now+(self.end-self.now)*.5, .83,
+                            issue,
+                            self.amber, yref="y domain", size=20)
+            return
+        # Current-candle reference geometry, not the pending-entry risk ratio.
+        x0, x1 = self.now, self.end-self.step*2
+        target, stop = s["target"], s["invalidation"]
+        # Exactly two future-only bands, not an overlay on every detector zone.
+        for y, fill, name in ((target, "rgba(66,223,178,0.22)", "Forecast reward"),
+                              (stop, "rgba(255,115,131,0.22)", "Forecast risk")):
+            self.fig.add_shape(type="rect", name=name, x0=x0, x1=x1,
+                               y0=min(self.current, y), y1=max(self.current, y),
+                               line_width=0, fillcolor=fill, layer="below")
+        self.draw_direction_badge(s["direction"])
+        self.fig.update_layout(meta={"presentation_version": PRESENTATION_VERSION,
+                                    "forecast_reference": "last_closed_candle",
+                                    "forecast_reference_price": self.current,
+                                    "activation_price": trigger})
+        pending_setup = s.get("setup") and self.plan.get("action") in {"long", "short"}
+        label = "Entry pending" if pending_setup else "Confirm"
+        labels = [(target, f"TP {price(target)}", "#127650", "TP"),
+                  (trigger, f"{label} {price(trigger)}", "#946014", "confirmation"),
+                  (self.current, f"NOW {price(self.current)} · ref.", "#355575", "reference"),
+                  (stop, f"SL / invalid. {price(stop)}", "#ae3548", "SL")]
+        for value, tint in ((target, self.green), (stop, self.red),
+                            (self.current, self.muted), (trigger, self.amber)):
+            self.fig.add_shape(type="line", x0=x0, x1=x1, y0=value, y1=value,
+                               line=dict(color=tint, width=1, dash="solid"),
+                               opacity=0.6, layer="below")
+        self.draw_forecast_price_tags(labels)
+        risk, reward = abs(trigger-stop), abs(target-trigger)
+        self.forecast_rr = reward/risk
+        # Extend activation back to the observed trigger pivot when known.
+        origin = s.get("trigger_timestamp")
+        if origin:
+            origin = pd.Timestamp(origin)
+            if self.now.tzinfo is None:
+                origin = origin.tz_localize(None)
+            elif origin.tzinfo is None:
+                origin = origin.tz_localize(self.now.tzinfo)
+            if origin <= self.now:
+                self.fig.add_shape(type="line", x0=max(self.start, origin), x1=x0, y0=trigger, y1=trigger,
+                                   line=dict(color=self.amber, width=1, dash="dot"))
 
     def draw_headings(self):
         if self.next_move:
@@ -201,20 +332,26 @@ class AnalysisChartPresentation:
         context = f"HTF: {htf}" if htf else "MTFA ON" if mtfa.get("enabled") else "MTFA OFF"
         pending_setup = bool(self.scenarios and self.scenarios[0].get("setup")
                              and p.get("action") in {"long", "short"})
-        status = (f"{p['action'].upper()} SETUP · CONFIRMATION PENDING" if pending_setup else
+        visible_forecast = not self.reference_forecast_issue()
+        status = ((f"{self.scenarios[0]['direction'].upper()} FORECAST · " +
+                   ("ENTRY PENDING" if pending_setup else "SCENARIO ONLY · NO ENTRY APPROVED")) if visible_forecast else
                   f"{self.market_read['trend_direction'].upper()} STRUCTURE · NO ENTRY CONFIRMED" if self.market_read else "WAIT · NO ENTRY CONFIRMED")
-        title = (f"Watch {price(self.scenarios[0]['trigger'])}" if self.scenarios else "No supported checkpoint")
+        title = (f"TP {price(self.scenarios[0]['target'])}" if visible_forecast else "Scenario needs reassessment")
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"
                                               f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction', 'undetermined'))} · {escape(context)}</span>",
                                           x=0.03, y=0.95, xanchor="left", yanchor="top", font=dict(size=34)))
         reason = p.get("reason") or p.get("context_summary") or ""
-        self.fig.add_annotation(x=0, y=1.22, xref="paper", yref="paper", xanchor="left", yanchor="top", align="left",
+        self.fig.add_annotation(x=0, y=1.20, xref="paper", yref="paper", xanchor="left", yanchor="top", align="left",
                                 text=f"<b>{escape(status)} · {escape(title)}</b><br>" + lines(reason, 116),
                                 showarrow=False, font=dict(size=23, color=self.amber))
         if self.scenarios:
             s = self.scenarios[0]
-            confirmation = p.get("confirmation_required") or s.get("confirmation") or "Wait for confirmed structure before entry."
-            text = lines(f"Checkpoint, not a profit target or a trade toward it. {confirmation}", 120)
+            confirmation = s.get("confirmation") or p.get("confirmation_required") or "Require a closed-candle trigger before entry."
+            reference = (f"Activation-based R:R {self.forecast_rr:.2f}R before fees. " if hasattr(self, "forecast_rr") else "")
+            if hasattr(self, "forecast_rr") and self.forecast_rr < 1.5:
+                reference += "Below the planner's 1.5R minimum; not a qualifying trade. "
+            scope = "Local scenario only; HTF context is not validated. " if s.get("basis") == "local_structure" and mtfa.get("enabled") else ""
+            text = lines(f"Condition: {confirmation} {scope}{reference}TP/SL are scenario levels, not placed orders.", 125)
         else:
             text = lines("Next check: " + self.market_read["next_check"], 112) if self.market_read else lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
@@ -234,10 +371,10 @@ class AnalysisChartPresentation:
                 why = "Local context: " + " · ".join(levels) + " · " + why
         if getattr(self, "omitted_anchor_count", 0):
             why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
-        self.fig.add_annotation(x=0, y=-0.39, xref="paper", yref="paper", xanchor="left", yanchor="top",
+        self.fig.add_annotation(x=0, y=-0.36, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 text=lines(why, 150), showarrow=False, font=dict(size=16, color=self.muted))
-        self.fig.add_annotation(x=0, y=-0.65, xref="paper", yref="paper", xanchor="left", yanchor="top",
-                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Checkpoints are conditions, not predicted moves · Experimental rules · {PRESENTATION_VERSION}",
+        self.fig.add_annotation(x=0, y=-0.49, xref="paper", yref="paper", xanchor="left", yanchor="top",
+                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Long/Short badge: scenario direction, not entry confirmation · Shading from latest close is illustrative · {PRESENTATION_VERSION}",
                                 showarrow=False, font=dict(size=15, color=self.muted))
 
     def draw_next_move(self):
@@ -260,10 +397,7 @@ class AnalysisChartPresentation:
             return
         s = self.scenarios[0]
         color = self.green if p["action"] == "long" else self.red
-        end = self.now+(self.end-self.now)*.88
-        self.fig.add_trace(go.Scatter(x=[self.now,end],y=[s["trigger"],s["target"]],
-            mode="lines+markers",name="Next move to exit",line=dict(color=color,width=5,dash="dash"),
-            marker=dict(size=11,color=color)))
+        self.draw_direction_badge("bullish" if p["action"] == "long" else "bearish")
         labels=[(s["target"],f"EXIT 100% · {price(s['target'])}",color),
                 (s["trigger"],f"Entry reference {price(s['trigger'])}",self.muted),
                 (s["invalidation"],f"STOP {price(s['invalidation'])}",self.red)]
@@ -304,5 +438,5 @@ class AnalysisChartPresentation:
         self.fig.add_annotation(x=0,y=-.27,xref="paper",yref="paper",xanchor="left",yanchor="top",align="left",
             text=lines(ledger,160),showarrow=False,font=dict(size=16,color=self.muted))
         self.fig.add_annotation(x=0,y=-.67,xref="paper",yref="paper",xanchor="left",yanchor="top",
-            text=f"Last {len(self.visible)} of {len(self.candles)} closed candles · Dashed line is an illustrative route, not a timing forecast · next-move-v1",
+            text=f"Last {len(self.visible)} of {len(self.candles)} closed candles · Long/Short badge marks direction; timing is unspecified · {NEXT_MOVE_PRESENTATION_VERSION}",
             showarrow=False,font=dict(size=14,color=self.muted))

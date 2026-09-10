@@ -1,5 +1,118 @@
 # Top-down analysis audit and validation — 2026-09-06
 
+## Long/Short candle badges, no projection arrow — 2026-09-10
+
+`conditional-forecast-v7` removes the directional projection line and arrow
+entirely. The user's reference meant a green **Long ▲** candle badge or a red
+**Short ▼** candle badge, not a diagonal path to TP. Long is positioned below
+the latest candle low; Short above its high, with the compact notched label
+style. Only the existing supported scenario determines direction. The same
+change applies to the experimental next-move presentation (`next-move-v3`).
+
+Current-reference TP/SL shading, price flags, confirmation levels, entry status,
+evidence, and planner decisions are unchanged. A scenario-only badge is explicitly
+not entry confirmation; invalid/missing scenarios do not gain a Long/Short badge.
+There are no historical signal badges fabricated from the reference image.
+Observed BOS/CHoCH annotation pointers remain evidence annotations, not forecasts.
+All **149 unit tests passed** with the existing unrelated price-alert import
+failure excluded. Tests assert removal of projection traces, badge direction and
+placement, retained TP/SL geometry, and unchanged input plans. The public-data
+preview now detects rendered scenarios by their badge, not by a removed line.
+ETH 4h (Long) and BNB 1h (Short) real-data PNGs were visually verified, with
+ON/OFF smoke renders completed for both. Artifacts are in workspace
+`outputs/conditional-forecast-v7` and `outputs/conditional-forecast-v7-bnb`.
+
+## Current-candle shading and price flags — 2026-09-10
+
+At the user's explicit request, `conditional-forecast-v6` changes the chart's
+**visual reference** from pending activation to the latest closed candle. The
+green area measures current close to the unchanged scenario target; the red area
+measures current close to unchanged invalidation. The solid illustrative arrow
+starts at that same candle/time/price. Neither the reference nor the arrow is an
+approved entry, a claim that confirmation has occurred, or a calibrated price
+prediction. The planner, its gates, and all price levels remain unchanged.
+
+This fixes the ETH 4h example where activation 2,523.30 and TP 2,523.97 left only
+0.67 of reward shading despite the snapshot close being well below both. The
+chart keeps the original **activation-based** R:R and its below-minimum warning;
+it does not replace that ratio with the visually larger current-to-target ratio.
+Current reference, confirmation, TP and SL/invalidation use separate left-pointing
+colored flags. Collision spacing moves labels only; leaders anchor displaced
+labels to the exact price. There is no invented retest leg or moved target.
+
+If the latest close has already reached/passed the target or invalidation, no
+current-reference arrow or reversed reward/risk boxes are drawn; the chart
+explicitly requests reassessment. This check is presentation-only and does not
+mutate the stored plan. Missing/invalid levels still cannot fabricate a forecast.
+**149 unit tests passed**, excluding the same unrelated price-alert import
+failure. Tests include mirrored long/short geometry, current/activation separation,
+near-identical TP/confirmation labels, MTFA isolation, and unchanged input plans.
+Actual ETHUSDT 4h ON/OFF PNGs were rendered and visually inspected under workspace
+`outputs/conditional-forecast-v6`. No claim of a new trading edge follows from
+these presentation changes.
+The local worker was confirmed idle and gracefully restarted with unchanged
+queues/pool/concurrency; it reported ready on this renderer. Fresh requests are
+needed because existing chart images are immutable.
+
+## Forecast layout follow-up — 2026-09-10
+
+`conditional-forecast-v5` removes the eight-candle visual gutter: the forecast
+arrow and both TP/SL bands start exactly at NOW on the time axis. The arrow still
+starts at the supplied activation **price**, not a newly invented executable
+entry at the last close. No planner levels, evidence or eligibility changed.
+The route is now a continuous solid arrow with a larger directional head and no
+starting dot; labels are offset clear of the arrowhead. The experimental
+next-move presentation uses the same arrow style (`next-move-v2`).
+The shaded future pane and explicit conditional captions distinguish forecasts
+from observations; the obsolete solid-facts/dashed-forecast legend is removed.
+Tests cover the boundary at 1m/1h/4h/1d, both MTFA modes, long/short directions,
+unchanged input plans and serialized PNG payloads. ETHUSDT 4h ON/OFF PNGs were
+rendered for visual verification; fresh analyses are required to replace old
+immutable images.
+Verification: **144 unit tests passed** (same unrelated price-alert collection
+failure excluded). The idle local worker was gracefully restarted with its
+existing queues/pool/concurrency and reported ready on the updated renderer.
+
+## Forecast visibility and TP/SL rendering — 2026-09-10
+
+The immediate display defect was in `analysis_chart_presentation.py`: a valid
+conditional scenario could include a trigger, target and invalidation, but the
+renderer deliberately showed only its trigger. WATCH therefore hid useful
+scenario information. `conditional-forecast-v4` restores that supplied path
+without promoting the scenario to an approved entry.
+
+- `trade_plan.py` preserves a separate `forecast_scenario` before entry-gate
+  early returns. Where higher-timeframe validation is unavailable or mixed,
+  an available local structural scenario is explicitly local-only and does not
+  populate order levels or change WAIT into BUY/SELL. Actual confirmed pivots
+  and an unswept target are required; missing evidence does not invent levels.
+- The chart draws green target/reward and red stop/invalidation regions only
+  for correctly ordered, complete levels. Its dashed path begins at the
+  activation level in the future pane, **not at today's price**: it does not
+  assert that price will reach a pending entry or invent a retest sequence.
+  Existing confirmation/retest requirements remain visible in the caption.
+- Pending setups say ENTRY PENDING; non-approved scenarios say NO ENTRY
+  APPROVED. Targets and invalidation are scenario levels, not placed orders.
+  Invalid/incomplete geometry has no fabricated arrow or risk boxes. A gross
+  reference reward/risk below the planner's 1.5R minimum is called out explicitly,
+  not concealed by favorable-looking shading.
+- Observed structural facts remain separate from the dashed conditional
+  forecast, whose timing and outcome are not claimed. Entry/exit thresholds,
+  evidence policy, indicator gates and research promotion rules are unchanged.
+
+Verification: **136 unit tests passed**, excluding the existing unrelated
+`test_price_alert_manager.py` collection failure (legacy notification import).
+Public closed Binance BTCUSDT/ETHUSDT/BNBUSDT 1h snapshots rendered successfully
+with MTFA ON and OFF: all six had a supported forecast. Final BTC/BNB PNGs were
+also visually checked for readable labels, price bounds and future-only risk
+regions. These are rendering checks, **not evidence of profitable forecasts**.
+The reproducible read-only smoke tool is `scripts/preview_analysis_forecasts.py`;
+workspace artifacts are under `outputs/conditional-forecast-v4` and
+`outputs/conditional-forecast-v4-final`. Previously generated PNGs are immutable;
+fresh analysis requests are needed after the worker loads this renderer.
+The single local worker was confirmed idle, gracefully restarted with the same
+queues/pool/concurrency, and reported ready with the updated renderer loaded.
+
 ## Independent regime-aware brain — implemented and tested, 2026-09-09
 
 The attached Architecture B proposal is implemented as a separate deterministic

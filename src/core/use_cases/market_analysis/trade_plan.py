@@ -99,6 +99,11 @@ def build_trade_plan(
     if trend not in {"bullish", "bearish"}:
         return _wait(base, "Market structure has no confirmed directional trend yet.")
 
+    # A market scenario and permission to enter are different outputs. Keep a
+    # local conditional scenario even if an entry/context gate returns early.
+    # This does NOT populate entry_level/stop_loss/take_profit or change action.
+    base["forecast_scenario"] = _structure_watch(candles, swings, trend, liquidity, "local")
+
     context, bias, explanation = _market_context(mtfa, trend)
     base["market_context"] = context
     base["context_summary"] = explanation
@@ -115,6 +120,8 @@ def build_trade_plan(
             scenario["extra_confirmation"] = f"Also require {', '.join(intermediate)} structure to turn {bias} before entry."
             scenario["confirmation"] += " " + scenario["extra_confirmation"]
     base["primary_scenario"] = scenario
+    if scenario:
+        base["forecast_scenario"] = deepcopy(scenario)
     if context == "pullback":
         return _wait(base, explanation)
 
@@ -228,6 +235,7 @@ def build_trade_plan(
             "alternative": f"Cancel the setup if price breaches the stop at {_round(stop)}; reassess structure.",
         },
     })
+    base["forecast_scenario"] = deepcopy(base["primary_scenario"])
     return base
 
 
@@ -247,7 +255,7 @@ def _market_context(mtfa, trend):
     }
     missing = set(mtfa.get("htf_requested", [])) - set(trends)
     if mtfa.get("htf_unavailable") or missing or not trends or any(t not in {"bullish", "bearish"} for t in trends.values()):
-        return "incomplete", None, "Higher-timeframe evidence is incomplete. No directional forecast until that context is resolved."
+        return "incomplete", None, "Higher-timeframe evidence is incomplete; no MTFA entry is approved. Any displayed local scenario is conditional and lacks higher-timeframe validation."
     # Respect hierarchy: a nearest-HTF correction inside two aligned larger
     # frames is a nested pullback, not equivalent to the largest frames splitting.
     def duration(tf):
@@ -270,7 +278,8 @@ def _structure_watch(candles, swings, direction, liquidity, context):
     pivot_type = "high" if bullish else "low"
     price = float(candles.close.iloc[-1])
     pivots = sorted((s for s in getattr(swings, "swings", [])
-                     if s.confirmed and s.type == pivot_type and 0 <= s.index < len(candles)),
+                     if s.confirmed and s.type == pivot_type and 0 <= s.index < len(candles)
+                     and s.index + getattr(swings, "window", 0) < len(candles)),
                     key=lambda s: s.index, reverse=True)
     for pivot in pivots:
         level = float(pivot.price)
@@ -290,6 +299,11 @@ def _structure_watch(candles, swings, direction, liquidity, context):
             "title": f"Potential {direction} resumption" if context == "pullback" else f"{direction.title()} structure watch",
             "trigger": _round(level), "target": _round(target) if target is not None else None,
             "invalidation": _round(invalidation),
+            "basis": "local_structure" if context == "local" else "mtfa_context_and_local_structure",
+            "target_source": "unswept_liquidity" if target is not None else None,
+            "trigger_source": "confirmed_swing",
+            "trigger_timestamp": pd.Timestamp(candles.timestamp.iloc[pivot.index]).isoformat(),
+            "interpretation": "Conditional directional scenario after activation; not a confirmed entry or calibrated prediction.",
             "confirmation": f"Wait for a {crossing} {level:g} candle close, then a retest that {holding} {level:g}. Reassess entry, stop and reward/risk.",
             "alternative": f"If the {'pullback low' if bullish else 'rally high'} at {invalidation:g} breaks first, cancel this watch; the local move may extend. This alone does not reverse the higher-timeframe trend.",
         }

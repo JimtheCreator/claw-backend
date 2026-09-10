@@ -116,11 +116,15 @@ def test_real_pullback_plan_renders_a_watch_not_an_approach_trade(direction):
     original = deepcopy(plan)
     fig = AnalysisChartPresentation(_candles(), {"symbol": "TEST", "trade_plan": plan}, {}).figure()
     captions = " ".join(a.text.replace("<br>", " ") for a in fig.layout.annotations)
-    assert "STRUCTURE · NO ENTRY CONFIRMED" in captions
-    assert "not a profit target or a trade toward it" in captions
+    assert "FORECAST · SCENARIO ONLY · NO ENTRY APPROVED" in captions
+    assert "scenario levels, not placed orders" in captions
     assert "retest" in captions  # The prerequisite is not silently erased.
     assert "NEXT PROJECTED MOVE" not in captions
-    assert not any(t.type == "scatter" and "lines" in (t.mode or "") for t in fig.data)
+    badge = next(a for a in fig.layout.annotations if a.name == "Forecast direction label")
+    assert badge.text == ("<b>Long ▲</b>" if direction == "bullish" else "<b>Short ▼</b>")
+    assert "scenario direction, not entry confirmation" in captions
+    assert pd.Timestamp(badge.x) == _candles().timestamp.iloc[-1]
+    assert not any(t.name == "Conditional forecast" for t in fig.data)
     assert f"Local: {plan['trend_direction']}" in fig.layout.title.text
     assert plan == original
 
