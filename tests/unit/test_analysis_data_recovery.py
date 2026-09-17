@@ -63,10 +63,19 @@ def test_cold_cache_source_data_survives_persistence_failure(monkeypatch):
 
 def test_binance_strict_failure_is_not_silently_no_data(monkeypatch):
     from infrastructure.data_sources.binance.client import BinanceMarketData
-    client=BinanceMarketData(use_pool=False,strict_errors=True)
-    client.circuit_breaker=NS(call=AsyncMock(side_effect=RuntimeError("exchange unavailable")))
-    with pytest.raises(RuntimeError,match="exchange unavailable"):
-        asyncio.run(client.get_klines("BTCUSDT","1m",max_retries=1))
+    from infrastructure.database.redis.rate_limiter import RedisRateLimiter
+    import fakeredis.aioredis
+    async def scenario():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            client=BinanceMarketData(use_pool=False,strict_errors=True)
+            client.global_limiter=RedisRateLimiter(redis_client=redis)
+            client.circuit_breaker=NS(call=AsyncMock(side_effect=RuntimeError("exchange unavailable")))
+            try:
+                with pytest.raises(RuntimeError,match="exchange unavailable"):
+                    await client.get_klines("BTCUSDT","1m",max_retries=1)
+            finally:
+                await client.disconnect()
+    asyncio.run(scenario())
 
 
 def test_analysis_limiter_fails_closed():

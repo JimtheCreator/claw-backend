@@ -14,6 +14,7 @@ import asyncio
 from typing import List, Dict, Any
 from src.core.services.tasks import save_market_data_task
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
+from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 
 
 # Batch sizes for different intervals
@@ -255,6 +256,8 @@ async def fetch_crypto_data_paginated(
             symbol, interval, start_time, end_time, page_size, prioritize_recent
         )
 
+    except ProviderRequestDeferred:
+        raise
     except Exception as e:
         logger.critical(f"Critical error in fetch_crypto_data_paginated: {str(e)}")
         return {"error": "Internal server error"}
@@ -281,7 +284,6 @@ async def _fetch_from_binance_chronological(
         # _fetch_and_save_missing_data. Do not disconnect it at the end;
         # it's shared process-wide (also used by the websocket route).
         binance = analysis_binance_client.get() or shared_binance_client
-        await binance.ensure_connected()
         
         if prioritize_recent:
             # Fetch recent data by calculating backwards from end_time
@@ -336,6 +338,8 @@ async def _fetch_from_binance_chronological(
         
         return data_entities
         
+    except ProviderRequestDeferred:
+        raise
     except Exception as e:
         logger.error(f"Error fetching data from Binance: {str(e)}")
         return {"error": f"Failed to fetch data from Binance: {str(e)}"}
@@ -428,7 +432,6 @@ async def _fetch_and_save_missing_data(
         # call - that handshake was the actual cost on this path, not the
         # klines request itself.
         binance = analysis_binance_client.get() or shared_binance_client
-        await binance.ensure_connected()
         
         missing_data = []
         # --- FIX: Start exactly at from_time (NOT from_time + interval). 
@@ -486,6 +489,8 @@ async def _fetch_and_save_missing_data(
             
         return missing_data
             
+    except ProviderRequestDeferred:
+        raise
     except Exception as e:
         logger.error(f"Error fetching missing data: {str(e)}")
         # --- FIX: Return an empty list on error ---

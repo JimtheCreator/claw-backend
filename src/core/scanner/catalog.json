@@ -1,0 +1,720 @@
+[
+  {
+    "id": "abandoned_baby",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_abandoned_baby",
+        "display_name": "Bullish Abandoned Baby"
+      },
+      {
+        "id": "bearish_abandoned_baby",
+        "display_name": "Bearish Abandoned Baby"
+      }
+    ]
+  },
+  {
+    "id": "abcd",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "abcd_bullish",
+        "display_name": "Abcd Bullish"
+      },
+      {
+        "id": "abcd_bearish",
+        "display_name": "Abcd Bearish"
+      }
+    ]
+  },
+  {
+    "id": "bat",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "bat_bullish",
+        "display_name": "Bat Bullish"
+      },
+      {
+        "id": "bat_bearish",
+        "display_name": "Bat Bearish"
+      }
+    ]
+  },
+  {
+    "id": "broadening_wedge",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "broadening_wedge",
+        "display_name": "Broadening Wedge"
+      }
+    ]
+  },
+  {
+    "id": "bump_and_run",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "bump_and_run",
+        "display_name": "Bump And Run"
+      }
+    ]
+  },
+  {
+    "id": "butterfly",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "butterfly_bullish",
+        "display_name": "Butterfly Bullish"
+      },
+      {
+        "id": "butterfly_bearish",
+        "display_name": "Butterfly Bearish"
+      }
+    ]
+  },
+  {
+    "id": "catapult",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "catapult",
+        "display_name": "Catapult"
+      }
+    ]
+  },
+  {
+    "id": "channel",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "horizontal_channel",
+        "display_name": "Horizontal Channel"
+      },
+      {
+        "id": "ascending_channel",
+        "display_name": "Ascending Channel"
+      },
+      {
+        "id": "descending_channel",
+        "display_name": "Descending Channel"
+      }
+    ]
+  },
+  {
+    "id": "crab",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "crab_bullish",
+        "display_name": "Crab Bullish"
+      },
+      {
+        "id": "crab_bearish",
+        "display_name": "Crab Bearish"
+      }
+    ]
+  },
+  {
+    "id": "cup_and_handle",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "cup_and_handle",
+        "display_name": "Cup And Handle"
+      }
+    ]
+  },
+  {
+    "id": "cypher",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "cypher_bullish",
+        "display_name": "Cypher Bullish"
+      },
+      {
+        "id": "cypher_bearish",
+        "display_name": "Cypher Bearish"
+      }
+    ]
+  },
+  {
+    "id": "dark_cloud_cover",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "dark_cloud_cover",
+        "display_name": "Dark Cloud Cover"
+      }
+    ]
+  },
+  {
+    "id": "diamond_top",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "diamond_top",
+        "display_name": "Diamond Top"
+      }
+    ]
+  },
+  {
+    "id": "doji",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "standard_doji",
+        "display_name": "Standard Doji"
+      },
+      {
+        "id": "gravestone_doji",
+        "display_name": "Gravestone Doji"
+      },
+      {
+        "id": "dragonfly_doji",
+        "display_name": "Dragonfly Doji"
+      }
+    ]
+  },
+  {
+    "id": "double_bottom",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "double_bottom",
+        "display_name": "Double Bottom"
+      }
+    ]
+  },
+  {
+    "id": "double_top",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "double_top",
+        "display_name": "Double Top"
+      }
+    ]
+  },
+  {
+    "id": "engulfing",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_engulfing",
+        "display_name": "Bullish Engulfing"
+      },
+      {
+        "id": "bearish_engulfing",
+        "display_name": "Bearish Engulfing"
+      }
+    ]
+  },
+  {
+    "id": "evening_star",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "evening_star",
+        "display_name": "Evening Star"
+      }
+    ]
+  },
+  {
+    "id": "falling_three_methods",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "falling_three_methods",
+        "display_name": "Falling Three Methods"
+      }
+    ]
+  },
+  {
+    "id": "flag_bearish",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "flag_bearish",
+        "display_name": "Flag Bearish"
+      }
+    ]
+  },
+  {
+    "id": "flag_bullish",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "flag_bullish",
+        "display_name": "Flag Bullish"
+      }
+    ]
+  },
+  {
+    "id": "gartley",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "gartley_bullish",
+        "display_name": "Gartley Bullish"
+      },
+      {
+        "id": "gartley_bearish",
+        "display_name": "Gartley Bearish"
+      }
+    ]
+  },
+  {
+    "id": "hammer",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "hammer",
+        "display_name": "Hammer"
+      }
+    ]
+  },
+  {
+    "id": "hanging_man",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "hanging_man",
+        "display_name": "Hanging Man"
+      }
+    ]
+  },
+  {
+    "id": "harami",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_harami",
+        "display_name": "Bullish Harami"
+      },
+      {
+        "id": "bearish_harami",
+        "display_name": "Bearish Harami"
+      },
+      {
+        "id": "bullish_harami_cross",
+        "display_name": "Bullish Harami Cross"
+      },
+      {
+        "id": "bearish_harami_cross",
+        "display_name": "Bearish Harami Cross"
+      }
+    ]
+  },
+  {
+    "id": "head_and_shoulders",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "bearish_head_and_shoulders",
+        "display_name": "Bearish Head And Shoulders"
+      },
+      {
+        "id": "inverse_head_and_shoulders",
+        "display_name": "Inverse Head And Shoulders"
+      }
+    ]
+  },
+  {
+    "id": "hikkake",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_hikkake",
+        "display_name": "Bullish Hikkake"
+      },
+      {
+        "id": "bearish_hikkake",
+        "display_name": "Bearish Hikkake"
+      }
+    ]
+  },
+  {
+    "id": "horn_top",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "horn_top",
+        "display_name": "Horn Top"
+      }
+    ]
+  },
+  {
+    "id": "inverse_cup_and_handle",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "inverse_cup_and_handle",
+        "display_name": "Inverse Cup And Handle"
+      }
+    ]
+  },
+  {
+    "id": "inverted_hammer",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "inverted_hammer",
+        "display_name": "Inverted Hammer"
+      }
+    ]
+  },
+  {
+    "id": "island_reversal",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "bullish_island_reversal",
+        "display_name": "Bullish Island Reversal"
+      },
+      {
+        "id": "bearish_island_reversal",
+        "display_name": "Bearish Island Reversal"
+      }
+    ]
+  },
+  {
+    "id": "kicker",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_kicker",
+        "display_name": "Bullish Kicker"
+      },
+      {
+        "id": "bearish_kicker",
+        "display_name": "Bearish Kicker"
+      }
+    ]
+  },
+  {
+    "id": "marubozu",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_marubozu",
+        "display_name": "Bullish Marubozu"
+      },
+      {
+        "id": "bearish_marubozu",
+        "display_name": "Bearish Marubozu"
+      }
+    ]
+  },
+  {
+    "id": "mat_hold",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_mat_hold",
+        "display_name": "Bullish Mat Hold"
+      },
+      {
+        "id": "bearish_mat_hold",
+        "display_name": "Bearish Mat Hold"
+      }
+    ]
+  },
+  {
+    "id": "morning_star",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "morning_star",
+        "display_name": "Morning Star"
+      }
+    ]
+  },
+  {
+    "id": "pennant",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "bullish_pennant",
+        "display_name": "Bullish Pennant"
+      },
+      {
+        "id": "bearish_pennant",
+        "display_name": "Bearish Pennant"
+      }
+    ]
+  },
+  {
+    "id": "piercing_pattern",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "piercing_pattern",
+        "display_name": "Piercing Pattern"
+      }
+    ]
+  },
+  {
+    "id": "pipe_bottom",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "pipe_bottom",
+        "display_name": "Pipe Bottom"
+      }
+    ]
+  },
+  {
+    "id": "rectangle",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "rectangle",
+        "display_name": "Rectangle"
+      }
+    ]
+  },
+  {
+    "id": "rising_three_methods",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "rising_three_methods",
+        "display_name": "Rising Three Methods"
+      }
+    ]
+  },
+  {
+    "id": "scallop",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "scallop",
+        "display_name": "Scallop"
+      }
+    ]
+  },
+  {
+    "id": "shark",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "shark_bullish",
+        "display_name": "Shark Bullish"
+      },
+      {
+        "id": "shark_bearish",
+        "display_name": "Shark Bearish"
+      }
+    ]
+  },
+  {
+    "id": "shooting_star",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "bullish_shooting_star",
+        "display_name": "Bullish Shooting Star"
+      },
+      {
+        "id": "bearish_shooting_star",
+        "display_name": "Bearish Shooting Star"
+      }
+    ]
+  },
+  {
+    "id": "spinning_top",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "spinning_top",
+        "display_name": "Spinning Top"
+      }
+    ]
+  },
+  {
+    "id": "three_black_crows",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_black_crows",
+        "display_name": "Three Black Crows"
+      }
+    ]
+  },
+  {
+    "id": "three_drives",
+    "category": "harmonic",
+    "patterns": [
+      {
+        "id": "three_drives_bullish",
+        "display_name": "Three Drives Bullish"
+      },
+      {
+        "id": "three_drives_bearish",
+        "display_name": "Three Drives Bearish"
+      }
+    ]
+  },
+  {
+    "id": "three_inside_down",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_inside_down",
+        "display_name": "Three Inside Down"
+      }
+    ]
+  },
+  {
+    "id": "three_inside_up",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_inside_up",
+        "display_name": "Three Inside Up"
+      }
+    ]
+  },
+  {
+    "id": "three_line_strike",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_line_strike",
+        "display_name": "Three Line Strike"
+      }
+    ]
+  },
+  {
+    "id": "three_outside_down",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_outside_down",
+        "display_name": "Three Outside Down"
+      }
+    ]
+  },
+  {
+    "id": "three_outside_up",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_outside_up",
+        "display_name": "Three Outside Up"
+      }
+    ]
+  },
+  {
+    "id": "three_white_soldiers",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "three_white_soldiers",
+        "display_name": "Three White Soldiers"
+      }
+    ]
+  },
+  {
+    "id": "tower_top",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "tower_top",
+        "display_name": "Tower Top"
+      }
+    ]
+  },
+  {
+    "id": "triangle",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "symmetrical_triangle",
+        "display_name": "Symmetrical Triangle"
+      },
+      {
+        "id": "descending_triangle",
+        "display_name": "Descending Triangle"
+      },
+      {
+        "id": "ascending_triangle",
+        "display_name": "Ascending Triangle"
+      }
+    ]
+  },
+  {
+    "id": "triple_bottom",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "triple_bottom",
+        "display_name": "Triple Bottom"
+      }
+    ]
+  },
+  {
+    "id": "triple_top",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "triple_top",
+        "display_name": "Triple Top"
+      }
+    ]
+  },
+  {
+    "id": "tweezers_bottom",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "tweezers_bottom",
+        "display_name": "Tweezers Bottom"
+      }
+    ]
+  },
+  {
+    "id": "tweezers_top",
+    "category": "candlestick",
+    "patterns": [
+      {
+        "id": "tweezers_top",
+        "display_name": "Tweezers Top"
+      }
+    ]
+  },
+  {
+    "id": "wedge_falling",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "wedge_falling",
+        "display_name": "Wedge Falling"
+      }
+    ]
+  },
+  {
+    "id": "wedge_rising",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "wedge_rising",
+        "display_name": "Wedge Rising"
+      }
+    ]
+  },
+  {
+    "id": "zigzag",
+    "category": "chart",
+    "patterns": [
+      {
+        "id": "zigzag",
+        "display_name": "Zigzag"
+      }
+    ]
+  }
+]

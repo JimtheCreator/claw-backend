@@ -32,6 +32,9 @@ from presentation.api.routes.watchlist import watchlist_sync
 from presentation.api.routes.watchlist import watchlist_groups
 from presentation.api.routes.watchlist import user_symbol_watchlist
 from presentation.api.routes.discover import router as discover_router
+from presentation.api.routes.scanner import router as scanner_router
+from presentation.api.routes.scanner_watches import router as scanner_watches_router
+from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -71,6 +74,9 @@ async def lifespan(app: FastAPI):
     await close_binance_connection_pool()
     logger.info("Binance connection pool closed.")
     await redis_cache.close()
+    scanner_pool = getattr(app.state, "scanner_watch_pool", None)
+    if scanner_pool is not None:
+        await scanner_pool.close()
     logger.info("Redis cache connection closed.")
     # Shutdown
     logger.info("Shutting down application...")
@@ -84,6 +90,12 @@ app = FastAPI(
 # Attach rate limiter to app
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
+@app.exception_handler(ProviderRequestDeferred)
+async def provider_deferred_handler(request, exc):
+    return JSONResponse(status_code=503,
+        content={"error": "market_data_deferred", "detail": str(exc)},
+        headers={"Retry-After": str(exc.retry_after)})
 
 # Add CORS middleware
 app.add_middleware(
@@ -108,6 +120,8 @@ app.include_router(watchlist_sync.router, prefix="/api/v1", tags=["Watchlist"])
 app.include_router(user_symbol_watchlist.router, prefix="/api/v1", tags=["Watchlist"])
 app.include_router(watchlist_groups.router, prefix="/api/v1", tags=["Watchlist Groups"])
 app.include_router(discover_router, prefix="/api/v1", tags=["Discover"])
+app.include_router(scanner_router, prefix="/api/v1")
+app.include_router(scanner_watches_router, prefix="/api/v1")
 
 # Health check endpoint
 @app.get("/health")

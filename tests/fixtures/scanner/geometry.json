@@ -1,0 +1,1443 @@
+{
+  "schema_version": 2,
+  "evidence": "synthetic_geometry",
+  "description": "Definition-based engineering fixtures, not independently reviewed market labels or estimates of live precision/recall.",
+  "scales": [
+    1e-07,
+    0.01,
+    1,
+    1000
+  ],
+  "cases": [
+    {
+      "id": "rectangle_touches",
+      "detector": "rectangle",
+      "expected": "rectangle",
+      "recipe": {
+        "kind": "rectangle"
+      },
+      "reason": "Repeated exact touches of horizontal support and resistance with distributed closes."
+    },
+    {
+      "id": "triangle_ascending",
+      "detector": "triangle",
+      "expected": "ascending_triangle",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0,
+        "lower_slope": 0.06
+      },
+      "reason": "Flat highs, rising lows and a future apex."
+    },
+    {
+      "id": "triangle_descending",
+      "detector": "triangle",
+      "expected": "descending_triangle",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": -0.06,
+        "lower_slope": 0
+      },
+      "reason": "Falling highs, flat lows and a future apex."
+    },
+    {
+      "id": "triangle_symmetrical",
+      "detector": "triangle",
+      "expected": "symmetrical_triangle",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": -0.03,
+        "lower_slope": 0.03
+      },
+      "reason": "Upper and lower boundaries converge from opposite directions."
+    },
+    {
+      "id": "channel_horizontal",
+      "detector": "channel",
+      "expected": "horizontal_channel",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0,
+        "lower_slope": 0
+      },
+      "reason": "Repeated flat highs and lows bounding a constant-width channel."
+    },
+    {
+      "id": "channel_ascending",
+      "detector": "channel",
+      "expected": "ascending_channel",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.05,
+        "lower_slope": 0.05
+      },
+      "reason": "Parallel rising support and resistance."
+    },
+    {
+      "id": "channel_descending",
+      "detector": "channel",
+      "expected": "descending_channel",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": -0.05,
+        "lower_slope": -0.05
+      },
+      "reason": "Parallel falling support and resistance."
+    },
+    {
+      "id": "engulfing_bullish",
+      "detector": "engulfing",
+      "expected": "bullish_engulfing",
+      "recipe": {
+        "kind": "engulfing"
+      },
+      "reason": "Bullish real body engulfs the previous bearish body after a decline."
+    },
+    {
+      "id": "engulfing_bearish",
+      "detector": "engulfing",
+      "expected": "bearish_engulfing",
+      "recipe": {
+        "kind": "engulfing",
+        "mirror": true
+      },
+      "reason": "Mirrored bullish fixture: bearish engulfing after an advance."
+    },
+    {
+      "id": "doji_standard",
+      "detector": "doji",
+      "expected": "standard_doji",
+      "recipe": {
+        "kind": "standard_doji"
+      },
+      "reason": "Equal open/close with balanced upper/lower shadows."
+    },
+    {
+      "id": "doji_dragonfly",
+      "detector": "doji",
+      "expected": "dragonfly_doji",
+      "recipe": {
+        "kind": "dragonfly_doji"
+      },
+      "reason": "Equal open/close at the high with a long lower shadow."
+    },
+    {
+      "id": "doji_gravestone",
+      "detector": "doji",
+      "expected": "gravestone_doji",
+      "recipe": {
+        "kind": "gravestone_doji"
+      },
+      "reason": "Equal open/close at the low with a long upper shadow."
+    },
+    {
+      "id": "hammer_downtrend",
+      "detector": "hammer",
+      "expected": "hammer",
+      "recipe": {
+        "kind": "hammer"
+      },
+      "reason": "Small upper body and long lower wick after a decline, with meaningful relative range."
+    },
+    {
+      "id": "morning_star",
+      "detector": "morning_star",
+      "expected": "morning_star",
+      "recipe": {
+        "kind": "morning_star"
+      },
+      "reason": "Bearish body, small middle body, bullish recovery past the first midpoint."
+    },
+    {
+      "id": "evening_star",
+      "detector": "evening_star",
+      "expected": "evening_star",
+      "recipe": {
+        "kind": "morning_star",
+        "mirror": true
+      },
+      "reason": "Mirrored morning-star fixture."
+    },
+    {
+      "id": "rectangle_zero_range",
+      "detector": "rectangle",
+      "expected": null,
+      "recipe": {
+        "kind": "flat"
+      },
+      "reason": "No height, swings or distributed closes."
+    },
+    {
+      "id": "rectangle_trend",
+      "detector": "rectangle",
+      "expected": null,
+      "recipe": {
+        "kind": "trend"
+      },
+      "reason": "Monotonic decline is not horizontal consolidation."
+    },
+    {
+      "id": "triangle_expanding",
+      "detector": "triangle",
+      "expected": null,
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.03,
+        "lower_slope": -0.03,
+        "origin": 50
+      },
+      "reason": "Equal and opposite slopes diverge; a past apex is not a converging triangle."
+    },
+    {
+      "id": "triangle_parallel",
+      "detector": "triangle",
+      "expected": null,
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.05,
+        "lower_slope": 0.05
+      },
+      "reason": "Parallel boundaries never meet."
+    },
+    {
+      "id": "channel_converging",
+      "detector": "channel",
+      "expected": null,
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": -0.03,
+        "lower_slope": 0.03
+      },
+      "reason": "A shrinking triangle is not a parallel channel."
+    },
+    {
+      "id": "engulfing_missing_body",
+      "detector": "engulfing",
+      "expected": null,
+      "recipe": {
+        "kind": "trend"
+      },
+      "reason": "Consecutive bearish bodies contain no bullish reversal."
+    },
+    {
+      "id": "doji_large_body",
+      "detector": "doji",
+      "expected": null,
+      "recipe": {
+        "kind": "standard_doji",
+        "large_body": true
+      },
+      "reason": "A large real body is not a doji."
+    },
+    {
+      "id": "hammer_wrong_context",
+      "detector": "hammer",
+      "expected": null,
+      "recipe": {
+        "kind": "hammer",
+        "wrong_trend": true
+      },
+      "reason": "Same hammer geometry without a preceding decline is rejected by the current reversal definition."
+    },
+    {
+      "id": "morning_star_no_recovery",
+      "detector": "morning_star",
+      "expected": null,
+      "recipe": {
+        "kind": "morning_star",
+        "wrong_final_direction": true
+      },
+      "reason": "The final candle fails to recover upward."
+    },
+    {
+      "id": "evening_star_no_decline",
+      "detector": "evening_star",
+      "expected": null,
+      "recipe": {
+        "kind": "morning_star",
+        "mirror": true,
+        "wrong_final_direction": true
+      },
+      "reason": "The final candle fails to turn downward."
+    },
+    {
+      "id": "bearish_head_and_shoulders",
+      "detector": "head_and_shoulders",
+      "expected": "bearish_head_and_shoulders",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            120
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "inverse_head_and_shoulders",
+      "detector": "head_and_shoulders",
+      "expected": "inverse_head_and_shoulders",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            120
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "double_top",
+      "detector": "double_top",
+      "expected": "double_top",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            195,
+            100
+          ],
+          [
+            210,
+            110
+          ],
+          [
+            228,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "double_bottom",
+      "detector": "double_bottom",
+      "expected": "double_bottom",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            195,
+            100
+          ],
+          [
+            210,
+            110
+          ],
+          [
+            228,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "triple_top",
+      "detector": "triple_top",
+      "expected": "triple_top",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            110
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "triple_bottom",
+      "detector": "triple_bottom",
+      "expected": "triple_bottom",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            110
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "gartley_bullish",
+      "detector": "gartley",
+      "expected": "gartley_bullish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            107.64
+          ],
+          [
+            195,
+            112.36152
+          ],
+          [
+            247,
+            104.28
+          ],
+          [
+            249,
+            108
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "gartley_bearish",
+      "detector": "gartley",
+      "expected": "gartley_bearish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            107.64
+          ],
+          [
+            195,
+            112.36152
+          ],
+          [
+            247,
+            104.28
+          ],
+          [
+            249,
+            108
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "bat_bullish",
+      "detector": "bat",
+      "expected": "bat_bullish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            111.18
+          ],
+          [
+            195,
+            116.7
+          ],
+          [
+            247,
+            102.28
+          ],
+          [
+            249,
+            107
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "bat_bearish",
+      "detector": "bat",
+      "expected": "bat_bearish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            111.18
+          ],
+          [
+            195,
+            116.7
+          ],
+          [
+            247,
+            102.28
+          ],
+          [
+            249,
+            107
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "abcd_bullish",
+      "detector": "abcd",
+      "expected": "abcd_bullish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            60,
+            120
+          ],
+          [
+            120,
+            100
+          ],
+          [
+            180,
+            112
+          ],
+          [
+            247,
+            92
+          ],
+          [
+            249,
+            96
+          ]
+        ]
+      },
+      "reason": "Explicit alternating pivots with recent final reversal; engineering geometry only."
+    },
+    {
+      "id": "abcd_bearish",
+      "detector": "abcd",
+      "expected": "abcd_bearish",
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            60,
+            120
+          ],
+          [
+            120,
+            100
+          ],
+          [
+            180,
+            112
+          ],
+          [
+            247,
+            92
+          ],
+          [
+            249,
+            96
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Price reflection reverses the geometry and direction."
+    },
+    {
+      "id": "wedge_rising",
+      "detector": "wedge_rising",
+      "expected": "wedge_rising",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.03,
+        "lower_slope": 0.105
+      },
+      "reason": "Sloped boundaries converge just beyond the most recent candle."
+    },
+    {
+      "id": "wedge_rising_parallel",
+      "detector": "wedge_rising",
+      "expected": null,
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.03,
+        "lower_slope": 0.03
+      },
+      "reason": "Parallel boundaries cannot form a wedge."
+    },
+    {
+      "id": "wedge_falling",
+      "detector": "wedge_falling",
+      "expected": "wedge_falling",
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": 0.03,
+        "lower_slope": 0.105,
+        "mirror": true
+      },
+      "reason": "Sloped boundaries converge just beyond the most recent candle."
+    },
+    {
+      "id": "wedge_falling_parallel",
+      "detector": "wedge_falling",
+      "expected": null,
+      "recipe": {
+        "kind": "envelope",
+        "upper_slope": -0.105,
+        "lower_slope": -0.105
+      },
+      "reason": "Parallel boundaries cannot form a wedge."
+    },
+    {
+      "id": "flag_bullish",
+      "detector": "flag_bullish",
+      "expected": "flag_bullish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": false
+      },
+      "reason": "A recent directional pole followed by a shorter, opposing parallel consolidation."
+    },
+    {
+      "id": "flag_bullish_horizontal",
+      "detector": "flag_bullish",
+      "expected": "flag_bullish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "slope": 0
+      },
+      "reason": "A horizontal consolidation may follow a directional pole."
+    },
+    {
+      "id": "flag_bullish_wrong_slope",
+      "detector": "flag_bullish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "slope": 0.08
+      },
+      "reason": "The consolidation continues in the pole direction instead of pausing or pulling back."
+    },
+    {
+      "id": "flag_bullish_no_pole",
+      "detector": "flag_bullish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "gain": 0
+      },
+      "reason": "A channel without a directional pole is not a flag."
+    },
+    {
+      "id": "flag_bullish_full_retrace",
+      "detector": "flag_bullish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "slope": -0.55
+      },
+      "reason": "The consolidation retraces the entire pole."
+    },
+    {
+      "id": "flag_bearish",
+      "detector": "flag_bearish",
+      "expected": "flag_bearish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": true
+      },
+      "reason": "A recent directional pole followed by a shorter, opposing parallel consolidation."
+    },
+    {
+      "id": "flag_bearish_horizontal",
+      "detector": "flag_bearish",
+      "expected": "flag_bearish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "slope": 0
+      },
+      "reason": "A horizontal consolidation may follow a directional pole."
+    },
+    {
+      "id": "flag_bearish_wrong_slope",
+      "detector": "flag_bearish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "slope": 0.08
+      },
+      "reason": "The consolidation continues in the pole direction instead of pausing or pulling back."
+    },
+    {
+      "id": "flag_bearish_no_pole",
+      "detector": "flag_bearish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "gain": 0
+      },
+      "reason": "A channel without a directional pole is not a flag."
+    },
+    {
+      "id": "flag_bearish_full_retrace",
+      "detector": "flag_bearish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "slope": -0.55
+      },
+      "reason": "The consolidation retraces the entire pole."
+    },
+    {
+      "id": "head_and_shoulders_invalid_geometry",
+      "detector": "head_and_shoulders",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            110
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "head_and_shoulders_invalid_geometry_mirrored",
+      "detector": "head_and_shoulders",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            110
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "double_top_invalid_geometry",
+      "detector": "double_top",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            195,
+            100
+          ],
+          [
+            210,
+            110
+          ],
+          [
+            228,
+            100
+          ],
+          [
+            247,
+            122
+          ],
+          [
+            249,
+            118
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "double_top_invalid_geometry_mirrored",
+      "detector": "double_bottom",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            195,
+            100
+          ],
+          [
+            210,
+            110
+          ],
+          [
+            228,
+            100
+          ],
+          [
+            247,
+            122
+          ],
+          [
+            249,
+            118
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "triple_top_invalid_geometry",
+      "detector": "triple_top",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            120
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "triple_top_invalid_geometry_mirrored",
+      "detector": "triple_bottom",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            85
+          ],
+          [
+            180,
+            100
+          ],
+          [
+            198,
+            110
+          ],
+          [
+            210,
+            100
+          ],
+          [
+            222,
+            120
+          ],
+          [
+            234,
+            100
+          ],
+          [
+            247,
+            110
+          ],
+          [
+            249,
+            106
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "gartley_invalid_geometry",
+      "detector": "gartley",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            110
+          ],
+          [
+            195,
+            112.36152
+          ],
+          [
+            247,
+            104.28
+          ],
+          [
+            249,
+            108
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "gartley_invalid_geometry_mirrored",
+      "detector": "gartley",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            110
+          ],
+          [
+            195,
+            112.36152
+          ],
+          [
+            247,
+            104.28
+          ],
+          [
+            249,
+            108
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "bat_invalid_geometry",
+      "detector": "bat",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            111.18
+          ],
+          [
+            195,
+            116.7
+          ],
+          [
+            247,
+            108
+          ],
+          [
+            249,
+            111
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "bat_invalid_geometry_mirrored",
+      "detector": "bat",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            30,
+            100
+          ],
+          [
+            85,
+            120
+          ],
+          [
+            140,
+            111.18
+          ],
+          [
+            195,
+            116.7
+          ],
+          [
+            247,
+            108
+          ],
+          [
+            249,
+            111
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "abcd_invalid_geometry",
+      "detector": "abcd",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            60,
+            120
+          ],
+          [
+            120,
+            100
+          ],
+          [
+            180,
+            112
+          ],
+          [
+            247,
+            96
+          ],
+          [
+            249,
+            100
+          ]
+        ]
+      },
+      "reason": "One defining height or ratio is deliberately outside the accepted geometry."
+    },
+    {
+      "id": "abcd_invalid_geometry_mirrored",
+      "detector": "abcd",
+      "expected": null,
+      "recipe": {
+        "kind": "pivots",
+        "points": [
+          [
+            0,
+            108
+          ],
+          [
+            60,
+            120
+          ],
+          [
+            120,
+            100
+          ],
+          [
+            180,
+            112
+          ],
+          [
+            247,
+            96
+          ],
+          [
+            249,
+            100
+          ]
+        ],
+        "mirror": true
+      },
+      "reason": "Mirrored invalid geometry must also be rejected."
+    },
+    {
+      "id": "flag_bullish_earlier_pole",
+      "detector": "flag_bullish",
+      "expected": "flag_bullish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "pole_start": 100,
+        "pole_end": 197,
+        "gain": 25,
+        "slope": -0.06
+      },
+      "reason": "The pole is located from the recent candles, independently of fixed window thirds."
+    },
+    {
+      "id": "flag_bullish_later_pole",
+      "detector": "flag_bullish",
+      "expected": "flag_bullish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "pole_start": 150,
+        "pole_end": 226
+      },
+      "reason": "A shorter recent consolidation with two upper and lower touches."
+    },
+    {
+      "id": "flag_bullish_long_consolidation",
+      "detector": "flag_bullish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": false,
+        "pole_start": 0,
+        "pole_end": 82,
+        "slope": -0.03
+      },
+      "reason": "An old pole followed by 167 consolidation bars exceeds the bounded flag definition."
+    },
+    {
+      "id": "flag_bearish_earlier_pole",
+      "detector": "flag_bearish",
+      "expected": "flag_bearish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "pole_start": 100,
+        "pole_end": 197,
+        "gain": 25,
+        "slope": -0.06
+      },
+      "reason": "The pole is located from the recent candles, independently of fixed window thirds."
+    },
+    {
+      "id": "flag_bearish_later_pole",
+      "detector": "flag_bearish",
+      "expected": "flag_bearish",
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "pole_start": 150,
+        "pole_end": 226
+      },
+      "reason": "A shorter recent consolidation with two upper and lower touches."
+    },
+    {
+      "id": "flag_bearish_long_consolidation",
+      "detector": "flag_bearish",
+      "expected": null,
+      "recipe": {
+        "kind": "flag",
+        "mirror": true,
+        "pole_start": 0,
+        "pole_end": 82,
+        "slope": -0.03
+      },
+      "reason": "An old pole followed by 167 consolidation bars exceeds the bounded flag definition."
+    }
+  ]
+}

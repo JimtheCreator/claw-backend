@@ -1,0 +1,2 @@
+pytest
+fakeredis[lua]>=2.23,<3

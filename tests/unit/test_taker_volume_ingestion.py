@@ -181,3 +181,27 @@ def test_closed_websocket_candle_persists_base_taker_volume(monkeypatch):
     asyncio.run(manager._cache_candle_data('btcusdt@kline_1h', {'k': k}))
     save.assert_called_once()
     assert json.loads(save.call_args.args[0][0])['taker_buy_volume'] == 2
+
+
+@pytest.mark.parametrize('closed', [False, True])
+def test_gateway_dispatches_only_nested_closed_kline_to_persistence(monkeypatch, closed):
+    save = NS(save_market_data_task=NS(delay=Mock()))
+    monkeypatch.setitem(sys.modules, 'src.core.services.tasks', save)
+    monkeypatch.setitem(sys.modules, 'core.services.tasks', save)
+    module = importlib.import_module('core.services.workers.websocket_subscription_manager')
+    cache = NS(publish=AsyncMock())
+    monkeypatch.setattr(module, 'redis_cache', cache)
+    manager = object.__new__(module.WebsocketSubscriptionManager)
+    manager.last_data_time = {}
+    manager._cache_candle_data = AsyncMock()
+    stream = 'ethusdt@kline_15m'
+    data = {'e': 'kline', 'k': dict(o='100', h='102', l='99', c='101', v='10', x=closed)}
+    connection = NS(connection_id=1, active_streams={stream},
+                    is_healthy=Mock(side_effect=[True, True, False, False]),
+                    websocket=NS(recv=AsyncMock(return_value=json.dumps({'stream': stream, 'data': data}))))
+    asyncio.run(manager._handle_connection_messages(connection))
+    cache.publish.assert_awaited_once()
+    if closed:
+        manager._cache_candle_data.assert_awaited_once_with(stream, data)
+    else:
+        manager._cache_candle_data.assert_not_called()

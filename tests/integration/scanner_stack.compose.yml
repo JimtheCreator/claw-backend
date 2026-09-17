@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: [alerts]
+    ports: ["127.0.0.1::5432"]
+    environment:
+      POSTGRES_USER: scanner_test
+      POSTGRES_PASSWORD: disposable-scanner-test-password
+      POSTGRES_DB: scanner_test
+    tmpfs: [/var/lib/postgresql/data]
+    networks: [isolated]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U scanner_test -d scanner_test"]
+      interval: 1s
+      timeout: 2s
+      retries: 60
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --save, "", --appendonly, "no"]
+    ports: ["127.0.0.1::6379"]
+    tmpfs: [/data]
+    networks: [isolated]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  influx:
+    image: influxdb:2.7
+    ports: ["127.0.0.1::8086"]
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: scanner-test
+      DOCKER_INFLUXDB_INIT_PASSWORD: disposable-scanner-test-password
+      DOCKER_INFLUXDB_INIT_ORG: scanner-test
+      DOCKER_INFLUXDB_INIT_BUCKET: scanner-test
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: disposable-scanner-test-token
+    tmpfs: [/var/lib/influxdb2, /etc/influxdb2]
+    networks: [isolated]
+    healthcheck:
+      test: [CMD, influx, ping]
+      interval: 1s
+      timeout: 2s
+      retries: 60
+networks:
+  isolated: {}

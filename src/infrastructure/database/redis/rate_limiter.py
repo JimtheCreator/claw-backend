@@ -1,154 +1,118 @@
-# src/infrastructure/database/redis/rate_limiter.py
+"""Atomic provider budgets and cooldowns shared by every worker.
+
+Redis server time defines fixed windows so host clock skew cannot split a
+budget. Provider access is deferred whenever coordination is unavailable.
 """
-Redis-backed global rate limiter for Binance REST calls.
-
-This replaces the old in-process `GlobalRateLimiter` in
-infrastructure/data_sources/binance/client.py. That limiter was a Python
-singleton, which only dedupes calls within a single OS process. Since this
-app runs as ~7 separate processes across 2 Fly apps (main_api,
-celery_analysis_worker x2, ticker_service, sparkline_service,
-pattern_alert_worker, ...), each process had its own private budget and
-none of them knew about each other's usage. Binance bans by IP, not by
-process, so the aggregate mattered and nothing was tracking the aggregate.
-
-This version keeps the two counters (per-second, per-minute) in Redis
-instead of process memory, using fixed 1s/60s windows keyed by the current
-epoch second/minute. A Lua script makes the check-and-increment atomic, so
-concurrent callers from different processes/machines can't race past the
-limit between the GET and the INCR.
-
-Every process that calls Binance REST endpoints must go through an
-instance of this class pointed at the same Redis database for the limit
-to actually be global. Swap-in is a drop-in: same `acquire(weight)`
-interface as the old GlobalRateLimiter.
-"""
-import time
 import asyncio
-import logging
+import math
+import time
 
 from infrastructure.database.redis.cache import redis_cache
-from common.logger import logger
 
 
-# Atomic check-and-increment. Returns:
-#   1  -> acquired, counters incremented
-#  -1  -> would exceed the per-second budget
-#  -2  -> would exceed the per-minute budget
+class ProviderRequestDeferred(RuntimeError):
+    """A temporary refusal to perform upstream work, not an empty dataset."""
+
+    def __init__(self, message, retry_after=5):
+        super().__init__(message)
+        self.retry_after = max(1, math.ceil(retry_after))
+
+
+class ProviderBudgetTimeout(ProviderRequestDeferred, TimeoutError):
+    pass
+
+
 _ACQUIRE_SCRIPT = """
-local sec_key = KEYS[1]
-local min_key = KEYS[2]
+local cooldown = redis.call('PTTL', KEYS[2])
+if cooldown > 0 then return {0, cooldown} end
+local now = redis.call('TIME')
+local sec = tonumber(now[1])
+local millis = math.floor(tonumber(now[2]) / 1000)
+local minute = math.floor(sec / 60)
+local state = redis.call('HMGET', KEYS[1], 'second', 'second_used', 'minute', 'minute_used')
+local second_used = 0
+local minute_used = 0
+if tonumber(state[1]) == sec then second_used = tonumber(state[2]) or 0 end
+if tonumber(state[3]) == minute then minute_used = tonumber(state[4]) or 0 end
 local weight = tonumber(ARGV[1])
-local max_sec = tonumber(ARGV[2])
-local max_min = tonumber(ARGV[3])
-
-local sec_count = tonumber(redis.call('GET', sec_key) or '0')
-local min_count = tonumber(redis.call('GET', min_key) or '0')
-
-if sec_count + weight > max_sec then
-    return -1
+local wait = 0
+if second_used + weight > tonumber(ARGV[2]) then wait = 1000 - millis end
+if minute_used + weight > tonumber(ARGV[3]) then
+    wait = math.max(wait, (60 - (sec % 60)) * 1000 - millis)
 end
-if min_count + weight > max_min then
-    return -2
+if wait > 0 then return {0, wait} end
+redis.call('HSET', KEYS[1], 'second', sec, 'second_used', second_used + weight,
+    'minute', minute, 'minute_used', minute_used + weight)
+redis.call('EXPIRE', KEYS[1], 120)
+return {1, 0}
+"""
+
+_COOLDOWN_SCRIPT = """
+local requested = tonumber(ARGV[1])
+if redis.call('PTTL', KEYS[1]) < requested then
+    redis.call('SET', KEYS[1], '1', 'PX', requested)
 end
-
-redis.call('INCRBY', sec_key, weight)
-redis.call('EXPIRE', sec_key, 2)
-redis.call('INCRBY', min_key, weight)
-redis.call('EXPIRE', min_key, 65)
-
-return 1
+return redis.call('PTTL', KEYS[1])
 """
 
 
 class RedisRateLimiter:
-    """
-    Global rate limiter backed by Redis. Safe to instantiate once per
-    process (cheap) — the coordination happens in Redis, not in this
-    object's memory, so multiple instances across multiple processes
-    correctly share the same budget as long as they point at the same
-    Redis database and use the same key_prefix.
-    """
-
-    def __init__(
-        self,
-        max_per_minute: int = 2400,   # INCREASED: Accommodates ~60 full fetches/min
-        max_per_second: int = 50,     # INCREASED: Must be higher than the max single request weight (40)
-        key_prefix: str = "binance_rl",
-        max_wait_seconds: float = 30.0,
-        redis_client=None,
-        fail_closed: bool = False,
-    ):
+    def __init__(self, max_per_minute=2400, max_per_second=100,
+                 key_prefix="binance_rl", max_wait_seconds=30.0,
+                 redis_client=None, fail_closed=True):
+        # Keep the old keyword for strict analysis callers, but disallow a
+        # bypass. The 100-weight burst budget can admit an 80-weight ticker.
+        if not fail_closed:
+            raise ValueError("Provider rate limits cannot fail open")
+        for value in (max_per_minute, max_per_second):
+            if type(value) is not int or value <= 0:
+                raise ValueError("Provider budgets must be positive integers")
+        if not math.isfinite(max_wait_seconds) or max_wait_seconds <= 0:
+            raise ValueError("max_wait_seconds must be finite and positive")
         self.max_per_minute = max_per_minute
         self.max_per_second = max_per_second
         self.key_prefix = key_prefix
         self.max_wait_seconds = max_wait_seconds
         self.redis_client = redis_client
-        self.fail_closed = fail_closed
 
-    async def acquire(self, weight: int = 1):
-        """Block until `weight` units of budget are available, globally."""
-        deadline = time.time() + self.max_wait_seconds
+    def get_client(self):
+        return self.redis_client if self.redis_client is not None else redis_cache.get_redis_client()
 
+    async def acquire(self, weight=1):
+        if type(weight) is not int or not 0 < weight <= min(self.max_per_second, self.max_per_minute):
+            raise ValueError("Request weight must fit both configured provider budgets")
+        deadline = time.monotonic() + self.max_wait_seconds
+        retry_after = 1
         while True:
-            now = time.time()
-            sec_key = f"{self.key_prefix}:sec:{int(now)}"
-            min_key = f"{self.key_prefix}:min:{int(now // 60)}"
-
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ProviderBudgetTimeout("Exchange rate-limit budget exhausted; request deferred.", retry_after)
             try:
-                client = self.redis_client if self.redis_client is not None else redis_cache.get_redis_client()
-                result = await client.eval(
-                    _ACQUIRE_SCRIPT,
-                    2,
-                    sec_key,
-                    min_key,
-                    weight,
-                    self.max_per_second,
-                    self.max_per_minute,
+                admitted, wait_ms = await asyncio.wait_for(
+                    self.get_client().eval(_ACQUIRE_SCRIPT, 2,
+                        f"{self.key_prefix}:budget:v2", f"{self.key_prefix}:cooldown",
+                        weight, self.max_per_second, self.max_per_minute),
+                    timeout=min(remaining, 5.0),
                 )
-            except Exception as e:
-                if self.fail_closed:
-                    raise RuntimeError("Exchange rate-limit service unavailable; data request deferred.") from e
-                # Redis being unavailable shouldn't take down every Binance
-                # call in the app. Fail open, but log loudly — this means
-                # the safety net is temporarily off.
-                logger.error(
-                    f"[RATE LIMITER] Redis error, failing OPEN for this request "
-                    f"(weight={weight}): {e}"
-                )
+            except Exception as exc:
+                raise ProviderRequestDeferred("Exchange rate-limit service unavailable; request deferred.") from exc
+            if admitted == 1:
                 return
+            if admitted != 0 or wait_ms <= 0:
+                raise ProviderRequestDeferred("Invalid response from rate-limit service; request deferred.")
+            retry_after = wait_ms / 1000
+            await asyncio.sleep(min(retry_after + 0.01, max(0, deadline - time.monotonic())))
 
-            if result == 1:
-                return
-
-            if time.time() >= deadline:
-                if self.fail_closed:
-                    raise TimeoutError("Exchange rate-limit budget exhausted; retry the analysis later.")
-                logger.error(
-                    f"[RATE LIMITER] Gave up waiting for Binance rate limit budget "
-                    f"after {self.max_wait_seconds}s (weight={weight}, result={result}). "
-                    f"Proceeding anyway to avoid a permanent stall — this request may "
-                    f"draw a 429 from Binance."
-                )
-                return
-
-            if result == -1:
-                wait = 1 - (now - int(now)) + 0.05
-                logger.warning(
-                    f"[RATE LIMITER] Global per-second Binance budget hit "
-                    f"(weight={weight}), waiting {wait:.2f}s"
-                )
-            else:
-                wait = 60 - (now - (int(now // 60) * 60)) + 0.1
-                logger.warning(
-                    f"[RATE LIMITER] Global per-minute Binance budget hit "
-                    f"(weight={weight}), waiting {wait:.2f}s"
-                )
-
-            if self.fail_closed:
-                wait = min(wait, max(deadline-time.time(), 0.05))
-            await asyncio.sleep(max(wait, 0.05))
+    async def defer(self, retry_after):
+        """Extend a shared provider cooldown; a shorter response cannot undo it."""
+        if not math.isfinite(retry_after) or retry_after <= 0:
+            raise ValueError("retry_after must be finite and positive")
+        try:
+            await asyncio.wait_for(self.get_client().eval(
+                _COOLDOWN_SCRIPT, 1, f"{self.key_prefix}:cooldown",
+                math.ceil(retry_after * 1000)), timeout=5.0)
+        except Exception as exc:
+            raise ProviderRequestDeferred("Provider cooldown could not be recorded; request deferred.") from exc
 
 
-# Module-level singleton. Every process imports this same object; the
-# actual coordination happens via Redis, so this is safe to share.
 redis_rate_limiter = RedisRateLimiter()

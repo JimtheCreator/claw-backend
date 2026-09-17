@@ -4,9 +4,25 @@ Chart pattern detection functions. Import and use the pattern_registry for regis
 """
 import numpy as np
 from scipy.signal import argrelextrema
-from .pattern_registry import register_pattern
+from .pattern_registry import register_pattern, strict_errors_enabled
 from typing import Dict, Any, Optional
 from common.logger import logger
+
+
+def _line_fit_quality(x, y, coefficients):
+    """Bounded regression quality, including exactly horizontal price levels."""
+    values = np.asarray(y, dtype=float)
+    scale = float(np.max(np.abs(values)))
+    if not np.isfinite(scale) or scale <= 0:
+        return 0.0
+    normalized = values / scale
+    residuals = (values - np.polyval(coefficients, x)) / scale
+    total = float(np.sum((normalized - np.mean(normalized)) ** 2))
+    numerical_floor = len(values) * (32 * np.finfo(float).eps) ** 2
+    error = float(np.sum(residuals ** 2))
+    if total <= numerical_floor:
+        return 1.0 if error <= numerical_floor else 0.0
+    return float(np.clip(1 - error / total, 0.0, 1.0))
 
 # --- Chart Pattern Detection Functions ---
 @register_pattern("rectangle", "chart", types=["rectangle"])
@@ -42,7 +58,7 @@ async def detect_rectangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
             
         height_pct = (top_band - bottom_band) / avg_price
         
-        if height_pct > max_height_pct:
+        if height_pct <= 0 or height_pct > max_height_pct:
             return None
         x = np.arange(len(highs))
         high_slope = float(np.polyfit(x, highs, 1)[0])
@@ -60,17 +76,17 @@ async def detect_rectangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
         bot_touch_quality = 0
         
         for i, h in enumerate(highs):
-            if h > top_band - touch_tol:
+            if abs(h - top_band) <= touch_tol:
                 top_touches.append(i)
                 # Quality: closer to band = higher quality
-                quality = 1 - (h - (top_band - touch_tol)) / touch_tol
+                quality = max(0.0, 1 - abs(h - top_band) / touch_tol)
                 top_touch_quality += quality
                 
         for i, l in enumerate(lows):
-            if l < bottom_band + touch_tol:
+            if abs(l - bottom_band) <= touch_tol:
                 bot_touches.append(i)
                 # Quality: closer to band = higher quality
-                quality = 1 - ((bottom_band + touch_tol) - l) / touch_tol
+                quality = max(0.0, 1 - abs(l - bottom_band) / touch_tol)
                 bot_touch_quality += quality
         
         if len(top_touches) < min_touches or len(bot_touches) < min_touches:
@@ -132,6 +148,8 @@ async def detect_rectangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
         }
         
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Rectangle detection error: {str(e)}")
         return None
           
@@ -284,6 +302,8 @@ async def detect_pennant(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Pennant pattern detection error: {str(e)}")
         return None
 
@@ -357,6 +377,8 @@ async def detect_zigzag(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"ZigZag detection error: {str(e)}")
         return None
 
@@ -384,28 +406,28 @@ async def detect_triangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Determine triangle type with stricter criteria
         triangle_type = None
         confidence = 0.0
-        # Slope thresholds for realism
-        FLAT_SLOPE_THRESH = 0.01
-        RISING_SLOPE_THRESH = 0.01
-        FALLING_SLOPE_THRESH = -0.01
-        if abs(peak_slope) < FLAT_SLOPE_THRESH and trough_slope > RISING_SLOPE_THRESH:
+        # Fractional price change per bar keeps the same geometry at any quote
+        # denomination. 0.0001 preserves the previous 0.01 threshold at price 100.
+        price_scale = float(np.mean(closes))
+        if not np.isfinite(price_scale) or price_scale <= 0:
+            return None
+        upper_rate, lower_rate = peak_slope / price_scale, trough_slope / price_scale
+        slope_threshold = 0.0001
+        if abs(upper_rate) < slope_threshold and lower_rate > slope_threshold:
             triangle_type = "ascending_triangle"
             confidence = 0.8
-        elif abs(trough_slope) < FLAT_SLOPE_THRESH and peak_slope < FALLING_SLOPE_THRESH:
+        elif abs(lower_rate) < slope_threshold and upper_rate < -slope_threshold:
             triangle_type = "descending_triangle"
             confidence = 0.8
-        elif abs(peak_slope + trough_slope) < 0.1 * (abs(peak_slope) + abs(trough_slope)):
+        elif (upper_rate < -slope_threshold and lower_rate > slope_threshold
+              and abs(upper_rate + lower_rate) < 0.1 * (abs(upper_rate) + abs(lower_rate))):
             triangle_type = "symmetrical_triangle"
             confidence = 0.7
         else:
             return None
         # Calculate R-squared to measure how well the trendlines fit
-        _, residuals_peak, _, _, _ = np.polyfit(recent_peaks, highs[recent_peaks], 1, full=True)
-        _, residuals_trough, _, _, _ = np.polyfit(recent_troughs, lows[recent_troughs], 1, full=True)
-        if len(residuals_peak) > 0 and len(residuals_trough) > 0:
-            r_squared_peak = 1 - residuals_peak[0] / (len(recent_peaks) * np.var(highs[recent_peaks]))
-            r_squared_trough = 1 - residuals_trough[0] / (len(recent_troughs) * np.var(lows[recent_troughs]))
-            confidence *= (r_squared_peak + r_squared_trough) / 2
+        confidence *= (_line_fit_quality(recent_peaks, highs[recent_peaks], peak_fit)
+                       + _line_fit_quality(recent_troughs, lows[recent_troughs], trough_fit)) / 2
         # Prepare points dict for overlaying
         points = {}
         for i, idx in enumerate(recent_peaks):
@@ -431,13 +453,14 @@ async def detect_triangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
         if end_index - start_index < MIN_PATTERN_WINDOW:
             return None
         # Calculate convergence point (intersection of trendlines)
-        convergence_point = None
-        if abs(peak_slope - trough_slope) > 1e-6:
-            x_conv = (trough_intercept - peak_intercept) / (peak_slope - trough_slope)
-            y_conv = peak_slope * x_conv + peak_intercept
-            # Only accept if convergence is after the last pattern point but not too far (e.g., within 2x window)
-            if end_index < x_conv < end_index + 2 * (end_index - start_index):
-                convergence_point = {"index": int(round(x_conv)), "price": float(y_conv)}
+        if peak_slope >= trough_slope:
+            return None
+        x_conv = (trough_intercept - peak_intercept) / (peak_slope - trough_slope)
+        y_conv = peak_slope * x_conv + peak_intercept
+        # This is an eligibility rule, not just optional overlay metadata.
+        if not end_index < x_conv < end_index + 2 * (end_index - start_index):
+            return None
+        convergence_point = {"index": int(round(x_conv)), "price": float(y_conv)}
         key_levels = {
             "points": points,
             "upper_trendline_slope": peak_slope,
@@ -455,6 +478,8 @@ async def detect_triangle(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Triangle detection error: {str(e)}")
         return None
 
@@ -471,8 +496,9 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
         peaks = argrelextrema(highs, np.greater, order=2)[0]
         troughs = argrelextrema(lows, np.less, order=2)[0]
         
-        # Need at least 3 peaks and 2 troughs for regular H&S
-        if len(peaks) < 3 or len(troughs) < 2:
+        # Regular and inverse formations have opposite pivot counts.
+        if not ((len(peaks) >= 3 and len(troughs) >= 2) or
+                (len(troughs) >= 3 and len(peaks) >= 2)):
             return None
         
         # For regular H&S (bearish)
@@ -645,6 +671,8 @@ async def detect_head_and_shoulders(ohlcv: dict) -> Optional[Dict[str, Any]]:
         return None
     
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Head and shoulders detection error: {str(e)}")
         return None
 
@@ -735,6 +763,8 @@ async def detect_double_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Double top detection error: {str(e)}")
         return None
 
@@ -825,6 +855,8 @@ async def detect_double_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Double bottom detection error: {str(e)}")
         return None
 
@@ -923,6 +955,8 @@ async def detect_triple_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Triple top detection error: {str(e)}")
         return None
 
@@ -1021,6 +1055,8 @@ async def detect_triple_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Triple bottom detection error: {str(e)}")
         return None
     
@@ -1108,6 +1144,8 @@ async def detect_wedge_rising(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Rising wedge detection error: {str(e)}")
         return None
 
@@ -1195,228 +1233,115 @@ async def detect_wedge_falling(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Falling wedge detection error: {str(e)}")
         return None
+
+def _detect_recent_flag(ohlcv: dict, direction: int) -> Optional[Dict[str, Any]]:
+    """Find a recent pole and shorter consolidation using bounded local windows.
+
+    These are scanner geometry rules, not calibrated trading probabilities:
+    12–60 consolidation bars, at most 120 pole bars, a >=3% efficient pole,
+    and at most a 50% pullback. Both directions share identical arithmetic.
+    """
+    closes = np.asarray(ohlcv['close'], dtype=float)
+    highs = np.asarray(ohlcv['high'], dtype=float)
+    lows = np.asarray(ohlcv['low'], dtype=float)
+    timestamps = ohlcv.get('timestamp')
+    count = len(closes)
+    if count < 25:
+        return None
+    directed = closes * direction
+    # Examine older candidates first so later oscillations do not replace the
+    # actual pole with a fragment of the consolidation.
+    for pole_end in range(max(12, count - 61), count - 12):
+        flag_length = count - 1 - pole_end
+        previous = directed[max(0, pole_end - 120):pole_end]
+        # Last occurrence prevents a flat prefix from inflating pole duration.
+        pole_start = max(0, pole_end - 120) + int(np.flatnonzero(previous == previous.min())[-1])
+        pole_length = pole_end - pole_start
+        if pole_length < flag_length:
+            continue
+        pole_move = directed[pole_end] - directed[pole_start]
+        pole_gain = pole_move / abs(closes[pole_start])
+        if pole_gain < .03:
+            continue
+        travel = np.abs(np.diff(closes[pole_start:pole_end + 1])).sum()
+        if travel == 0 or pole_move / travel < .8:
+            continue
+        flag_prices = directed[pole_end:]
+        price_scale = float(np.mean(np.abs(closes[pole_end:])))
+        epsilon = price_scale * 1e-6
+        if flag_prices.max() > directed[pole_end] + epsilon:
+            continue
+        if directed[pole_end] - flag_prices.min() > .5 * pole_move:
+            continue
+        upper_x = argrelextrema(highs[pole_end:], np.greater, order=1)[0] + pole_end
+        lower_x = argrelextrema(lows[pole_end:], np.less, order=1)[0] + pole_end
+        if min(len(upper_x), len(lower_x)) < 2:
+            continue
+        upper_y, lower_y = highs[upper_x], lows[lower_x]
+        upper_fit = np.polyfit(upper_x, upper_y, 1)
+        lower_fit = np.polyfit(lower_x, lower_y, 1)
+        upper_slope, lower_slope = upper_fit[0], lower_fit[0]
+        if max(direction * upper_slope, direction * lower_slope) > epsilon:
+            continue
+        slope_size = max(abs(upper_slope), abs(lower_slope))
+        if slope_size > epsilon and abs(upper_slope - lower_slope) / slope_size > .5:
+            continue
+        fit_quality = min(_line_fit_quality(upper_x, upper_y, upper_fit),
+                          _line_fit_quality(lower_x, lower_y, lower_fit))
+        if fit_quality < .8:
+            continue
+        upper_now, lower_now = np.polyval(upper_fit, count - 1), np.polyval(lower_fit, count - 1)
+        if upper_now <= lower_now or not lower_now - epsilon <= closes[-1] <= upper_now + epsilon:
+            continue
+        confidence = .6 * fit_quality + (.1 if pole_gain > .05 else 0)
+        confidence += .1 if flag_length / pole_length < .7 else 0
+        def point(index):
+            return {"index": int(index), "price": float(closes[index]),
+                    "timestamp": timestamps[index] if timestamps is not None else None}
+        return {
+            "pattern_name": "flag_bullish" if direction == 1 else "flag_bearish",
+            "confidence": round(float(confidence), 2),
+            "start_index": pole_start, "end_index": count - 1,
+            "start_time": timestamps[pole_start] if timestamps is not None else None,
+            "end_time": timestamps[-1] if timestamps is not None else None,
+            "key_levels": {
+                "points": {"flagpole_start": point(pole_start), "flagpole_end": point(pole_end),
+                           "flag_start": point(pole_end + 1), "flag_end": point(count - 1)},
+                "latest_close": float(closes[-1]),
+                "avg_high_5": float(np.mean(highs[-5:])), "avg_low_5": float(np.mean(lows[-5:])),
+                "pattern_high": float(highs[pole_start:].max()),
+                "pattern_low": float(lows[pole_start:].min()),
+                "pattern_open": float(ohlcv['open'][pole_start]), "pattern_close": float(closes[-1]),
+            },
+        }
+    return None
+
 
 @register_pattern("flag_bullish", "chart", types=["flag_bullish"])
 async def detect_flag_bullish(ohlcv: dict) -> Optional[Dict[str, Any]]:
     try:
-        opens = np.array(ohlcv['open'])
-        lows = np.array(ohlcv['low'])
-        closes = np.array(ohlcv['close'])
-        highs = np.array(ohlcv['high'])
-        timestamps = ohlcv.get('timestamp', None)
-        pattern_type = "flag_bullish"
-        min_points = 15
-        if len(closes) < min_points:
-            return None
-        pole_section = closes[:int(len(closes)/3)]
-        pole_gain = (pole_section[-1] - pole_section[0]) / pole_section[0]
-        if pole_gain < 0.03:
-            return None
-        flag_start_idx = int(len(closes)/3)
-        flag_section_highs = highs[flag_start_idx:]
-        flag_section_lows = lows[flag_start_idx:]
-        upper_channel_points = []
-        lower_channel_points = []
-        for i in range(len(flag_section_highs)):
-            is_local_high = i > 0 and i < len(flag_section_highs) - 1 and \
-                        flag_section_highs[i] > flag_section_highs[i-1] and \
-                        flag_section_highs[i] > flag_section_highs[i+1]
-            is_local_low = i > 0 and i < len(flag_section_lows) - 1 and \
-                        flag_section_lows[i] < flag_section_lows[i-1] and \
-                        flag_section_lows[i] < flag_section_lows[i+1]
-            if is_local_high:
-                upper_channel_points.append((i, flag_section_highs[i]))
-            if is_local_low:
-                lower_channel_points.append((i, flag_section_lows[i]))
-        if len(upper_channel_points) < 2 or len(lower_channel_points) < 2:
-            return None
-        upper_x = [p[0] for p in upper_channel_points]
-        upper_y = [p[1] for p in upper_channel_points]
-        upper_slope = np.polyfit(upper_x, upper_y, 1)[0]
-        lower_x = [p[0] for p in lower_channel_points]
-        lower_y = [p[1] for p in lower_channel_points]
-        lower_slope = np.polyfit(lower_x, lower_y, 1)[0]
-        if upper_slope > 0.001 or lower_slope > 0.001:
-            return None
-        if abs(upper_slope - lower_slope) / abs(lower_slope) > 0.5:
-            return None
-        _, upper_residuals, _, _, _ = np.polyfit(upper_x, upper_y, 1, full=True)
-        _, lower_residuals, _, _, _ = np.polyfit(lower_x, lower_y, 1, full=True)
-        if len(upper_residuals) > 0 and len(lower_residuals) > 0:
-            r_squared_upper = 1 - upper_residuals[0] / (len(upper_x) * np.var(upper_y))
-            r_squared_lower = 1 - lower_residuals[0] / (len(lower_x) * np.var(lower_y))
-            fit_quality = (r_squared_upper + r_squared_lower) / 2
-        else:
-            fit_quality = 0.5
-        confidence = 0.6
-        confidence *= fit_quality
-        if pole_gain > 0.05:
-            confidence += 0.1
-        ideal_flag_ratio = 0.5
-        current_ratio = (len(closes) - flag_start_idx) / flag_start_idx
-        if abs(current_ratio - ideal_flag_ratio) < 0.2:
-            confidence += 0.1
-        # Points dict
-        points = {
-            "flagpole_start": {
-                "index": 0,
-                "price": float(closes[0]),
-                "timestamp": timestamps[0] if timestamps is not None and 0 < len(timestamps) else None
-            },
-            "flagpole_end": {
-                "index": flag_start_idx-1,
-                "price": float(closes[flag_start_idx-1]),
-                "timestamp": timestamps[flag_start_idx-1] if timestamps is not None and flag_start_idx-1 < len(timestamps) else None
-            },
-            "flag_start": {
-                "index": flag_start_idx,
-                "price": float(closes[flag_start_idx]),
-                "timestamp": timestamps[flag_start_idx] if timestamps is not None and flag_start_idx < len(timestamps) else None
-            },
-            "flag_end": {
-                "index": len(closes)-1,
-                "price": float(closes[-1]),
-                "timestamp": timestamps[len(closes)-1] if timestamps is not None and len(closes)-1 < len(timestamps) else None
-            }
-        }
-        start_index = 0
-        end_index = len(closes)-1
-        start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
-        end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
-        key_levels = {
-            "points": points,
-            "latest_close": float(closes[-1]),
-            "avg_high_5": float(np.mean(highs[-5:])),
-            "avg_low_5": float(np.mean(lows[-5:])),
-            "pattern_high": float(highs[-1]),
-            "pattern_low": float(lows[-1]),
-            "pattern_open": float(opens[-1]),
-            "pattern_close": float(closes[-1])
-        }
-        return {
-            "pattern_name": pattern_type,
-            "confidence": round(confidence, 2),
-            "start_index": start_index,
-            "end_index": end_index,
-            "start_time": start_time,
-            "end_time": end_time,
-            "key_levels": key_levels
-        }
+        return _detect_recent_flag(ohlcv, direction=1)
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Bullish flag detection error: {str(e)}")
         return None
+
 
 @register_pattern("flag_bearish", "chart", types=["flag_bearish"])
 async def detect_flag_bearish(ohlcv: dict) -> Optional[Dict[str, Any]]:
     try:
-        opens = np.array(ohlcv['open'])
-        closes = np.array(ohlcv['close'])
-        lows = np.array(ohlcv['low'])
-        highs = np.array(ohlcv['high'])
-        timestamps = ohlcv.get('timestamp', None)
-        pattern_type = "flag_bearish"
-        min_points = 15
-        if len(closes) < min_points:
-            return None
-        pole_section = closes[:int(len(closes)/3)]
-        pole_loss = (pole_section[0] - pole_section[-1]) / pole_section[0]
-        if pole_loss < 0.03:
-            return None
-        flag_start_idx = int(len(closes)/3)
-        flag_section_highs = highs[flag_start_idx:]
-        flag_section_lows = lows[flag_start_idx:]
-        upper_channel_points = []
-        lower_channel_points = []
-        for i in range(len(flag_section_highs)):
-            is_local_high = i > 0 and i < len(flag_section_highs) - 1 and \
-                        flag_section_highs[i] > flag_section_highs[i-1] and \
-                        flag_section_highs[i] > flag_section_highs[i+1]
-            is_local_low = i > 0 and i < len(flag_section_lows) - 1 and \
-                        flag_section_lows[i] < flag_section_lows[i-1] and \
-                        flag_section_lows[i] < flag_section_lows[i+1]
-            if is_local_high:
-                upper_channel_points.append((i, flag_section_highs[i]))
-            if is_local_low:
-                lower_channel_points.append((i, flag_section_lows[i]))
-        if len(upper_channel_points) < 2 or len(lower_channel_points) < 2:
-            return None
-        upper_x = [p[0] for p in upper_channel_points]
-        upper_y = [p[1] for p in upper_channel_points]
-        upper_slope = np.polyfit(upper_x, upper_y, 1)[0]
-        lower_x = [p[0] for p in lower_channel_points]
-        lower_y = [p[1] for p in lower_channel_points]
-        lower_slope = np.polyfit(lower_x, lower_y, 1)[0]
-        if upper_slope < -0.001 or lower_slope < -0.001:
-            return None
-        if abs(upper_slope - lower_slope) / abs(upper_slope) > 0.5:
-            return None
-        _, upper_residuals, _, _, _ = np.polyfit(upper_x, upper_y, 1, full=True)
-        _, lower_residuals, _, _, _ = np.polyfit(lower_x, lower_y, 1, full=True)
-        if len(upper_residuals) > 0 and len(lower_residuals) > 0:
-            r_squared_upper = 1 - upper_residuals[0] / (len(upper_x) * np.var(upper_y))
-            r_squared_lower = 1 - lower_residuals[0] / (len(lower_x) * np.var(lower_y))
-            fit_quality = (r_squared_upper + r_squared_lower) / 2
-        else:
-            fit_quality = 0.5
-        confidence = 0.6
-        confidence *= fit_quality
-        if pole_loss > 0.05:
-            confidence += 0.1
-        ideal_flag_ratio = 0.5
-        current_ratio = (len(closes) - flag_start_idx) / flag_start_idx
-        if abs(current_ratio - ideal_flag_ratio) < 0.2:
-            confidence += 0.1
-        # Points dict
-        points = {
-            "flagpole_start": {
-                "index": 0,
-                "price": float(closes[0]),
-                "timestamp": timestamps[0] if timestamps is not None and 0 < len(timestamps) else None
-            },
-            "flagpole_end": {
-                "index": flag_start_idx-1,
-                "price": float(closes[flag_start_idx-1]),
-                "timestamp": timestamps[flag_start_idx-1] if timestamps is not None and flag_start_idx-1 < len(timestamps) else None
-            },
-            "flag_start": {
-                "index": flag_start_idx,
-                "price": float(closes[flag_start_idx]),
-                "timestamp": timestamps[flag_start_idx] if timestamps is not None and flag_start_idx < len(timestamps) else None
-            },
-            "flag_end": {
-                "index": len(closes)-1,
-                "price": float(closes[-1]),
-                "timestamp": timestamps[len(closes)-1] if timestamps is not None and len(closes)-1 < len(timestamps) else None
-            }
-        }
-        start_index = 0
-        end_index = len(closes)-1
-        start_time = timestamps[start_index] if timestamps is not None and start_index < len(timestamps) else None
-        end_time = timestamps[end_index] if timestamps is not None and end_index < len(timestamps) else None
-        key_levels = {
-            "points": points,
-            "latest_close": float(closes[-1]),
-            "avg_high_5": float(np.mean(highs[-5:])),
-            "avg_low_5": float(np.mean(lows[-5:])),
-            "pattern_high": float(highs[-1]),
-            "pattern_low": float(lows[-1]),
-            "pattern_open": float(opens[-1]),
-            "pattern_close": float(closes[-1])
-        }
-        return {
-            "pattern_name": pattern_type,
-            "confidence": round(confidence, 2),
-            "start_index": start_index,
-            "end_index": end_index,
-            "start_time": start_time,
-            "end_time": end_time,
-            "key_levels": key_levels
-        }
+        return _detect_recent_flag(ohlcv, direction=-1)
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Bearish flag detection error: {str(e)}")
         return None
+
 
 @register_pattern("channel", "chart", types=["horizontal_channel", "ascending_channel", "descending_channel"])
 async def detect_channel(ohlcv: dict) -> Optional[Dict[str, Any]]:
@@ -1449,24 +1374,21 @@ async def detect_channel(ohlcv: dict) -> Optional[Dict[str, Any]]:
         avg_price = (upper_val + lower_val) / 2
         slope_diff = abs(upper_slope - lower_slope)
         slope_avg = (abs(upper_slope) + abs(lower_slope)) / 2
-        if slope_diff > 0.5 * slope_avg:
-            return None
         if avg_price == 0:
+            return None
+        is_horizontal = max(abs(upper_slope), abs(lower_slope)) / abs(avg_price) < 0.000001
+        # Near-zero fitted slopes have roundoff-dependent ratios. Flat levels
+        # need no directional parallelism comparison.
+        if not is_horizontal and slope_diff > 0.5 * slope_avg:
             return None
         width_percent = channel_width / avg_price
         if width_percent < 0.01 or width_percent > 0.2:
             return None
-        _, upper_residuals, _, _, _ = np.polyfit(peak_x, peak_y, 1, full=True)
-        _, lower_residuals, _, _, _ = np.polyfit(trough_x, trough_y, 1, full=True)
-        if len(upper_residuals) > 0 and len(lower_residuals) > 0:
-            r_squared_upper = 1 - upper_residuals[0] / (len(peak_x) * np.var(peak_y))
-            r_squared_lower = 1 - lower_residuals[0] / (len(trough_x) * np.var(trough_y))
-            fit_quality = (r_squared_upper + r_squared_lower) / 2
-        else:
-            fit_quality = 0.5
+        fit_quality = (_line_fit_quality(peak_x, peak_y, upper_line)
+                       + _line_fit_quality(trough_x, trough_y, lower_line)) / 2
         if fit_quality < 0.6:
             return None
-        if abs(upper_slope) < 0.0001:
+        if is_horizontal:
             channel_type = "horizontal_channel"
         elif upper_slope > 0:
             channel_type = "ascending_channel"
@@ -1524,6 +1446,8 @@ async def detect_channel(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Channel detection error: {str(e)}")
         return None
 
@@ -1612,6 +1536,8 @@ async def detect_island_reversal(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Island reversal detection error: {str(e)}")
         return None
 
@@ -1734,6 +1660,8 @@ async def detect_cup_and_handle(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Cup and handle hybrid detection error: {str(e)}")
         return None
 
@@ -1810,6 +1738,8 @@ async def detect_inverse_cup_and_handle(ohlcv: dict) -> Optional[Dict[str, Any]]
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Inverse cup and handle detection error: {str(e)}")
         return None
 
@@ -1878,6 +1808,8 @@ async def detect_horn_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Horn top detection error: {str(e)}")
         return None
 
@@ -1946,6 +1878,8 @@ async def detect_broadening_wedge(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Broadening wedge detection error: {str(e)}")
         return None
 
@@ -2016,6 +1950,8 @@ async def detect_pipe_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Pipe bottom detection error: {str(e)}")
         return None
 
@@ -2101,6 +2037,8 @@ async def detect_catapult(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Catapult detection error: {str(e)}")
         return None
 
@@ -2153,6 +2091,8 @@ async def detect_scallop(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Scallop detection error: {str(e)}")
         return None
 
@@ -2218,6 +2158,8 @@ async def detect_tower_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Tower top detection error: {str(e)}")
         return None
 
@@ -2283,6 +2225,8 @@ async def detect_diamond_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Diamond top detection error: {str(e)}")
         return None
 
@@ -2351,6 +2295,7 @@ async def detect_bump_and_run(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Bump and run detection error: {str(e)}")
         return None
-

@@ -6,7 +6,7 @@ from textwrap import wrap
 import pandas as pd
 import plotly.graph_objects as go
 
-PRESENTATION_VERSION = "conditional-forecast-v7"
+PRESENTATION_VERSION = "conditional-forecast-v8"
 NEXT_MOVE_PRESENTATION_VERSION = "next-move-v3"
 
 
@@ -47,10 +47,14 @@ class AnalysisChartPresentation:
                                and abs(item["price"]-self.current) <= 3*self.span}
 
     def build_scenarios(self):
-        # The decision layer owns forecasts. Never draw an unrelated breakout
-        # guess just because the result says WAIT.
+        # Fail closed for rejected or legacy scenario-only plans as well as new
+        # output. Valid geometry alone cannot authorize a directional forecast.
+        direction = {"long": "bullish", "short": "bearish"}.get(self.plan.get("action"))
+        if (direction is None or self.plan.get("market_context") not in {"local", "aligned"}
+                or (self.plan.get("setup_quality") or {}).get("eligible") is not True):
+            return []
         scenario = self.plan.get("primary_scenario") or self.plan.get("forecast_scenario")
-        if not scenario:
+        if not scenario or scenario.get("setup") is not True or scenario.get("direction") != direction:
             return []
         levels = [scenario.get(key) for key in ("trigger", "invalidation", "target")]
         if scenario.get("direction") not in {"bullish", "bearish"} or levels[0] is None or levels[1] is None:
@@ -117,7 +121,9 @@ class AnalysisChartPresentation:
                       xref="x", yref="y domain", line=dict(color=self.muted, width=1, dash="dot"))
         self.annotation(self.now, 1.035, "NOW", self.muted, yref="y domain", size=18)
         self.annotation(self.now + (self.end - self.now) * 0.58, 1.035,
-                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else "CONDITIONAL FORECAST · TIMING NOT ESTIMATED",
+                        "NEXT LEVEL · TIMING UNSPECIFIED" if self.next_move else
+                        "CONDITIONAL FORECAST · TIMING NOT ESTIMATED" if not self.reference_forecast_issue() else
+                        "MARKET WATCH · NO FORECAST APPROVED",
                         self.muted, yref="y domain", size=18)
         fig.add_trace(go.Candlestick(x=self.visible.timestamp.astype(str), open=self.visible.open,
                                     high=self.visible.high, low=self.visible.low, close=self.visible.close,
@@ -202,7 +208,8 @@ class AnalysisChartPresentation:
         """Reference-style Long/Short candle badge; never a projection line."""
         bullish = direction == "bullish"
         fill = "#00bd83" if bullish else "#ff4e64"
-        text = "Long ▲" if bullish else "Short ▼"
+        pending = not self.next_move or self.plan.get("wait_for_confirmation") is not False
+        text = ("Long pending ▲" if bullish else "Short pending ▼") if pending else ("Long ▲" if bullish else "Short ▼")
         lo, hi = self.fig.layout.yaxis.range
         layout = self.fig.layout
         width = layout.width - layout.margin.l - layout.margin.r
@@ -214,7 +221,8 @@ class AnalysisChartPresentation:
         sign = -1 if bullish else 1
         tip = (anchor-lo)/(hi-lo) + sign*6/height
         near, far = tip+sign*6/height, tip+sign*32/height
-        left, right, notch = x-43/width, x+43/width, 6/width
+        half_width = 80 if pending else 43
+        left, right, notch = x-half_width/width, x+half_width/width, 6/width
         self.fig.add_shape(type="path", name="Forecast direction badge",
                            xref="x domain", yref="y domain", fillcolor=fill, line_width=0,
                            path=f"M {x},{tip} L {x+notch},{near} L {right},{near} L {right},{far} L {left},{far} L {left},{near} L {x-notch},{near} Z")
@@ -334,9 +342,10 @@ class AnalysisChartPresentation:
                              and p.get("action") in {"long", "short"})
         visible_forecast = not self.reference_forecast_issue()
         status = ((f"{self.scenarios[0]['direction'].upper()} FORECAST · " +
-                   ("ENTRY PENDING" if pending_setup else "SCENARIO ONLY · NO ENTRY APPROVED")) if visible_forecast else
+                   ("ENTRY PENDING" if pending_setup else "NO ENTRY APPROVED")) if visible_forecast else
                   f"{self.market_read['trend_direction'].upper()} STRUCTURE · NO ENTRY CONFIRMED" if self.market_read else "WAIT · NO ENTRY CONFIRMED")
-        title = (f"TP {price(self.scenarios[0]['target'])}" if visible_forecast else "Scenario needs reassessment")
+        title = (f"TP {price(self.scenarios[0]['target'])}" if visible_forecast else
+                 "Scenario needs reassessment" if self.scenarios else "Forecast withheld")
         self.fig.update_layout(title=dict(text=f"<b>{escape(self.analysis.get('symbol', ''))} · {escape(interval)} chart</b>"
                                               f"<br><span style='font-size:23px'>Local: {escape(p.get('trend_direction', 'undetermined'))} · {escape(context)}</span>",
                                           x=0.03, y=0.95, xanchor="left", yanchor="top", font=dict(size=34)))
@@ -353,7 +362,9 @@ class AnalysisChartPresentation:
             scope = "Local scenario only; HTF context is not validated. " if s.get("basis") == "local_structure" and mtfa.get("enabled") else ""
             text = lines(f"Condition: {confirmation} {scope}{reference}TP/SL are scenario levels, not placed orders.", 125)
         else:
-            text = lines("Next check: " + self.market_read["next_check"], 112) if self.market_read else lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
+            watch = p.get("structure_watch") or {}
+            next_check = watch.get("confirmation") or self.market_read.get("next_check")
+            text = lines("Next check: " + next_check, 112) if next_check else lines(p.get("reason") or "No confirmed structural levels. No entry or forecast.", 112)
         self.fig.add_annotation(x=0, y=-0.13, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 align="left", text=text, showarrow=False, font=dict(size=22, color="#ecf1f8"))
         evidence = self.plan.get("chart_evidence", [])
@@ -373,8 +384,10 @@ class AnalysisChartPresentation:
             why += f" · 5 chart anchors shown; {self.omitted_anchor_count} additional located fact(s) summarized here"
         self.fig.add_annotation(x=0, y=-0.36, xref="paper", yref="paper", xanchor="left", yanchor="top",
                                 text=lines(why, 150), showarrow=False, font=dict(size=16, color=self.muted))
+        forecast_note = ("Pending badge requires the stated retest; it is not an entry now · Shading from latest close is illustrative"
+                         if visible_forecast else "Observed structure only · No directional forecast approved")
         self.fig.add_annotation(x=0, y=-0.49, xref="paper", yref="paper", xanchor="left", yanchor="top",
-                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · Long/Short badge: scenario direction, not entry confirmation · Shading from latest close is illustrative · {PRESENTATION_VERSION}",
+                                text=f"Latest {len(self.visible)} of {len(self.candles)} candles · {forecast_note} · {PRESENTATION_VERSION}",
                                 showarrow=False, font=dict(size=15, color=self.muted))
 
     def draw_next_move(self):

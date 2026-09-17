@@ -11,7 +11,10 @@ import json
 from datetime import datetime, timezone
 import time
 
-from infrastructure.database.redis.rate_limiter import redis_rate_limiter, RedisRateLimiter
+from infrastructure.database.redis.rate_limiter import redis_rate_limiter, RedisRateLimiter, ProviderRequestDeferred
+from infrastructure.database.redis.single_flight import RedisSingleFlight
+from infrastructure.data_sources.binance.kline_request import kline_request_identity
+from infrastructure.data_sources.provider_backoff import defer_if_throttled
 from common.logger import logger
 
 load_dotenv()
@@ -55,6 +58,8 @@ class CircuitBreaker:
                     self.failure_count = 0
                     logger.info("Circuit breaker closed - API recovered")
             return result
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
             async with self.lock:
                 self.failure_count += 1
@@ -68,12 +73,12 @@ class CircuitBreaker:
 
 
 class BinanceMarketData:
-    # API endpoint weights (conservative estimates)
+    # Binance Spot REST weights, verified against official docs 2026-09-13.
     ENDPOINT_WEIGHTS = {
         'get_klines': 2,
-        'get_ticker': 1,
-        'get_exchange_info': 10,
-        'get_all_tickers': 40,
+        'get_ticker': 2,
+        'get_exchange_info': 20,
+        'get_all_tickers': 80,
     }
     
     def __init__(self, *, use_pool=True, strict_errors=False):
@@ -117,8 +122,7 @@ class BinanceMarketData:
             if self.client is None:
                 logger.info("[binance] connect: creating main client connection...")
                 try:
-                    if self.strict_errors:
-                        await self.global_limiter.acquire(2)  # AsyncClient's public ping/time handshake.
+                    await self.global_limiter.acquire(2)  # AsyncClient's ping + server time.
                     self.client = await asyncio.wait_for(
                         AsyncClient.create(
                             self.api_key, 
@@ -131,6 +135,7 @@ class BinanceMarketData:
                     logger.error("Timeout connecting to Binance API")
                     raise
                 except Exception as e:
+                    await self._defer_if_throttled(e)
                     logger.error(f"Failed to connect to Binance API: {str(e)}")
                     raise
             else:
@@ -140,7 +145,15 @@ class BinanceMarketData:
         """Initialize a small pool of connections"""
         if self._init_task is None:
             self._init_task = asyncio.create_task(self._initialize_pool())
-        return await self._init_task
+        task = self._init_task
+        try:
+            return await task
+        except BaseException:
+            # A temporary budget/cooldown failure must not poison the pool
+            # forever through a retained failed task.
+            if self._init_task is task:
+                self._init_task = None
+            raise
             
     async def _initialize_pool(self):
         """Create a small pool of connections"""
@@ -149,6 +162,7 @@ class BinanceMarketData:
                 logger.info(f"Initializing connection pool with {self._pool_size} connections")
                 for i in range(self._pool_size):
                     try:
+                        await self.global_limiter.acquire(2)
                         client = await asyncio.wait_for(
                             AsyncClient.create(
                                 self.api_key, 
@@ -161,6 +175,9 @@ class BinanceMarketData:
                         if i < self._pool_size - 1:
                             await asyncio.sleep(1)
                     except Exception as e:
+                        if isinstance(e, ProviderRequestDeferred):
+                            raise
+                        await self._defer_if_throttled(e)
                         logger.error(f"Failed to create connection {i}: {str(e)}")
                         self._connection_pool[i] = None
                 
@@ -170,9 +187,8 @@ class BinanceMarketData:
     async def get_all_tickers(self) -> list[dict]:
         """Fetch all 24hr tickers in one request (80 weight)."""
         logger.info("[binance] get_all_tickers: acquiring rate limit budget...")
-        await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
-
         client = await self.get_pooled_client()
+        await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_all_tickers'])
         try:
             tickers = await asyncio.wait_for(
                 client.get_ticker(),  # ✅ No symbol → returns ALL tickers
@@ -181,6 +197,7 @@ class BinanceMarketData:
             logger.info(f"[binance] get_all_tickers: fetched {len(tickers)} ticker(s).")
             return tickers
         except Exception as e:
+            await self._defer_if_throttled(e)
             logger.error(f"Error fetching all tickers: {e}")
             return []
            
@@ -273,9 +290,9 @@ class BinanceMarketData:
         limit: int = 1000,
         start_time: Optional[int] = None,
         end_time: Optional[int] = None,
-        max_retries: int = 3  # Reduced from 3 to 2
+        max_retries: int = 3
     ) -> list:
-        """Fetch OHLCV data with proper rate limiting and error handling"""
+        """Share a bounded fetch across workers, with a two-second result cache."""
         # Validate interval
         valid_intervals = [
             "1m", "3m", "5m", "15m", "30m",
@@ -291,14 +308,48 @@ class BinanceMarketData:
         if not symbol.isalnum():
             raise ValueError("Invalid symbol format")
 
-        # Limit the limit parameter to prevent excessive data requests
-        limit = min(limit, 1000)  # Binance max is 1000
+        if type(limit) is not int or limit < 1:
+            raise ValueError("limit must be a positive integer")
+        if type(max_retries) is not int or not 1 <= max_retries <= 3:
+            raise ValueError("max_retries must be between 1 and 3")
+        for bound in (start_time, end_time):
+            if bound is not None and (type(bound) is not int or bound < 0):
+                raise ValueError("Kline bounds must be non-negative millisecond timestamps")
+        if start_time is not None and end_time is not None and start_time > end_time:
+            raise ValueError("start_time must not exceed end_time")
+        symbol = symbol.upper()
+        limit = min(limit, 1000)
+        # Freeze an implicit end before waiting for the shared lease/budget.
+        # Otherwise a fetch crossing a candle close could include a new bar
+        # under the previous range's cache identity.
+        request_now_ms = int(time.time() * 1000)
+        effective_end_time = request_now_ms if end_time is None else end_time
+        identity = kline_request_identity(symbol, interval, limit, start_time,
+                                          effective_end_time, now_ms=request_now_ms)
+        try:
+            try:
+                redis_client = self.global_limiter.get_client()
+            except Exception as exc:
+                raise ProviderRequestDeferred("Shared market-data coordination unavailable; request deferred.") from exc
+            return await RedisSingleFlight(redis_client).run(identity, lambda:
+                self._fetch_klines_with_retries(symbol, interval, limit, start_time, effective_end_time, max_retries))
+        except ProviderRequestDeferred:
+            raise
+        except Exception:
+            if self.strict_errors:
+                raise
+            logger.warning("Shared Binance candle fetch failed.", exc_info=True)
+            return []
+
+    async def _defer_if_throttled(self, error):
+        await defer_if_throttled(self.global_limiter, getattr(error, "status_code", None),
+                                getattr(getattr(error, "response", None), "headers", {}))
+
+    async def _fetch_klines_with_retries(self, symbol, interval, limit, start_time, end_time, max_retries):
 
         async def _fetch_klines():
-            # Acquire rate limit permission
-            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_klines'])
-            
             client = await self.get_pooled_client()
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_klines'])
             
             return await asyncio.wait_for(
                 client.get_klines(
@@ -320,17 +371,15 @@ class BinanceMarketData:
                 klines = await self.circuit_breaker.call(_fetch_klines)
 
                 # Validate response
-                if not isinstance(klines, list) or len(klines) == 0:
-                    logger.warning(f"No klines data returned for {symbol}/{interval} on attempt {attempt + 1}")
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(2 ** attempt)
-                        continue
+                if not isinstance(klines, list):
+                    raise ValueError("Malformed Binance candle response")
+                if not klines:
                     return []
 
                 # Validate structure
                 if len(klines[0]) < 6:
                     logger.error(f"Malformed kline data for {symbol}/{interval}")
-                    return []
+                    raise ValueError("Malformed Binance candle response")
 
                 # Filter out invalid candles
                 valid_klines = [
@@ -340,12 +389,15 @@ class BinanceMarketData:
 
                 if not valid_klines:
                     logger.warning(f"Filtered out all klines for {symbol}/{interval} due to invalid values")
-                    return []
+                    raise ValueError("Binance response contained no valid candles")
 
                 logger.info(f"[binance] get_klines: fetched {len(valid_klines)} valid candle(s) for {symbol}/{interval}.")
                 return valid_klines
 
+            except ProviderRequestDeferred:
+                raise
             except Exception as e:
+                await self._defer_if_throttled(e)
                 last_error = e
                 logger.error(f"Error fetching klines for {symbol} on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
@@ -354,7 +406,7 @@ class BinanceMarketData:
                     await asyncio.sleep(wait_time)
                     continue
         
-        if self.strict_errors and last_error is not None:
+        if last_error is not None:
             raise last_error
         return []
 
@@ -362,8 +414,8 @@ class BinanceMarketData:
         """Get exchange information with rate limiting"""
         async def _fetch_exchange_info():
             logger.info("[binance] get_exchange_info: acquiring rate limit budget...")
-            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_exchange_info'])
             client = await self.get_pooled_client()
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_exchange_info'])
             return await asyncio.wait_for(
                 client.get_exchange_info(),
                 timeout=self._connection_timeout
@@ -373,15 +425,18 @@ class BinanceMarketData:
             info = await self.circuit_breaker.call(_fetch_exchange_info)
             logger.info(f"[binance] get_exchange_info: fetched {len(info.get('symbols', []))} symbol(s).")
             return info
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
+            await self._defer_if_throttled(e)
             logger.error(f"Error fetching exchange info: {e}")
             return {"symbols": []}
 
     async def get_ticker(self, symbol: str) -> Dict[str, Any]:
         """Get ticker data for a specific symbol with rate limiting"""
         async def _fetch_ticker():
-            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_ticker'])
             client = await self.get_pooled_client()
+            await self.global_limiter.acquire(self.ENDPOINT_WEIGHTS['get_ticker'])
             return await asyncio.wait_for(
                 client.get_ticker(symbol=symbol),
                 timeout=self._connection_timeout
@@ -391,7 +446,10 @@ class BinanceMarketData:
             ticker = await self.circuit_breaker.call(_fetch_ticker)
             logger.info(f"[binance] get_ticker({symbol}): {ticker.get('lastPrice', 'n/a')}")
             return ticker
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
+            await self._defer_if_throttled(e)
             logger.error(f"Error fetching ticker for {symbol}: {e}")
             return {
                 "lastPrice": "0", 

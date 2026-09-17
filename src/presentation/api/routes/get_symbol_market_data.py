@@ -17,6 +17,7 @@ from common.logger import logger
 from datetime import datetime, timezone
 from typing import Optional
 from infrastructure.database.redis.cache import redis_cache
+from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 import asyncio
 import time
 
@@ -140,6 +141,11 @@ async def get_market_data(
             "has_more": len(response_data) == page_size
         }
 
+    except ProviderRequestDeferred as exc:
+        raise HTTPException(status_code=503, detail=str(exc),
+                            headers={"Retry-After": str(exc.retry_after)}) from exc
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Unexpected error in get_market_data")
         return {"error": "An unexpected error occurred while processing your request"}
@@ -378,6 +384,10 @@ async def websocket_stream_market_data(
             except Exception as e:
                 logger.error(f"An unexpected error occurred in the WebSocket message loop: {e}")
                 break 
+    except ProviderRequestDeferred as exc:
+        await websocket.send_json({"type": "market_data_deferred", "retry_after": exc.retry_after,
+                                   "message": str(exc)})
+        await websocket.close(code=1013)
     except WebSocketDisconnect:
         logger.info(f"Client {client_id} disconnected for {symbol}")
     except Exception as e:

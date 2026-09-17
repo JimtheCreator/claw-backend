@@ -60,7 +60,7 @@ def test_off_context_does_not_depend_on_stale_higher_timeframes():
 
 
 @pytest.mark.parametrize('context', ['mixed', 'incomplete'])
-def test_context_gate_blocks_entry_but_keeps_explicit_local_forecast(context):
+def test_context_gate_blocks_forecast_even_with_complete_local_scenario_geometry(context):
     df, swings, structure = inputs()
     mtfa = {'enabled': True, 'htf_trends': {'4h': 'bearish', '1d': 'bullish'}}
     if context == 'incomplete':
@@ -71,10 +71,10 @@ def test_context_gate_blocks_entry_but_keeps_explicit_local_forecast(context):
                            fvg=None, order_blocks=None, confluence=None)
     assert plan['action'] == 'wait' and plan['primary_scenario'] is None
     assert all(plan[k] is None for k in ('entry_level', 'stop_loss', 'take_profit'))
-    assert plan['forecast_scenario']['direction'] == 'bearish'
-    assert plan['forecast_scenario']['basis'] == 'local_structure'
+    assert plan['forecast_scenario'] is None
+    assert plan['market_read']['support']['price'] == 99
     fig = AnalysisChartPresentation(df, {'symbol': 'TEST', 'trade_plan': plan}, {}).figure()
-    badge = next(a for a in fig.layout.annotations if a.name == 'Forecast direction label')
-    assert badge.text == '<b>Short ▼</b>'
+    assert not any(a.name == 'Forecast direction label' for a in fig.layout.annotations)
+    assert not any(s.name in {'Forecast risk', 'Forecast reward'} for s in fig.layout.shapes)
     assert not any(t.name == 'Conditional forecast' for t in fig.data)
-    assert any('HTF context is not validated' in a.text for a in fig.layout.annotations)
+    assert any('STRUCTURE · NO ENTRY CONFIRMED' in a.text for a in fig.layout.annotations)

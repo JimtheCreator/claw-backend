@@ -3,7 +3,7 @@
 Candlestick pattern detection functions. Import and use the pattern_registry for registration.
 """
 
-from .pattern_registry import register_pattern
+from .pattern_registry import register_pattern, strict_errors_enabled
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Optional, Tuple
@@ -185,6 +185,8 @@ async def _detect_engulfing(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Engulfing pattern detection error: {str(e)}")
         return None
 
@@ -212,8 +214,9 @@ async def _detect_doji(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Calculate body and range
         body = abs(curr_close - curr_open)
         candle_range = curr_high - curr_low
-        # Skip if range is too small (prevents division by zero)
-        if candle_range < 0.0001:
+        # Reject numerical zero, not a fixed quote-price amount. Sub-cent
+        # instruments must keep the same classification when prices are scaled.
+        if candle_range <= 16 * np.finfo(float).eps * max(abs(curr_high), abs(curr_low)):
             return None
         # Doji has very small body compared to range
         body_ratio = body / candle_range
@@ -300,6 +303,8 @@ async def _detect_doji(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Doji pattern detection error: {str(e)}")
         return None
 
@@ -382,6 +387,8 @@ async def _detect_morning_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Morning star detection error: {str(e)}")
         return None
 
@@ -462,6 +469,8 @@ async def _detect_evening_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Evening star detection error: {str(e)}")
         return None
 
@@ -489,7 +498,7 @@ async def _detect_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
         # Calculate body and shadows
         body = abs(curr_close - curr_open)
         candle_range = curr_high - curr_low
-        if candle_range < 0.0001:
+        if candle_range <= 16 * np.finfo(float).eps * max(abs(curr_high), abs(curr_low)):
             return None
         upper_shadow = curr_high - max(curr_open, curr_close)
         lower_shadow = min(curr_open, curr_close) - curr_low
@@ -557,6 +566,8 @@ async def _detect_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Hammer detection error: {str(e)}")
         return None
 
@@ -654,6 +665,8 @@ async def _detect_shooting_star(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Shooting star detection error: {str(e)}")
         return None
 
@@ -751,6 +764,8 @@ async def _detect_three_line_strike(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three line strike detection error: {str(e)}")
         return None
 
@@ -844,6 +859,8 @@ async def detect_three_outside_up(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three outside up detection error: {str(e)}")
         return None
 
@@ -935,6 +952,8 @@ async def detect_three_outside_down(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three outside down detection error: {str(e)}")
         return None
 
@@ -1022,6 +1041,8 @@ async def detect_three_inside_up(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three inside up detection error: {str(e)}")
         return None
 
@@ -1109,6 +1130,8 @@ async def detect_three_inside_down(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three inside down detection error: {str(e)}")
         return None
 
@@ -1190,6 +1213,8 @@ async def detect_dark_cloud_cover(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Dark cloud cover detection error: {str(e)}")
         return None
 
@@ -1271,6 +1296,8 @@ async def detect_piercing_pattern(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Piercing pattern detection error: {str(e)}")
         return None
 
@@ -1351,6 +1378,8 @@ async def detect_kicker(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Kicker detection error: {str(e)}")
         return None
 
@@ -1436,6 +1465,8 @@ async def detect_three_white_soldiers(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three white soldiers detection error: {str(e)}")
         return None
 
@@ -1526,6 +1557,8 @@ async def detect_hanging_man(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Hanging man detection error: {str(e)}")
         return None
 
@@ -1616,6 +1649,8 @@ async def detect_inverted_hammer(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Inverted hammer detection error: {str(e)}")
         return None
 
@@ -1690,6 +1725,8 @@ async def detect_tweezers_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Tweezers top detection error: {str(e)}")
         return None
 
@@ -1764,6 +1801,8 @@ async def detect_tweezers_bottom(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Tweezers bottom detection error: {str(e)}")
         return None
 
@@ -1849,6 +1888,8 @@ async def detect_abandoned_baby(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Abandoned baby detection error: {str(e)}")
         return None
 
@@ -1916,6 +1957,8 @@ async def detect_rising_three_methods(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Rising Three Methods detection error: {str(e)}")
         return None
 
@@ -1983,6 +2026,8 @@ async def detect_falling_three_methods(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Falling Three Methods detection error: {str(e)}")
         return None
 
@@ -2051,6 +2096,8 @@ async def detect_hikkake(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Hikkake detection error: {str(e)}")
         return None
 
@@ -2126,6 +2173,8 @@ async def detect_mat_hold(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Mat Hold detection error: {str(e)}")
         return None
 
@@ -2190,6 +2239,8 @@ async def detect_spinning_top(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Spinning Top detection error: {str(e)}")
         return None
 
@@ -2269,6 +2320,8 @@ async def detect_marubozu(ohlcv: dict) -> Optional[Dict[str, Any]]:
             "key_levels": key_levels
         }
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Marubozu detection error: {str(e)}")
         return None
 
@@ -2379,6 +2432,8 @@ async def detect_harami(ohlcv: dict) -> Optional[Dict[str, Any]]:
                 }
         return None
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Harami detection error: {str(e)}")
         return None
 
@@ -2452,5 +2507,7 @@ async def detect_three_black_crows(ohlcv: dict) -> Optional[Dict[str, Any]]:
             }
         return None
     except Exception as e:
+        if strict_errors_enabled():
+            raise
         logger.error(f"Three Black Crows detection error: {str(e)}")
         return None

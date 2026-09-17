@@ -36,6 +36,7 @@ def example_data(action="wait"):
         plan["evidence"]["mtfa"]["htf_trend_alignment"] = {"15m": True, "1h": True}
         plan.update(entry_level=100, stop_loss=98 if action == "long" else 103,
                     take_profit=105 if action == "long" else 95,
+                    market_context="aligned", setup_quality={"eligible": True}, wait_for_confirmation=True,
                     entry_zone={"bottom": 99.8, "top": 100.2},
                     confirmation_required="Wait for a candle to reject the zone and confirm structure.",
                     reason="Directional structure, fresh zone and target meet the setup rules.")
@@ -54,28 +55,22 @@ def example_data(action="wait"):
     return candles, {"trade_plan": plan, "symbol": "ILLUSTRATION"}, smc
 
 
-def test_wait_uses_only_the_plan_scenario_not_the_opposing_local_trend():
+def test_wait_rejects_legacy_scenario_even_when_it_has_complete_geometry():
     candles, analysis, smc = example_data()
     original = deepcopy(analysis)
     chart = AnalysisChartPresentation(candles, analysis, smc)
     fig = chart.figure()
-    assert len(chart.scenarios) == 1
-    assert chart.scenarios[0]["direction"] == "bullish"
-    assert chart.scenarios[0]["target"] == 105
-    assert not chart.scenarios[0]["setup"]
-    assert any("BULLISH FORECAST · SCENARIO ONLY · NO ENTRY APPROVED" in a.text for a in fig.layout.annotations)
-    assert any("Confirm 102.80" in a.text for a in fig.layout.annotations)
-    badge = direction_label(fig)
-    assert badge.text == "<b>Long ▲</b>"
-    assert pd.Timestamp(badge.x) == chart.now
-    assert badge.y < candles.low.iloc[-1]
+    assert chart.scenarios == []
+    assert any("WAIT · NO ENTRY CONFIRMED" in a.text for a in fig.layout.annotations)
+    assert not any(a.name == "Forecast direction label" for a in fig.layout.annotations)
+    assert not any(s.name in {"Forecast risk", "Forecast reward"} for s in fig.layout.shapes)
     assert not any("BUY NOW" in a.text for a in fig.layout.annotations)
     assert analysis == original
     assert (chart.end - chart.now) / (chart.end - chart.start) > 0.30
 
 
 def test_chart_caps_historical_clutter_and_keeps_requested_timeframe():
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     chart = AnalysisChartPresentation(candles, analysis, smc)
     fig = chart.figure()
     assert len([s for s in fig.layout.shapes if s.type == "rect"]) == 3  # Backdrop + one TP/SL pair, not 100 zones.
@@ -125,7 +120,7 @@ def test_forecast_preserves_plan_and_displays_direction_target_and_stop(action):
     low, high = fig.layout.yaxis.range
     assert all(low < chart.scenarios[0][k] < high for k in ("trigger", "target", "invalidation"))
     badge = direction_label(fig)
-    assert badge.text == ("<b>Long ▲</b>" if action == "long" else "<b>Short ▼</b>")
+    assert badge.text == ("<b>Long pending ▲</b>" if action == "long" else "<b>Short pending ▼</b>")
     assert badge.y < candles.low.iloc[-1] if action == "long" else badge.y > candles.high.iloc[-1]
     assert badge.showarrow is False
     assert any("FORECAST · ENTRY PENDING" in a.text for a in fig.layout.annotations)
@@ -141,14 +136,14 @@ def test_forecast_preserves_plan_and_displays_direction_target_and_stop(action):
 
 
 def test_image_path_serializes_dates_and_uses_focused_chart():
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     chart = ChartEngine(candles.to_dict("list"), analysis_data=analysis, smc_data=smc)
     with patch("core.engines.chart_engine.pio.to_image", return_value=b"png") as renderer:
         assert chart.create_chart("image") == b"png"
     payload = renderer.call_args.args[0]
     orjson.dumps(payload, option=orjson.OPT_SERIALIZE_NUMPY)
     assert renderer.call_args.kwargs["height"] == 900
-    assert payload["layout"]["meta"]["presentation_version"] == "conditional-forecast-v7"
+    assert payload["layout"]["meta"]["presentation_version"] == "conditional-forecast-v8"
     assert payload["layout"]["meta"]["forecast_reference"] == "last_closed_candle"
     candle_trace = next(t for t in payload["data"] if t["type"] == "candlestick")
     assert len(candle_trace["x"]) == 60
@@ -164,12 +159,12 @@ def test_missing_plan_scenario_is_not_replaced_with_an_invented_forecast():
 
 
 def test_unknown_later_target_does_not_hide_the_first_leg():
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     analysis["trade_plan"]["primary_scenario"]["target"] = None
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()
     assert not any(t.name == "Conditional forecast" for t in fig.data)
     assert not any(a.name == "Forecast direction label" for a in fig.layout.annotations)
-    assert any("Activation 102.80" in a.text for a in fig.layout.annotations)
+    assert any("Activation 100.00" in a.text for a in fig.layout.annotations)
     assert any("No complete forecast" in a.text for a in fig.layout.annotations)
 
 
@@ -186,7 +181,7 @@ def test_current_reference_does_not_relabel_pending_entry_or_draw_a_retest(actio
     original = deepcopy(analysis)
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()
     badge = direction_label(fig)
-    assert badge.text == ("<b>Long ▲</b>" if action == "long" else "<b>Short ▼</b>")
+    assert badge.text == ("<b>Long pending ▲</b>" if action == "long" else "<b>Short pending ▼</b>")
     assert pd.Timestamp(badge.x) == candles.timestamp.iloc[-1]
     assert any("FORECAST · ENTRY PENDING" in a.text for a in fig.layout.annotations)
     assert any("Retest entry is still pending." in a.text for a in fig.layout.annotations)
@@ -215,10 +210,10 @@ def test_monthly_chart_keeps_month_label_distinct_from_minutes():
     assert "1 month chart" in fig.layout.title.text
 
 
-@pytest.mark.parametrize('changes', [dict(target=None), dict(target=102.), dict(invalidation=103.),
+@pytest.mark.parametrize('changes', [dict(target=None), dict(target=99.), dict(invalidation=103.),
                                    dict(target=float('nan')), dict(trigger='bad')])
 def test_invalid_or_missing_forecast_geometry_never_draws_tp_sl_boxes(changes):
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     analysis['trade_plan']['primary_scenario'].update(changes)
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()
     assert not any(t.name == 'Conditional forecast' for t in fig.data)
@@ -226,10 +221,10 @@ def test_invalid_or_missing_forecast_geometry_never_draws_tp_sl_boxes(changes):
     assert not any(s.name in {'Forecast risk', 'Forecast reward'} for s in fig.layout.shapes)
 
 
-def test_poor_reference_rr_is_visible_not_promoted_to_an_entry():
+def test_rejected_reference_rr_cannot_be_presented_as_a_forecast():
     candles, analysis, smc = example_data()
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()
-    assert any('Below the planner' in a.text for a in fig.layout.annotations)
+    assert not any(s.name in {"Forecast risk", "Forecast reward"} for s in fig.layout.shapes)
     assert analysis['trade_plan']['action'] == 'wait'
     assert analysis['trade_plan']['entry_level'] is None
 
@@ -237,7 +232,7 @@ def test_poor_reference_rr_is_visible_not_promoted_to_an_entry():
 @pytest.mark.parametrize("interval,freq", [("1m", "min"), ("1h", "h"), ("4h", "4h"), ("1d", "D")])
 @pytest.mark.parametrize("enabled", [False, True])
 def test_forecast_and_risk_bands_meet_now_without_changing_activation(interval, freq, enabled):
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     candles.timestamp = pd.date_range("2026-01-01", periods=len(candles), freq=freq, tz="UTC")
     analysis["trade_plan"]["interval"] = interval
     analysis["trade_plan"]["evidence"]["mtfa"]["enabled"] = enabled
@@ -248,16 +243,16 @@ def test_forecast_and_risk_bands_meet_now_without_changing_activation(interval, 
     bands = [s for s in fig.layout.shapes if s.name in {"Forecast risk", "Forecast reward"}]
     assert pd.Timestamp(badge.x) == chart.now
     assert all(pd.Timestamp(s.x0) == chart.now for s in bands)
-    assert badge.text == "<b>Long ▲</b>"
-    assert bands[0].y0 == chart.current != 102.8
+    assert badge.text == "<b>Long pending ▲</b>"
+    assert bands[0].y0 == chart.current != 100
     assert bands[0].y1 == 105
     assert all("dashed" not in a.text.lower() for a in fig.layout.annotations)
-    assert any("scenario direction, not entry confirmation" in a.text for a in fig.layout.annotations)
+    assert any("Pending badge requires the stated retest" in a.text for a in fig.layout.annotations)
     assert analysis == original
 
 
 def test_tiny_activation_to_tp_distance_does_not_hide_current_price_reward_area():
-    candles, analysis, smc = example_data()
+    candles, analysis, smc = example_data("long")
     analysis["trade_plan"]["primary_scenario"].update(trigger=102.8, target=102.81)
     analysis["trade_plan"]["current_price"] = 500  # Renderer owns its candle snapshot.
     chart = AnalysisChartPresentation(candles, analysis, smc)
@@ -266,9 +261,9 @@ def test_tiny_activation_to_tp_distance_does_not_hide_current_price_reward_area(
     assert reward.y0 == candles.close.iloc[-1]
     assert reward.y1 == 102.81
     assert reward.y1 - reward.y0 > 1
-    assert chart.forecast_rr == pytest.approx(.01 / (102.8-97.2))
+    assert chart.forecast_rr == pytest.approx(.01 / (102.8-98))
     assert any("Activation-based R:R" in a.text for a in fig.layout.annotations)
-    assert any("Below the planner" in a.text for a in fig.layout.annotations)
+    assert any("Below the planner" in a.text.replace("<br>", " ") for a in fig.layout.annotations)
     tags = [s for s in fig.layout.shapes if s.type == "path" and s.name.endswith(" tag")]
     assert len(tags) == 4  # TP, SL, current reference and separate confirmation.
     assert all(s.xref == "x domain" and s.yref == "y domain" for s in tags)
@@ -276,18 +271,18 @@ def test_tiny_activation_to_tp_distance_does_not_hide_current_price_reward_area(
     centers = sorted(a.y for a in labels)
     assert len(labels) == 4 and min(b-a for a, b in zip(centers, centers[1:])) >= 33/455
     assert all(0 < y < 1 for y in centers)
-    assert analysis["trade_plan"]["action"] == "wait"
-    assert analysis["trade_plan"]["entry_level"] is None
+    assert analysis["trade_plan"]["action"] == "long"
+    assert analysis["trade_plan"]["wait_for_confirmation"] is True
 
 
 @pytest.mark.parametrize("direction,current,message", [
     ("bullish", 105, "reached or passed the target"),
-    ("bullish", 97.2, "beyond scenario invalidation"),
+    ("bullish", 98, "beyond scenario invalidation"),
     ("bearish", 95, "reached or passed the target"),
     ("bearish", 103, "beyond scenario invalidation"),
 ])
 def test_current_price_outside_scenario_cannot_draw_reversed_reward_boxes(direction, current, message):
-    candles, analysis, smc = example_data("wait" if direction == "bullish" else "short")
+    candles, analysis, smc = example_data("long" if direction == "bullish" else "short")
     candles.loc[candles.index[-1], "close"] = current
     original = deepcopy(analysis)
     fig = AnalysisChartPresentation(candles, analysis, smc).figure()

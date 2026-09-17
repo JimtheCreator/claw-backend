@@ -24,6 +24,8 @@ celery_app.conf.update(
         Queue('telegram'),
         Queue('analysis'),
         Queue('broadcasts'),
+        Queue('scanner'),
+        Queue('scanner_ingestion'),
         # Drain jobs sent by older application builds before an explicit
         # route/default queue was configured. New tasks do not use this.
         Queue('celery'),
@@ -35,9 +37,17 @@ celery_app.conf.update(
     enable_utc=True,
     include=[
         'src.core.services.tasks',
-        'src.core.services.broadcast_task' # Add this line
+        'src.core.services.broadcast_task',
+        'src.core.services.scanner_tasks',
+        'src.core.services.scanner_ingestion_tasks',
     ],
     task_routes={
+        'src.core.services.scanner_tasks.scan_market_universe': {'queue': 'scanner'},
+        'src.core.services.scanner_tasks.scan_scheduled_universe': {'queue': 'scanner'},
+        'src.core.services.scanner_tasks.scan_market_instrument': {'queue': 'scanner'},
+        'src.core.services.scanner_tasks.finalize_scanner_batch': {'queue': 'scanner'},
+        'src.core.services.scanner_ingestion_tasks.prepare_scanner_scan': {'queue': 'scanner_ingestion'},
+        'src.core.services.scanner_ingestion_tasks.persist_scanner_candle': {'queue': 'scanner_ingestion'},
         # Telegram tasks - lightweight, use default queue
         'src.core.services.tasks.process_telegram_update': {'queue': 'telegram'},
         

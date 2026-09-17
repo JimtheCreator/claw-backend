@@ -35,6 +35,9 @@ from infrastructure.data_sources.binance.client import BinanceMarketData  # ADD 
 from datetime import datetime, timezone
 from core.services.tasks import save_market_data_task
 from core.domain.entities.MarketDataEntity import MarketDataEntity
+from core.scanner.automation import AutomationRegistry, streams_for
+from infrastructure.database.redis.lease import RedisLease
+from infrastructure.database.redis.rate_limiter import RedisRateLimiter
 
 # Configuration - Conservative Binance limits
 BINANCE_STREAM_URL = "wss://stream.binance.com:9443/stream"
@@ -43,10 +46,10 @@ DATA_CHANNEL_PREFIX = "binance:data:"
 CANDLE_CACHE_PREFIX = "candles:"
 
 # Binance WebSocket Limits (being conservative)
-MAX_CONNECTIONS = 3  # Binance allows 5, we use 3 for safety
+MAX_CONNECTIONS = 3  # Application socket cap, not a provider entitlement.
 MAX_STREAMS_PER_CONNECTION = 200  # Binance allows 1024, we use 200 for safety
-MAX_SUBSCRIPTION_REQUESTS_PER_SECOND = 5  # Binance allows 10, we use 5
-MAX_SUBSCRIPTION_REQUESTS_PER_CONNECTION = 100  # Per hour, we track this
+MAX_SUBSCRIPTION_REQUESTS_PER_SECOND = 1  # Leave headroom for ping/pong and window boundaries.
+MAX_SUBSCRIPTION_REQUESTS_PER_CONNECTION = 100  # Application control-message budget per hour.
 
 class BinanceConnection:
     """Represents a managed WebSocket connection via BinanceMarketData"""
@@ -59,6 +62,7 @@ class BinanceConnection:
         self.websocket = None
         self.active_streams = set()
         self.request_id = 1
+        self.pending_requests = {}
         self.subscription_requests_count = 0
         self.last_hour_reset = time.time()
         self.is_connected = False
@@ -109,6 +113,10 @@ class BinanceConnection:
     
     async def disconnect(self):
         """Safely disconnect WebSocket"""
+        for pending in self.pending_requests.values():
+            if not pending.done():
+                pending.set_result(False)
+        self.pending_requests.clear()
         if self.websocket:
             try:
                 await self.websocket.close()
@@ -208,6 +216,10 @@ class WebsocketSubscriptionManager:
         self.health_task = None
         self.subscription_processor_task = None
         self.message_handler_tasks: Dict[int, asyncio.Task] = {}
+        self.scanner_streams = set()
+        self.retired_scanner_streams = set()
+        self.subscription_lock = asyncio.Lock()
+        self.gateway_lease = None
 
 
 
@@ -233,14 +245,28 @@ class WebsocketSubscriptionManager:
         # Give connections a moment to stabilize
         await asyncio.sleep(1)
 
-    async def _rate_limit_subscription_request(self):
-        """
-        Use the shared global rate limiter from BinanceMarketData.
-        Subscription requests use minimal weight, so we use weight=1.
-        """
-        # WebSocket subscription requests have minimal impact, but we still track them
-        # to prevent abuse. Binance allows 10 subscription requests per second globally.
-        await self.binance_client.global_limiter.acquire(weight=1)
+    async def _assert_gateway_owner(self):
+        if getattr(self, 'gateway_lease', None) is not None:
+            await self.gateway_lease.assert_owned()
+
+    async def _rate_limit_subscription_request(self, connection):
+        # WebSocket controls have a separate budget from REST request weight.
+        # Reserve capacity for ping/pong traffic under the provider's ceiling.
+        await RedisRateLimiter(redis_client=redis_cache.get_redis_client(),
+            key_prefix=f"binance_ws_control:{connection.connection_id}",
+            max_per_second=MAX_SUBSCRIPTION_REQUESTS_PER_SECOND,
+            max_per_minute=60, max_wait_seconds=3).acquire(1)
+
+    async def _connect_owned(self, connection):
+        await self._assert_gateway_owner()
+        await RedisRateLimiter(redis_client=redis_cache.get_redis_client(),
+            key_prefix="binance_gateway_connect", max_per_second=1,
+            max_per_minute=10, max_wait_seconds=3).acquire(1)
+        await connection.connect()
+        task = self.message_handler_tasks.get(connection.connection_id)
+        if not task or task.done():
+            self.message_handler_tasks[connection.connection_id] = asyncio.create_task(
+                self._handle_connection_messages(connection))
     
 
     def _find_best_connection_for_streams(self, streams: List[str]) -> Optional[BinanceConnection]:
@@ -270,34 +296,48 @@ class WebsocketSubscriptionManager:
         
         # ADD: Use shared rate limiter before sending
         try:
-            await self._rate_limit_subscription_request()
+            await self._assert_gateway_owner()
+            await self._rate_limit_subscription_request(connection)
         except Exception as e:
             logger.error(f"Rate limit check failed: {e}")
             return False
         
         try:
+            request_id = connection.request_id
+            connection.request_id += 1
+            acknowledgement = asyncio.get_running_loop().create_future()
+            connection.pending_requests[request_id] = acknowledgement
             payload = {
                 "method": method.upper(),
                 "params": streams,
-                "id": connection.request_id
+                "id": request_id
             }
             
             await connection.websocket.send(json.dumps(payload))
             
-            connection.request_id += 1
             connection.record_request()
             # REMOVE: self._record_global_request()  # No longer needed
             
             logger.info(f"Sent {method} for {len(streams)} streams on connection {connection.connection_id}")
+            if not await asyncio.wait_for(acknowledgement, timeout=10):
+                raise RuntimeError("Gateway subscription rejected or connection closed")
             return True
             
         except Exception as e:
             logger.error(f"Error sending {method} request on connection {connection.connection_id}: {e}")
             connection.is_connected = False
             return False
+        finally:
+            if 'request_id' in locals():
+                connection.pending_requests.pop(request_id, None)
     
     async def _subscribe_streams_batch(self, streams: List[str], batch_size: int = 50):
+        async with self.subscription_lock:
+            await self._subscribe_streams_batch_locked(streams, batch_size)
+
+    async def _subscribe_streams_batch_locked(self, streams: List[str], batch_size: int = 50):
         """Subscribe to streams in batches across available connections"""
+        streams = [s for s in set(streams) if s not in self.active_streams]
         if not streams:
             return
         
@@ -307,6 +347,14 @@ class WebsocketSubscriptionManager:
             
             # Find best connection for this batch
             connection = self._find_best_connection_for_streams(batch)
+            if not connection:
+                idle = next((c for c in self.connections if not c.is_connected and not c.active_streams), None)
+                if idle is not None:
+                    try:
+                        await self._connect_owned(idle)
+                        connection = idle
+                    except Exception:
+                        logger.warning("Gateway connection deferred", exc_info=True)
             if not connection:
                 logger.warning(f"No available connection for batch of {len(batch)} streams. Queuing for later.")
                 self.pending_subscriptions.update(batch)
@@ -339,7 +387,14 @@ class WebsocketSubscriptionManager:
             await asyncio.sleep(0.2)
     
     async def _unsubscribe_streams_batch(self, streams: List[str], batch_size: int = 50):
+        async with self.subscription_lock:
+            await self._unsubscribe_streams_batch_locked(streams, batch_size)
+
+    async def _unsubscribe_streams_batch_locked(self, streams: List[str], batch_size: int = 50):
         """Unsubscribe from streams in batches"""
+        # Recheck at execution time: a subscriber or scanner may have arrived
+        # since the control message was queued.
+        streams = [s for s in streams if s not in self.scanner_streams and self.stream_subscribers[s] == 0]
         if not streams:
             return
         
@@ -492,12 +547,6 @@ class WebsocketSubscriptionManager:
             logger.info(f"Connection {connection.connection_id} message loop iteration {loop_count}")
             
             try:
-                # If no active streams, just wait and check health periodically
-                if len(connection.active_streams) == 0:
-                    logger.info(f"Connection {connection.connection_id}: No active streams, sleeping for 5s")
-                    await asyncio.sleep(5)  # Check every 5 seconds when idle
-                    continue
-                
                 logger.info(f"Connection {connection.connection_id}: Waiting for message (timeout: 30s)")
                 # Only try to receive messages if we have active streams
                 message = await asyncio.wait_for(connection.websocket.recv(), timeout=30.0)
@@ -523,15 +572,25 @@ class WebsocketSubscriptionManager:
                     self.last_data_time[stream_name] = time.time()
                     
                     if self._validate_stream_data(stream_name, stream_data):
+                        await self._assert_gateway_owner()
                         channel = f"{DATA_CHANNEL_PREFIX}{stream_name}"
                         await redis_cache.publish(channel, json.dumps(stream_data))
                         
-                        if '@kline_' in stream_name and stream_data.get('x'):
+                        if '@kline_' in stream_name and stream_data.get('k', {}).get('x') is True:
+                            if stream_name in getattr(self, 'scanner_streams', set()):
+                                from core.services.scanner_ingestion_tasks import persist_scanner_candle
+                                await asyncio.to_thread(persist_scanner_candle.apply_async,
+                                    args=[stream_name, stream_data], queue="scanner_ingestion")
                             await self._cache_candle_data(stream_name, stream_data)
                 
-                elif 'result' in data:
+                elif 'result' in data or 'code' in data:
+                    request = getattr(connection, 'pending_requests', {}).get(data.get('id'))
+                    if request is not None and not request.done():
+                        request.set_result('result' in data and data['result'] is None)
                     result = data.get('result')
-                    if result is None:
+                    if 'code' in data:
+                        logger.warning(f"Connection {connection.connection_id}: Control request rejected: {data.get('code')}")
+                    elif result is None:
                         logger.info(f"Connection {connection.connection_id}: Successfully processed request ID {data.get('id')}")
                     else:
                         logger.warning(f"Connection {connection.connection_id}: Request ID {data.get('id')} returned: {result}")
@@ -611,7 +670,7 @@ class WebsocketSubscriptionManager:
             interval = parts[1]
             
             kline = kline_data.get('k', {})
-            if not kline:
+            if not kline or kline.get('x') is not True:
                 return
             
             candle_data = {
@@ -670,6 +729,9 @@ class WebsocketSubscriptionManager:
         while True:
             try:
                 for conn in self.connections:
+                    await self._assert_gateway_owner()
+                    if not conn.is_connected and not conn.active_streams and not self.pending_subscriptions:
+                        continue
                     task = self.message_handler_tasks.get(conn.connection_id)
                     is_task_running = task and not task.done()
 
@@ -690,7 +752,7 @@ class WebsocketSubscriptionManager:
 
                         try:
                             if conn.reconnect_attempts < conn.max_reconnect_attempts:
-                                await conn.connect()
+                                await self._connect_owned(conn)
                                 logger.info(f"Connection {conn.connection_id} reconnected successfully.")
                                 if streams_to_restore:
                                     logger.info(f"Restoring {len(streams_to_restore)} streams on reconnected conn {conn.connection_id}.")
@@ -741,17 +803,55 @@ class WebsocketSubscriptionManager:
                 logger.error(f"Error in subscription processor: {e}")
                 await asyncio.sleep(10)
     
+    async def _reconcile_scanner_streams(self):
+        registry = AutomationRegistry(redis_cache.get_redis_client())
+        while True:
+            await self._reconcile_scanner_once(registry)
+            await asyncio.sleep(5)
+
+    async def _reconcile_scanner_once(self, registry):
+        await self._assert_gateway_owner()
+        desired = streams_for(await registry.all())
+        removed = self.scanner_streams - desired
+        self.scanner_streams = desired
+        self.retired_scanner_streams = (getattr(self, 'retired_scanner_streams', set()) | removed) - desired
+        self.pending_subscriptions.difference_update(
+            s for s in self.retired_scanner_streams if self.stream_subscribers[s] == 0)
+        await self._subscribe_streams_batch(sorted(desired - self.active_streams))
+        await self._unsubscribe_streams_batch(sorted(self.retired_scanner_streams))
+        self.retired_scanner_streams = {
+            s for s in self.retired_scanner_streams if s in self.active_streams and self.stream_subscribers[s] == 0}
+
     async def run(self):
-        """Enhanced main loop with connection pooling"""
+        """Only the elected gateway owns sockets; standby replicas stay idle."""
+        await redis_cache.initialize()
+        self.gateway_lease = RedisLease(redis_cache.get_redis_client(), "binance:gateway:owner:v1")
+        while not await self.gateway_lease.acquire():
+            await asyncio.sleep(5)
+        heartbeat = asyncio.create_task(self.gateway_lease.maintain())
+        owned = asyncio.create_task(self._run_owned())
         try:
-            await redis_cache.initialize()
+            done, _ = await asyncio.wait([heartbeat, owned], return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        finally:
+            heartbeat.cancel()
+            owned.cancel()
+            await asyncio.gather(heartbeat, owned, return_exceptions=True)
+            await self.gateway_lease.release()
+
+    async def _run_owned(self):
+        """Enhanced main loop with connection pooling"""
+        background_tasks = []
+        try:
             await self.initialize()
             
             # Start background tasks
             background_tasks = [
                 asyncio.create_task(self._handle_control_messages()),
                 asyncio.create_task(self._health_monitor()),
-                asyncio.create_task(self._subscription_processor())
+                asyncio.create_task(self._subscription_processor()),
+                asyncio.create_task(self._reconcile_scanner_streams())
             ]
             
             all_tasks = background_tasks
@@ -764,22 +864,18 @@ class WebsocketSubscriptionManager:
             # Log which task completed
             for task in done:
                 if task.exception():
-                    logger.error(f"Task failed with exception: {task.exception()}")
-                else:
-                    logger.warning(f"Task completed unexpectedly: {task}")
-            
-            # Cancel remaining tasks
-            for task in pending:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+                    raise task.exception()
+                raise RuntimeError("Gateway background task stopped unexpectedly")
                     
         except Exception as e:
             logger.error(f"Critical error in subscription manager: {e}")
+            raise
         finally:
             # Clean shutdown
+            tasks = background_tasks + list(self.message_handler_tasks.values())
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
             for connection in self.connections:
                 await connection.disconnect()
             

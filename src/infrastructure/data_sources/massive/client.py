@@ -2,7 +2,8 @@ import httpx
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
-from infrastructure.database.redis.rate_limiter import RedisRateLimiter
+from infrastructure.database.redis.rate_limiter import RedisRateLimiter, ProviderRequestDeferred
+from infrastructure.data_sources.provider_backoff import defer_if_throttled
 from common.logger import logger
 
 
@@ -50,6 +51,7 @@ class MassiveClient:
                 for page in range(max_pages):
                     await self.rate_limiter.acquire(weight=1)
                     response = await client.get(next_url, params=params)
+                    await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                     response.raise_for_status()
                     data = response.json()
                     all_results.extend(data.get("results", []))
@@ -69,6 +71,8 @@ class MassiveClient:
                         f"results may be incomplete."
                     )
             return all_results
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
             logger.warning(
                 f"Massive API unavailable ({type(e).__name__}: {e}) after "
@@ -92,8 +96,11 @@ class MassiveClient:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
+                await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                 response.raise_for_status()
                 return response.json().get("results", [])
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
             logger.warning(f"Massive search API unavailable ({type(e).__name__}: {e}) for query '{query}'.")
             return []
@@ -121,9 +128,12 @@ class MassiveClient:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(url, params=params)
+                await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                 response.raise_for_status()
                 data = response.json()
                 return data.get("tickers", []) or []
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
             logger.warning(
                 f"Massive forex snapshot unavailable ({type(e).__name__}: {e}). "
@@ -165,6 +175,7 @@ class MassiveClient:
             try:
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     response = await client.get(url, params=params)
+                    await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                     if response.status_code == 404:
                         target -= timedelta(days=1)
                         continue
@@ -173,6 +184,8 @@ class MassiveClient:
                     results = data.get("results", []) or []
                     if results:
                         return results
+            except ProviderRequestDeferred:
+                raise
             except Exception as e:
                 logger.warning(
                     f"Massive grouped daily fx unavailable for {date_str} "
@@ -227,9 +240,12 @@ class MassiveClient:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(url, params=params)
+                await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                 response.raise_for_status()
                 data = response.json()
                 return data.get("results", []) or []
+        except ProviderRequestDeferred:
+            raise
         except Exception as e:
             logger.warning(
                 f"Massive forex aggregates unavailable for {symbol} "

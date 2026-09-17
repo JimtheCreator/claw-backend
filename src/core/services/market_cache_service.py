@@ -10,6 +10,7 @@ from core.services.market_normalizers import (
 from common.logger import logger
 from infrastructure.database.redis.cache import redis_cache
 from redis.exceptions import RedisError
+from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 
 class MarketCacheService:
     CACHE_KEY = "market:instruments:active"
@@ -177,6 +178,8 @@ class MarketCacheService:
                     if normalized_query in inst.symbol.upper()
                     or normalized_query in inst.base_asset.upper()
                 ])
+            except ProviderRequestDeferred:
+                raise  # A deferred lookup is not a missing instrument.
             except Exception as e:
                 logger.error(f"Live Binance lookup failed for '{normalized_query}': {e}")
 
@@ -186,6 +189,8 @@ class MarketCacheService:
                 # approach -- cheaper, and correct regardless of where the
                 # ticker sorts in Massive's unfiltered fx universe.
                 matches.extend(await search_and_normalize_massive(normalized_query))
+            except ProviderRequestDeferred:
+                raise
             except Exception as e:
                 logger.error(f"Live Massive lookup failed for '{normalized_query}': {e}")
 

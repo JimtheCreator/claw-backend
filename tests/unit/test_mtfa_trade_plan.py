@@ -99,7 +99,8 @@ def test_countertrend_is_a_conditional_resumption_watch_not_a_trade(direction):
     assert "not a confirmed reversal" in plan["reason"]
     assert plan["action"] == "wait"
     assert plan["entry_level"] is plan["stop_loss"] is None
-    scenario = plan["primary_scenario"]
+    assert plan["primary_scenario"] is plan["forecast_scenario"] is None
+    scenario = plan["structure_watch"]
     assert scenario["direction"] == direction
     assert scenario["trigger"] == (102 if direction == "bullish" else 98)
     assert scenario["invalidation"] == (99 if direction == "bullish" else 101)
@@ -116,21 +117,18 @@ def test_real_pullback_plan_renders_a_watch_not_an_approach_trade(direction):
     original = deepcopy(plan)
     fig = AnalysisChartPresentation(_candles(), {"symbol": "TEST", "trade_plan": plan}, {}).figure()
     captions = " ".join(a.text.replace("<br>", " ") for a in fig.layout.annotations)
-    assert "FORECAST · SCENARIO ONLY · NO ENTRY APPROVED" in captions
-    assert "scenario levels, not placed orders" in captions
+    assert "STRUCTURE · NO ENTRY CONFIRMED" in captions
     assert "retest" in captions  # The prerequisite is not silently erased.
     assert "NEXT PROJECTED MOVE" not in captions
-    badge = next(a for a in fig.layout.annotations if a.name == "Forecast direction label")
-    assert badge.text == ("<b>Long ▲</b>" if direction == "bullish" else "<b>Short ▼</b>")
-    assert "scenario direction, not entry confirmation" in captions
-    assert pd.Timestamp(badge.x) == _candles().timestamp.iloc[-1]
+    assert not any(a.name == "Forecast direction label" for a in fig.layout.annotations)
+    assert not any(s.name in {"Forecast risk", "Forecast reward"} for s in fig.layout.shapes)
     assert not any(t.name == "Conditional forecast" for t in fig.data)
     assert f"Local: {plan['trend_direction']}" in fig.layout.title.text
     assert plan == original
 
 
 def test_provisional_pivot_cannot_confirm_a_reversal():
-    assert _pullback_plan(confirmed=False)["primary_scenario"] is None
+    assert _pullback_plan(confirmed=False)["structure_watch"] is None
 
 
 def test_missing_htf_does_not_draw_a_reversal_forecast():
@@ -140,7 +138,7 @@ def test_missing_htf_does_not_draw_a_reversal_forecast():
 
 
 def test_no_liquidity_target_is_not_invented_for_pullback():
-    assert _pullback_plan(target=False)["primary_scenario"]["target"] is None
+    assert _pullback_plan(target=False)["structure_watch"]["target"] is None
 
 
 def test_nearest_htf_correction_is_a_nested_pullback_when_larger_frames_agree():

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import argrelextrema
 from typing import Dict, List, Tuple, Optional, Any
-from .pattern_registry import register_pattern
+from .pattern_registry import register_pattern, strict_errors_enabled
 from common.logger import logger
 
 class PatternValidator:
@@ -56,6 +56,8 @@ class PatternValidator:
             else:
                 return 0.3
         except:
+            if strict_errors_enabled():
+                raise
             return 0.5
     
     @staticmethod
@@ -126,13 +128,11 @@ def find_significant_swings(ohlcv: dict, atr_multiplier: float = 3.0) -> List[Tu
     return swings
 
 def calculate_ratio_confidence(actual_ratio: float, ideal_ratio: float, tolerance: float = 0.05) -> float:
-    """Calculate confidence based on ratio deviation"""
-    if abs(actual_ratio - ideal_ratio) > tolerance:
+    """Score absolute ratio error monotonically within an absolute tolerance."""
+    if not all(np.isfinite(value) for value in (actual_ratio, ideal_ratio, tolerance)) or tolerance <= 0:
         return 0.0
-    deviation = abs(actual_ratio - ideal_ratio) / ideal_ratio
-    normalized_deviation = deviation / tolerance
-    confidence = (1 - normalized_deviation) ** 2
-    return max(0.0, min(1.0, confidence))
+    deviation = abs(actual_ratio - ideal_ratio) / tolerance
+    return max(0.0, 1.0 - deviation) ** 2
 
 def check_ratio_range(actual_ratio: float, min_ratio: float, max_ratio: float) -> Tuple[bool, float]:
     """Check if ratio is within range and calculate confidence"""
@@ -184,7 +184,7 @@ pattern_configs = {
         "ratios": [
             {"name": "AB_XA", "calculate": lambda p: abs(p[2] - p[1]) / abs(p[1] - p[0]) if abs(p[1] - p[0]) != 0 else 0, "min": 0.382, "max": 0.500, "weight": 0.3},
             {"name": "BC_AB", "calculate": lambda p: abs(p[3] - p[2]) / abs(p[2] - p[1]) if abs(p[2] - p[1]) != 0 else 0, "min": 0.382, "max": 0.886, "weight": 0.2},
-            {"name": "XD_XA", "calculate": lambda p: abs(p[4] - p[0]) / abs(p[1] - p[0]) if abs(p[1] - p[0]) != 0 else 0, "ideal": 0.886, "tolerance": 0.05, "weight": 0.5},
+            {"name": "AD_XA", "calculate": lambda p: abs(p[4] - p[1]) / abs(p[1] - p[0]) if abs(p[1] - p[0]) != 0 else 0, "ideal": 0.886, "tolerance": 0.05, "weight": 0.5},
         ]
     },
     "butterfly": {
@@ -274,6 +274,10 @@ def validate_pattern(swings: List[Tuple[int, float, str]], pattern_config: Dict[
         
         expected_sequence = ['low', 'high'] * (number_of_points // 2 + 1) if pattern_type == 'bullish' else ['high', 'low'] * (number_of_points // 2 + 1)
         expected_sequence = expected_sequence[:number_of_points]
+        # ABCD has four pivots: its reversal direction is set by D, not A.
+        # Five-point XABCD patterns start and finish on the same swing type.
+        if pattern_config["name"] == "abcd":
+            pattern_type = 'bullish' if p_types[-1] == 'low' else 'bearish'
         
         if p_types == expected_sequence:
             if "direction_check" in pattern_config and not pattern_config["direction_check"](p_prices, pattern_type):
@@ -291,6 +295,8 @@ def validate_pattern(swings: List[Tuple[int, float, str]], pattern_config: Dict[
                             conf = 0.0
                     ratios_conf[ratio_config["name"]] = conf
                 except ZeroDivisionError:
+                    # A degenerate swing has no valid ratio; rejecting that
+                    # candidate is expected even for strict scanner callers.
                     ratios_conf[ratio_config["name"]] = 0.0
             
             if all(conf > 0 for conf in ratios_conf.values()):
@@ -361,16 +367,12 @@ def get_pattern_targets_and_stops(pattern_name: str, points: List[float], patter
         return {'stop_loss': stop_loss, 'target_1': target_1, 'target_2': target_2, 'target_3': target_3}
     elif pattern_name == "abcd":
         A, B, C, D = points
-        if pattern_direction == 'bullish':
-            stop_loss = D * 0.98
-            target_1 = D + (B - C) * 0.382
-            target_2 = D + (B - C) * 0.618
-            target_3 = B
-        else:
-            stop_loss = D * 1.02
-            target_1 = D - (C - B) * 0.382
-            target_2 = D - (C - B) * 0.618
-            target_3 = B
+        stop_loss = D * (0.98 if pattern_direction == 'bullish' else 1.02)
+        # Keep the existing B endpoint for legacy chart consumers, with ordered
+        # intermediate levels between D and B. Scanner results omit targets.
+        target_1 = D + (B - D) * 0.382
+        target_2 = D + (B - D) * 0.618
+        target_3 = B
         return {'stop_loss': stop_loss, 'target_1': target_1, 'target_2': target_2, 'target_3': target_3}
     elif pattern_name == "three_drives":
         X, A1, B1, A2, B2, D = points

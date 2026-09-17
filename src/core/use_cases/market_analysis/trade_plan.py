@@ -85,6 +85,8 @@ def build_trade_plan(
         "reason": None,
         "evidence": {"mtfa": mtfa},
         "primary_scenario": None,
+        "forecast_scenario": None,
+        "structure_watch": None,
         "policy_version": "evidence-v2" if evidence_policy == "smc_v2" else "indicators-v1",
         "validation_status": "experimental_not_validated",
         "targets": [],
@@ -98,11 +100,6 @@ def build_trade_plan(
         return _wait(base, "No valid closing price is available; no trade plan can be formed.")
     if trend not in {"bullish", "bearish"}:
         return _wait(base, "Market structure has no confirmed directional trend yet.")
-
-    # A market scenario and permission to enter are different outputs. Keep a
-    # local conditional scenario even if an entry/context gate returns early.
-    # This does NOT populate entry_level/stop_loss/take_profit or change action.
-    base["forecast_scenario"] = _structure_watch(candles, swings, trend, liquidity, "local")
 
     context, bias, explanation = _market_context(mtfa, trend)
     base["market_context"] = context
@@ -119,9 +116,9 @@ def build_trade_plan(
         if intermediate:
             scenario["extra_confirmation"] = f"Also require {', '.join(intermediate)} structure to turn {bias} before entry."
             scenario["confirmation"] += " " + scenario["extra_confirmation"]
-    base["primary_scenario"] = scenario
-    if scenario:
-        base["forecast_scenario"] = deepcopy(scenario)
+    # A structural watch explains what to reassess; it must not become a
+    # directional forecast before context, evidence and risk checks pass.
+    base["structure_watch"] = scenario
     if context == "pullback":
         return _wait(base, explanation)
 
@@ -240,8 +237,12 @@ def build_trade_plan(
 
 
 def _wait(plan: Dict[str, Any], reason: str) -> Dict[str, Any]:
+    # All rejection paths share this boundary, including late risk failures.
+    # Keep observed context/evidence, but never leave a rejected forecast behind.
+    plan["primary_scenario"] = None
+    plan["forecast_scenario"] = None
     plan["reason"] = reason
-    scenario = plan.get("primary_scenario")
+    scenario = plan.get("structure_watch")
     plan["confirmation_required"] = scenario["confirmation"] if scenario else "Wait for confirmed structure and complete context before entering."
     return plan
 
@@ -255,7 +256,7 @@ def _market_context(mtfa, trend):
     }
     missing = set(mtfa.get("htf_requested", [])) - set(trends)
     if mtfa.get("htf_unavailable") or missing or not trends or any(t not in {"bullish", "bearish"} for t in trends.values()):
-        return "incomplete", None, "Higher-timeframe evidence is incomplete; no MTFA entry is approved. Any displayed local scenario is conditional and lacks higher-timeframe validation."
+        return "incomplete", None, "Higher-timeframe evidence is incomplete; no entry or directional forecast is approved. Local structure remains available for inspection."
     # Respect hierarchy: a nearest-HTF correction inside two aligned larger
     # frames is a nested pullback, not equivalent to the largest frames splitting.
     def duration(tf):
