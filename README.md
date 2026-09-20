@@ -94,50 +94,32 @@ Claw/
 
 ## 🚀 Getting Started
 
-Because this is a distributed system, you are spinning up a mesh of containers rather than a single script.
+For local iOS development, the app connects to one API and a single launcher
+supervises the background processes. Use the existing `.env` and `.venv`.
+Open OrbStack / Docker Desktop and start the configured Redis and InfluxDB
+services first. On the current Mac these are `claw_redis` and `claw_influxdb`.
 
-### 1. Prerequisites
-
-- Docker & Docker Compose
-- Python 3.10+ (for local debugging)
-- External API Keys (Binance, Telegram, Stripe)
-
-### 2. Environment Configuration
-
-Create a `.env` file from the example:
-
-```bash
-cp .env.example .env
+```sh
+.venv/bin/python scripts/dev_backend.py check
+.venv/bin/python scripts/dev_backend.py start --scanner
 ```
 
-Ensure you populate `REDIS_HOST`, `INFLUXDB_URL`, and your market data provider keys.
+In a second terminal, expose port 8000 using the app's existing tunnel:
 
-### 3. Launching the Cluster
-
-Use Docker Compose to spin up the entire stack (API, Workers, DBs, Cache):
-
-```bash
-# Build and start all services in detached mode
-docker-compose up --build -d
+```sh
+ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
 ```
 
-**Services created:**
-- `core-api`: Accessible at http://localhost:8000
-- `data-workers`: Background logs available via `docker logs -f watchers-data-workers-1`
-- `redis`: Port 6379
-- `influxdb`: Port 8086
+`--scanner` enables the bounded 10-symbol Binance pilot on four intervals.
+Startup can require initial candle preparation; catalog definitions alone do
+not mean live scans are ready. Alert/push workers are not started. Ctrl-C stops
+the launcher's processes. Logs are under `logs/dev-backend/`.
 
-### 4. Running Locally (Development)
-
-If you need to debug the Data Science logic without the full Docker overhead, you can run the analyzer directly:
-
-```bash
-# Install specific DS dependencies
-pip install pandas numpy scikit-learn ta-lib
-
-# Run the analysis test suite
-python tests/integration/test_pattern_detection_workflow.py
-```
+See **[Running the backend for iOS](docs/local-ios-backend.md)** for database
+startup, process roles, health checks, iPhone configuration and troubleshooting.
+The familiar manual `PYTHONPATH` commands also remain in `src/app.py`.
+There is no root Compose file; the older generic `docker-compose up` instruction
+did not match this checkout.
 
 ---
 

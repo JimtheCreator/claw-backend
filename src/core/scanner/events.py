@@ -31,7 +31,8 @@ def lifecycle_transition(previous, metadata, results):
             key = json.dumps([row["instrument_id"], row["pattern_id"]], separators=(",", ":"))
             if key in current:
                 raise ValueError("Duplicate instrument/pattern in lifecycle input")
-            current[key] = dict(row)
+            # Drawing geometry is presentation data, not notification state.
+            current[key] = {k: v for k, v in row.items() if k not in ("geometry", "preview")}
     state = {"schema_version": 1, "scope": scope, "epoch": epoch, "cutoff": cutoff, "matches": current}
     if previous and previous["scope"] != scope:
         raise ValueError("Pattern lifecycle checkpoint scope mismatch")

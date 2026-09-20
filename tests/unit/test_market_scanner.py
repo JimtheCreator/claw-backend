@@ -249,11 +249,14 @@ def test_api_vertical_slice_and_1000_reads_never_repeat_scanning():
                 data = catalog.json()
                 assert data["items"][1]["id"] == "bullish_engulfing"
                 assert data["items"][1]["match_count"] == 1
+                assert data["items"][1]["symbols"] == ["binance:spot:BTCUSDT"]
                 params["snapshot"] = data["snapshot"]
+                params["include_preview"] = "true"
                 responses = await asyncio.gather(*(client.get(base + "/patterns/bullish_engulfing/matches", params=params)
                                                    for _ in range(1000)))
                 assert all(r.status_code == 200 and r.json()["total"] == 1 for r in responses)
                 assert responses[0].json()["items"][0]["symbol"] == "BTCUSDT"
+                assert responses[0].json()["items"][0]["preview"]["candles"][-1]["close"] == 102.5
                 candle_source.load.assert_awaited_once()
                 reg["engulfing"]["function"].assert_awaited_once()
                 assert (await client.get(base + "/patterns/no_such_pattern/matches", params=params)).status_code == 404

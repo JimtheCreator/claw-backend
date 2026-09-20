@@ -137,10 +137,24 @@ if __name__ == "__main__":
         reload=True
     )
 
-# For NGROK TUNNELING USE
+# LOCAL iOS DEVELOPMENT (from the repository root; existing .env is reused)
+# 1. Open OrbStack / Docker Desktop. Existing Redis + Influx containers must run.
+# 2. .venv/bin/python scripts/dev_backend.py check
+# 3. .venv/bin/python scripts/dev_backend.py start --scanner
+#    One terminal supervises API, market feeds, chart/analysis worker, gateway,
+#    scanner ingestion, detection and scheduler. Ctrl-C stops its processes.
+#    --scanner explicitly enables the 10-symbol Binance pilot (15m/1h/4h/1d).
+#    Alerts/push delivery are separate and are not started by this launcher.
+#    Logs: logs/dev-backend/*.log | Full guide: docs/local-ios-backend.md
+#    To print each underlying PYTHONPATH command:
+#    .venv/bin/python scripts/dev_backend.py commands --scanner
+#
+# In a SECOND terminal, expose the API to the physical iPhone:
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
 
-# PYTHONPATH=./src:. python -m src.core.services.workers.celery_worker
+# MANUAL STARTUP ALTERNATIVE (one command per terminal; activate .venv first)
+# Running `python -m ...celery_worker` only loads Celery configuration; use:
+# PYTHONPATH=src:. python -m celery -A src.core.services.workers.celery_worker:celery_app worker --pool=prefork --concurrency=2 --queues=default,analysis --hostname=ios-app@%h --loglevel=info
 
 # PYTHONPATH=./src:. python -m src.core.services.workers.ticker_service
 
@@ -156,8 +170,20 @@ if __name__ == "__main__":
 
 # PYTHONPATH=./src:. python -m src.core.services.workers.websocket_subscription_manager
 
+# Additional roles for continuously refreshed pattern matches:
+# PYTHONPATH=src:. python -m celery -A src.core.services.workers.celery_worker:celery_app worker --pool=prefork --concurrency=2 --queues=scanner_ingestion --hostname=ios-ingestion@%h --loglevel=info
+# PYTHONPATH=src:. python -m celery -A src.core.services.workers.celery_worker:celery_app worker --pool=prefork --concurrency=2 --queues=scanner --hostname=ios-detection@%h --loglevel=info
+# PYTHONPATH=src:. python -m core.services.workers.scanner_scheduler
+# PYTHONPATH=src:. python scripts/manage_scanner.py enable --manifest config/scanner/binance-spot-pilot.json --intervals 15m 1h 4h 1d
+# PYTHONPATH=src:. python scripts/manage_scanner.py status
+# PYTHONPATH=src:. python scripts/manage_scanner.py disable --universe binance-spot-pilot
+# notification_worker and scanner inbox/delivery are OPTIONAL ALERT processes,
+# not requirements for browsing patterns or saving watchlist shortcuts.
+
 # fly deploy --config docker/core-api/fly.toml --remote-only
 
 # fly deploy --config docker/service-workers/fly.toml --remote-only
 
 # fly deploy --config docker/influxdb/fly.toml --remote-only
+
+

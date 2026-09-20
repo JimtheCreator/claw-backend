@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .catalog import INTERVAL_SECONDS, detector_catalog, pattern_catalog
+from .preview import chart_candles, geometry
 
 SYMBOL = re.compile(r"^[A-Z0-9]{3,30}$")
 UNIVERSE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -93,7 +94,7 @@ def load_registry():
 def detector_version():
     root = Path(__file__).parents[1] / "use_cases/market_analysis/detect_patterns_engine"
     digest = hashlib.sha256()
-    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json")]:
+    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json"), Path(__file__).with_name("preview.py")]:
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
     return "pilot-v1-" + digest.hexdigest()[:16]
@@ -138,6 +139,7 @@ def normalize_detections(raw, detector, symbol, interval, ohlcv):
             "pattern_start": ohlcv["timestamp"][start],
             "pattern_end": ohlcv["timestamp"][end], "age_bars": age,
             "last_price": ohlcv["close"][-1],
+            "geometry": geometry(item, detector["category"], start, end, size),
         }
         old = matches.get(name)
         if old is None or (match["pattern_end"], score) > (old["pattern_end"], old["geometry_score"]):
@@ -173,6 +175,7 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
     async def compute():
         functions = load_registry() if registry is None else registry
         outcome = {"symbol": symbol, "status": "ready", "matches": [],
+                   "chart": chart_candles(ohlcv),
                    "issues": [], "detector_coverage": {}, "input_revision": revision,
                    "detector_version": version, "data_as_of": utc_iso(cutoff)}
         for detector in selected:
@@ -215,7 +218,7 @@ def assemble_snapshot(manifest, interval, cutoff, outcomes, *, version=None):
                 "warming": 0, "stale": 0, "gapped": 0, "invalid_data": 0, "error": 0,
                 "pending": 0}
     detector_coverage = {d: {"evaluated": 0, "errors": 0} for d in manifest["detectors"]}
-    issues, revisions = [], {}
+    issues, revisions, charts = [], {}, {}
     work = {"computed": 0, "reused": 0}
     for symbol in sorted(manifest["symbols"]):
         outcome = outcomes.get(symbol) or empty_instrument(symbol, "pending", "scan_pending")
@@ -227,6 +230,8 @@ def assemble_snapshot(manifest, interval, cutoff, outcomes, *, version=None):
                 detector_coverage[detector][metric] += stats[metric]
         for match in outcome["matches"]:
             results[match["pattern_id"]].append(match)
+        if outcome.get("chart") and outcome["matches"]:
+            charts[f"binance:spot:{symbol}"] = outcome["chart"]
         issues.extend(outcome["issues"])
         if outcome.get("input_revision"):
             revisions[symbol] = outcome["input_revision"]
@@ -243,6 +248,8 @@ def assemble_snapshot(manifest, interval, cutoff, outcomes, *, version=None):
         "patterns": patterns, "counts": {p: len(rows) for p, rows in results.items()},
         "issues": issues[:100], "issue_count": len(issues), "lookback_bars": LOOKBACK,
         "input_revisions": revisions, "processing": work,
+        "members": {pattern: sorted(row["instrument_id"] for row in rows) for pattern, rows in results.items()},
+        "_charts": charts,
     }
     return metadata, results
 

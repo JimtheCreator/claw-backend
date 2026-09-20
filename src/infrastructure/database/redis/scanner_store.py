@@ -90,6 +90,7 @@ class ScannerStore:
     async def publish(self, token, metadata, results, *, guard=None, emit_events=False):
         key = self.snapshot_key(token)
         metadata = dict(metadata, snapshot=token)
+        charts = metadata.pop("_charts", {})
         stream = ScannerEventStream(self.redis, self.prefix)
         state_payload, batch_payload = "", ""
         if emit_events:
@@ -102,6 +103,8 @@ class ScannerStore:
                 if max(len(state_payload.encode()), len(batch_payload.encode())) > MAX_EVENT_BYTES:
                     raise ScannerEventBacklogFull("Scanner event batch/checkpoint exceeds the configured byte bound")
         fields = {"metadata": json.dumps(metadata, allow_nan=False)}
+        fields.update({f"chart:{instrument}": json.dumps(candles, allow_nan=False)
+                       for instrument, candles in charts.items()})
         for pattern, rows in results.items():
             for offset in range(0, len(rows), PAGE_SIZE):
                 fields[f"{pattern}:{offset // PAGE_SIZE}"] = json.dumps(
@@ -158,3 +161,23 @@ class ScannerStore:
         rows = [row for page in data for row in json.loads(page)]
         begin = offset % PAGE_SIZE
         return rows[begin:begin + limit]
+
+    async def previews(self, metadata, rows):
+        """Read the exact detection snapshot, never current/provider candles."""
+        if not rows:
+            return []
+        raw = await self.redis.hmget(self.snapshot_key(metadata["snapshot"]),
+                                    [f"chart:{row['instrument_id']}" for row in rows])
+        output = []
+        for row, data in zip(rows, raw):
+            geometry = row.get("geometry")
+            preview = None
+            if data and geometry:
+                candles = json.loads(data)
+                first = max(0, geometry["start_index"] - 8)
+                # Short candlestick setups retain at least 24 bars of context.
+                first = min(first, max(0, len(candles) - 24))
+                preview = dict(geometry, candles=[c for c in candles if c["index"] >= first],
+                               data_as_of=metadata["data_as_of"])
+            output.append(dict(row, preview=preview))
+        return output

@@ -78,7 +78,8 @@ async def patterns(response: Response, universe: Universe = "binance-spot-pilot"
     for pattern in metadata["patterns"]:
         coverage = metadata["detector_coverage"][pattern["detector_id"]]
         items.append(dict(pattern, match_count=metadata["counts"][pattern["id"]]
-                          if coverage["evaluated"] else None, coverage=coverage))
+                          if coverage["evaluated"] else None, coverage=coverage,
+                          symbols=metadata.get("members", {}).get(pattern["id"])))
     response.headers["Cache-Control"] = "public, max-age=5"
     return dict(summary(metadata), items=items)
 
@@ -89,6 +90,7 @@ async def matches(pattern_id: str, response: Response,
                   snapshot: Snapshot = None,
                   offset: Annotated[int, Query(ge=0, le=1000)] = 0,
                   limit: Annotated[int, Query(ge=1, le=100)] = 50,
+                  include_preview: bool = False,
                   redis=Depends(get_scanner_redis)):
     known = {p["id"]: p for p in pattern_catalog()}
     if pattern_id not in known:
@@ -100,6 +102,8 @@ async def matches(pattern_id: str, response: Response,
     try:
         async with asyncio.timeout(3):
             rows = await store.matches(metadata, pattern_id, offset, limit)
+            if include_preview:
+                rows = await store.previews(metadata, rows)
     except ScannerSnapshotMissing:
         raise HTTPException(410, detail={"code": "snapshot_expired"}) from None
     except (RedisError, TimeoutError):

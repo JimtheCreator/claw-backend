@@ -1311,6 +1311,9 @@ def _detect_recent_flag(ohlcv: dict, direction: int) -> Optional[Dict[str, Any]]
             "key_levels": {
                 "points": {"flagpole_start": point(pole_start), "flagpole_end": point(pole_end),
                            "flag_start": point(pole_end + 1), "flag_end": point(count - 1)},
+                "overlay_lines": [[point(pole_start), point(pole_end)],
+                    *[[{"index": int(i), "price": float(np.polyval(fit, i))}
+                       for i in (pole_end + 1, count - 1)] for fit in (upper_fit, lower_fit)]],
                 "latest_close": float(closes[-1]),
                 "avg_high_5": float(np.mean(highs[-5:])), "avg_low_5": float(np.mean(lows[-5:])),
                 "pattern_high": float(highs[pole_start:].max()),
