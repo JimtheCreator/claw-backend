@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from redis.exceptions import RedisError
 
 from core.scanner.catalog import INTERVAL_SECONDS, pattern_catalog
@@ -115,3 +115,36 @@ async def matches(pattern_id: str, response: Response,
     return dict(summary(metadata), pattern_id=pattern_id, pattern_coverage=coverage,
                 total=total, offset=offset, limit=limit, items=rows,
                 next_offset=next_offset if total is not None and next_offset < total else None)
+
+
+@router.get("/symbols/{symbol}/patterns")
+async def symbol_patterns(symbol: Annotated[str, Path(pattern=r"^[A-Z0-9]{2,30}$")],
+                          response: Response, universe: Universe = "binance-spot-pilot",
+                          interval: Interval = "15m", redis=Depends(get_scanner_redis)):
+    """Read one immutable scan. Never fetch candles or run detectors for a viewer."""
+    store = ScannerStore(redis, universe, interval)
+    metadata = await read_metadata(store, None)
+    instrument = f"{metadata['provider']}:{metadata['market']}:{symbol}"
+    coverage = metadata.get("instrument_coverage")
+    if coverage is not None:
+        availability = coverage.get(symbol, "not_scanned")
+    else:
+        # Legacy snapshots do not have a complete per-symbol coverage map.
+        # Do not turn unknown coverage into an authoritative 'no matches'.
+        availability = "unknown"
+        if symbol in metadata.get("input_revisions", {}):
+            complete = metadata["coverage"]["ready"] == metadata["coverage"]["eligible"]
+            availability = "ready" if complete else "partial"
+    try:
+        async with asyncio.timeout(3):
+            rows = await store.symbol_matches(metadata, instrument)
+            rows = await store.previews(metadata, rows)
+    except ScannerSnapshotMissing:
+        raise HTTPException(410, detail={"code": "snapshot_expired"}) from None
+    except (RedisError, TimeoutError):
+        raise unavailable() from None
+    definitions = {p["id"]: p for p in metadata["patterns"]}
+    items = [dict(row, event=definitions[row["pattern_id"]]) for row in rows]
+    items.sort(key=lambda row: row["event"]["display_name"])
+    response.headers["Cache-Control"] = "public, max-age=5"
+    return dict(summary(metadata), symbol=symbol, availability=availability, items=items)

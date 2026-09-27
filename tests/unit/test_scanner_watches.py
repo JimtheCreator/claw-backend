@@ -10,7 +10,7 @@ from pydantic import ValidationError
 import pytest
 
 from core.scanner.watches import WatchCreate
-from core.services.scanner_alerts import consume_events, deliver_one, PermanentDeliveryError
+from core.services.scanner_alerts import consume_events, deliver_one, PermanentDeliveryError, PushConfigurationError
 from presentation.api.dependencies.scanner_auth import FirebaseIDVerifier, verify_token_sync
 
 
@@ -137,3 +137,85 @@ def test_notification_contains_stable_identity_and_provider_expiration(monkeypat
     assert message.apns.headers['apns-expiration'] == str(int(delivery['expires_at'].timestamp()))
     assert message.apns.headers['apns-collapse-id'] == str(delivery['id'])
     send.assert_called_once()
+
+
+def test_multidevice_retry_skips_already_accepted_devices(monkeypatch):
+    import hashlib
+    from infrastructure.database.firebase.scanner_notifications import FirebaseScannerSender
+    async def scenario():
+        first, second = 'device-one', 'device-two'
+        repo = Mock(notification_devices=AsyncMock(return_value=([first,second],set())),
+                    record_device_delivery=AsyncMock())
+        send = Mock(side_effect=['ok',RuntimeError('temporary')])
+        monkeypatch.setattr(FirebaseScannerSender,'_send',send)
+        sender = FirebaseScannerSender(repo)
+        with pytest.raises(RuntimeError):
+            await sender.send({})
+        repo.record_device_delivery.assert_awaited_once_with({},first)
+        repo.notification_devices.return_value = ([first,second],{hashlib.sha256(first.encode()).hexdigest()})
+        send.reset_mock(side_effect=True)
+        send.return_value = 'second-ok'
+        assert await sender.send({}) == 'second-ok'
+        send.assert_called_once_with({},second)
+    asyncio.run(scenario())
+
+
+def test_invalid_device_is_removed_and_not_reported_delivered(monkeypatch):
+    from infrastructure.database.firebase.scanner_notifications import FirebaseScannerSender
+    async def scenario():
+        repo = Mock(notification_devices=AsyncMock(return_value=(['invalid-token'],set())),
+                    record_device_delivery=AsyncMock())
+        monkeypatch.setattr(FirebaseScannerSender,'_send',Mock(side_effect=PermanentDeliveryError()))
+        with pytest.raises(PermanentDeliveryError):
+            await FirebaseScannerSender(repo).send({})
+        repo.record_device_delivery.assert_awaited_once_with({},'invalid-token',invalid=True)
+    asyncio.run(scenario())
+
+
+def test_apns_authentication_error_is_configuration_failure(monkeypatch):
+    from infrastructure.database.firebase import scanner_notifications as module
+    monkeypatch.setattr(module, 'scanner_firebase_app', lambda: object())
+    monkeypatch.setattr(module.messaging, 'send', Mock(side_effect=module.messaging.ThirdPartyAuthError('private provider details')))
+    delivery = {'id':uuid.uuid4(),'watch_id':uuid.uuid4(),'user_id':'alice','event_id':'event',
+                'expires_at':datetime.now(timezone.utc)+timedelta(minutes=5),
+                'payload':{'match':{'symbol':'BTCUSDT','pattern_id':'bullish_engulfing',
+                    'interval':'15m','provider':'binance','market':'spot'}}}
+    with pytest.raises(PushConfigurationError):
+        module.FirebaseScannerSender._send(delivery, 'private-token')
+
+
+def test_configuration_error_preserves_devices_and_successful_receipts(monkeypatch):
+    from infrastructure.database.firebase.scanner_notifications import FirebaseScannerSender
+    async def scenario():
+        repo = Mock(notification_devices=AsyncMock(return_value=(['android-token','ios-token'],set())),
+                    record_device_delivery=AsyncMock())
+        monkeypatch.setattr(FirebaseScannerSender, '_send', Mock(side_effect=['accepted',PushConfigurationError()]))
+        with pytest.raises(PushConfigurationError):
+            await FirebaseScannerSender(repo).send({})
+        repo.record_device_delivery.assert_awaited_once_with({}, 'android-token')
+    asyncio.run(scenario())
+
+
+def test_configuration_failure_records_actionable_reason_without_credentials(caplog):
+    async def scenario():
+        delivery = {'status':'sending'}
+        repo = Mock(claim_delivery=AsyncMock(return_value=delivery),
+                    delivery_allowed=AsyncMock(return_value=True), finish_delivery=AsyncMock(return_value=True))
+        sender = Mock(send=AsyncMock(side_effect=PushConfigurationError('secret-provider-response')))
+        assert await deliver_one(repo, sender) == 'retry'
+        repo.finish_delivery.assert_awaited_once_with(delivery, error='push_credentials_invalid')
+    asyncio.run(scenario())
+    assert 'check Firebase APNs key' in caplog.text
+    assert 'secret-provider-response' not in caplog.text
+
+
+def test_transient_failure_logs_type_without_provider_payload(caplog):
+    async def scenario():
+        delivery = {'status':'sending'}
+        repo = Mock(claim_delivery=AsyncMock(return_value=delivery),
+                    delivery_allowed=AsyncMock(return_value=True), finish_delivery=AsyncMock(return_value=True))
+        sender = Mock(send=AsyncMock(side_effect=TimeoutError('secret-device-token')))
+        assert await deliver_one(repo, sender) == 'retry'
+    asyncio.run(scenario())
+    assert 'TimeoutError' in caplog.text
+    assert 'secret-device-token' not in caplog.text

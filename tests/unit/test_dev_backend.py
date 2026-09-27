@@ -101,3 +101,19 @@ def test_shutdown_reaps_an_owned_process_that_ignores_termination():
             os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=3)
         process.stdout.close()
+
+
+def test_notifications_are_explicit_and_use_separate_database_roles():
+    plan = dev.process_plan('python',True,True)
+    assert plan['scanner-inbox'][-1] == 'inbox'
+    assert plan['scanner-delivery'][-1] == 'delivery'
+    source = {'SCANNER_API_DATABASE_URL':'api-dsn','SCANNER_WORKER_DATABASE_URL':'worker-dsn',
+              'SCANNER_DATABASE_URL':'unused-admin-dsn'}
+    for role, dsn in [('api','api-dsn'),('scanner-inbox','worker-dsn'),('scanner-delivery','worker-dsn'),('price-alerts','worker-dsn'),('scanner-detection',None)]:
+        env = dev.child_environment(source,True,role)
+        assert env.get('SCANNER_DATABASE_URL') == dsn
+        assert env['SCANNER_EVENTS_ENABLED'] == '1'
+        assert env['SCANNER_PUSH_ENABLED'] == ('1' if role in ('scanner-delivery','price-alerts') else '0')
+        assert 'SCANNER_WORKER_DATABASE_URL' not in env
+        assert 'SCANNER_API_DATABASE_URL' not in env
+    assert source['SCANNER_DATABASE_URL'] == 'unused-admin-dsn'

@@ -34,6 +34,7 @@ from presentation.api.routes.watchlist import user_symbol_watchlist
 from presentation.api.routes.discover import router as discover_router
 from presentation.api.routes.scanner import router as scanner_router
 from presentation.api.routes.scanner_watches import router as scanner_watches_router
+from presentation.api.routes.symbol_alerts import router as symbol_alerts_router
 from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 
 # Initialize rate limiter
@@ -122,6 +123,7 @@ app.include_router(watchlist_groups.router, prefix="/api/v1", tags=["Watchlist G
 app.include_router(discover_router, prefix="/api/v1", tags=["Discover"])
 app.include_router(scanner_router, prefix="/api/v1")
 app.include_router(scanner_watches_router, prefix="/api/v1")
+app.include_router(symbol_alerts_router, prefix="/api/v1")
 
 # Health check endpoint
 @app.get("/health")
@@ -147,7 +149,8 @@ if __name__ == "__main__":
 #    Alerts/push delivery are separate and are not started by this launcher.
 #    Logs: logs/dev-backend/*.log | Full guide: docs/local-ios-backend.md
 #    To print each underlying PYTHONPATH command:
-#    .venv/bin/python scripts/dev_backend.py commands --scanner
+#    .venv/bin/python scripts/dev_backend.py start --scanner --notifications
+#    tail -f logs/dev-backend/scanner-inbox.log logs/dev-backend/scanner-delivery.log
 #
 # In a SECOND terminal, expose the API to the physical iPhone:
 # ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
@@ -185,5 +188,3 @@ if __name__ == "__main__":
 # fly deploy --config docker/service-workers/fly.toml --remote-only
 
 # fly deploy --config docker/influxdb/fly.toml --remote-only
-
-

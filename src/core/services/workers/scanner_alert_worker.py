@@ -48,6 +48,7 @@ class ScannerInboxPump:
 
 async def run_inbox(redis, repository, consumer, stop):
     pump = ScannerInboxPump(redis, repository, consumer)
+    log.info('Scanner inbox started; waiting for scanner event batches')
     while not stop.is_set():
         try:
             stats = await pump.tick()
@@ -61,6 +62,7 @@ async def run_inbox(redis, repository, consumer, stop):
 async def run_delivery(repository, sender, stop, concurrency=8):
     if not 1 <= concurrency <= 16:
         raise ValueError('Delivery concurrency must be between 1 and 16')
+    log.info('Scanner delivery started; waiting for queued notifications')
 
     async def lane():
         while not stop.is_set():

@@ -67,7 +67,7 @@ def lifecycle_transition(previous, metadata, results):
                 events.append(event("no_longer_detected", old,
                                     reason="replaced" if new else "absent_on_complete_scan"))
             if new and (not old or changed):
-                events.append(event("detected", new))
+                events.append(event("detected", new, new_symbol=not bool(old)))
     batch = {"schema_version": 1, "batch_id": batch_id, "scope": scope,
              "epoch": epoch, "data_as_of": cutoff, "events": events}
     return state, batch

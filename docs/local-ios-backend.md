@@ -47,7 +47,7 @@ Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` an
 3. Start the application processes together:
 
    ```sh
-   .venv/bin/python scripts/dev_backend.py start --scanner
+   .venv/bin/python scripts/dev_backend.py start --scanner --notifications
    ```
 
    Leave this terminal running. `--scanner` explicitly enables the existing
@@ -56,6 +56,11 @@ Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` an
    limiter. Let the initial snapshots warm; repeatedly restarting will not help.
    Some catalog patterns are not enabled by this pilot. A ready scan may correctly
    contain zero matches.
+
+   `--notifications` also starts the followed-event API, scanner inbox and push
+   delivery worker, using the separate database connections already configured in
+   `.env`. Omit this flag for browsing without notifications. See
+   [notification setup and testing](event-follow-notifications.md) for prerequisites.
 
    The launcher stops its own children on Ctrl-C or if any child exits. It refuses
    a duplicate launcher or an occupied API port. It does not stop unrelated
@@ -90,14 +95,20 @@ Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` an
 | Scanner ingestion worker | Persist finalized candles and prepare missing bounded windows |
 | Scanner detection worker | Calculate patterns and publish shared match snapshots |
 | Scanner scheduler | Schedule work after closed candles, independently of app users |
+| Scanner inbox (`--notifications`) | Consume shared scan events and queue matching followers' notifications |
+| Scanner delivery (`--notifications`) | Deliver queued notifications through Firebase/APNs |
 
-The last three are included by `--scanner`. These are processes in the same
+The scanner ingestion, detection and scheduler processes are included by `--scanner`.
+The inbox and delivery processes additionally require `--notifications`.
+These are processes in the same
 repository; the launcher is a local convenience, not a production deployment or
 a claim of 1,000-user capacity. Use dedicated supervised roles for production.
 
-There are **no alert inbox, push, broadcast or Telegram consumers** in this
-launcher. Scanner event publication/watch endpoints/push flags are forced off for
-its children. Saving an event in iOS is a Firebase preference, not an alert rule.
+Without `--notifications`, scanner event publication, watch endpoints and push
+delivery are disabled by the launcher. With it, newly saved supported iOS patterns
+follow new matching symbols on the saved timeframe. Existing bookmarks can enable
+notifications separately. This launcher does not start Telegram consumers or the
+separate legacy price-alert services.
 
 ## Commands you can copy individually
 
@@ -105,7 +116,7 @@ The familiar commented commands are still in `src/app.py`. To print the exact
 commands with the current Python executable:
 
 ```sh
-.venv/bin/python scripts/dev_backend.py commands --scanner
+.venv/bin/python scripts/dev_backend.py commands --scanner --notifications
 ```
 
 Use either the launcher or the individual processes, not both. `python -m
@@ -192,3 +203,28 @@ pilot symbols, with real stored-candle previews. This does not establish product
 capacity for 1,000 simultaneous users. The broad unit suite currently cannot collect
 `test_price_alert_manager.py` because it imports the obsolete
 `infrastructure.notifications` package; that unrelated test was not changed here.
+
+## Event notifications
+
+For followed-event pushes, complete the database and APNs setup in
+[event-follow-notifications.md](event-follow-notifications.md), then run
+`.venv/bin/python scripts/dev_backend.py start --scanner --notifications`.
+The original `--scanner` command keeps notification delivery off.
+
+### Chart Patterns pane
+
+The chart's Patterns button reads
+`GET /api/v1/scanner/symbols/SOLUSDT/patterns?interval=15m`.
+Restart the existing `start --scanner --notifications` launcher after updating
+this code. No new process, migration, credential or detector configuration is
+needed. Published snapshots include a symbol index and per-symbol coverage;
+older snapshots remain readable until replaced by the next scheduled scan.
+This endpoint only reads shared Redis results and snapshot previews. It never
+calls Binance/Massive or dispatches analysis from an app request.
+
+### Symbol price alerts
+
+The same `start --scanner --notifications` command now also runs `price-alerts`.
+Use `tail -f logs/dev-backend/price-alerts.log` to inspect its delivery activity.
+The chart bell configures price or symbol-scoped pattern alerts; see
+[symbol-price-alerts.md](symbol-price-alerts.md) for storage, migration and feed details.

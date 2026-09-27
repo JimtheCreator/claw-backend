@@ -10,7 +10,6 @@ import logging
 import os
 import signal
 import socket
-import ssl
 import uuid
 
 import asyncpg
@@ -18,6 +17,7 @@ from redis.asyncio import Redis
 
 from core.services.workers.scanner_alert_worker import run_inbox, run_delivery
 from infrastructure.database.supabase.scanner_watches import ScannerWatchRepository
+from infrastructure.database.supabase.tls import database_tls_context
 
 
 async def run(args):
@@ -32,15 +32,17 @@ async def run(args):
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
-    tls = ssl.create_default_context(cafile=os.getenv('SCANNER_DATABASE_CA_FILE'))
-    pool = await asyncpg.create_pool(dsn, min_size=1, max_size=args.concurrency + 2,
+    tls = database_tls_context(os.getenv('SCANNER_DATABASE_CA_FILE'))
+    pool = await asyncpg.create_pool(dsn, min_size=1, max_size=2 if args.mode == 'inbox' else args.concurrency + 1,
         timeout=5, command_timeout=20, statement_cache_size=0, ssl=tls)
     try:
         repository = ScannerWatchRepository(pool)
         if args.mode == 'delivery':
             from infrastructure.database.firebase.scanner_notifications import FirebaseScannerSender
-            await run_delivery(repository, FirebaseScannerSender(), stop, args.concurrency)
+            await run_delivery(repository, FirebaseScannerSender(repository), stop, args.concurrency)
         else:
+            upgraded = await repository.upgrade_follows()
+            logging.info('All-timeframe follows ready; checked %d accounts', upgraded)
             async with Redis.from_url(os.environ['REDIS_URL'], decode_responses=True,
                     socket_connect_timeout=5, socket_timeout=5, max_connections=4) as redis:
                 consumer = f'{socket.gethostname()}-{uuid.uuid4().hex}'

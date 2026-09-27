@@ -1,3 +1,5 @@
+> Followed-event iOS integration, multi-device registration and launcher setup are now documented in [event-follow-notifications.md](event-follow-notifications.md). Apply its additive migration before running the updated workers.
+
 # Saved pattern watches and delivery
 
 Implemented locally for milestone 6. Public pattern browsing remains independent:
@@ -89,9 +91,11 @@ Clients must use the stable `notification_id` for deduplication; collapse IDs do
 not establish exactly-once delivery.
 
 No watch creation, event matching, history read or delivery starts a detector or
-contacts Binance/Massive. Delivery uses the existing Firebase
-`users/{uid}/fcmToken` convention: currently one token per owner. Multiple devices,
-token registration hardening and end-to-end device delivery remain integration work.
+contacts Binance/Massive. Delivery now reads authenticated installation bindings
+from `scanner_alerts.devices`, with per-device acceptance receipts for retries.
+The existing Firebase `users/{uid}/fcmToken` remains a compatibility fallback for
+accounts without those bindings. Real-device APNs validation is still required;
+see the followed-event integration document above.
 
 ## Ownership and deployment
 

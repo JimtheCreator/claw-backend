@@ -248,6 +248,8 @@ def assemble_snapshot(manifest, interval, cutoff, outcomes, *, version=None):
         "patterns": patterns, "counts": {p: len(rows) for p, rows in results.items()},
         "issues": issues[:100], "issue_count": len(issues), "lookback_bars": LOOKBACK,
         "input_revisions": revisions, "processing": work,
+        "instrument_coverage": {symbol: (outcomes.get(symbol) or {}).get("status", "pending")
+                                for symbol in sorted(manifest["symbols"])},
         "members": {pattern: sorted(row["instrument_id"] for row in rows) for pattern, rows in results.items()},
         "_charts": charts,
     }

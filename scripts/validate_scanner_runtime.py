@@ -113,6 +113,7 @@ def main():
             test_paths = [str(ROOT / "tests/integration/test_scanner_runtime.py")]
             if args.alerts:
                 test_paths.append(str(ROOT / "tests/integration/test_scanner_alerts_runtime.py"))
+                test_paths.append(str(ROOT / "tests/integration/test_symbol_price_runtime.py"))
             result = subprocess.run([sys.executable, "-m", "pytest", "-q", *test_paths],
                 cwd=work, env=env, timeout=600 if args.burst else 360)
             if result.returncode:

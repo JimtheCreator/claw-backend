@@ -32,3 +32,16 @@ class WatchLimitReached(Exception):
 
 class EventConflict(Exception):
     pass
+
+
+class FollowCreate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    universe: str = Field(default='binance-spot-pilot', pattern=r'^[a-z0-9][a-z0-9-]{0,63}$')
+    # Accepted for older clients; saved follows always cover every scanner interval.
+    interval: Literal['15m','1h','4h','1d'] | None = Field(default=None, deprecated=True)
+    muted: bool = False
+
+
+class DeviceRegistration(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    token: str = Field(min_length=20, max_length=4096)

@@ -27,7 +27,7 @@ REQUIRED_ENV = (
 )
 
 
-def process_plan(python: str, scanner: bool) -> dict[str, list[str]]:
+def process_plan(python: str, scanner: bool, notifications: bool = False) -> dict[str, list[str]]:
     def module(name):
         return [python, "-m", f"core.services.workers.{name}"]
 
@@ -51,16 +51,30 @@ def process_plan(python: str, scanner: bool) -> dict[str, list[str]]:
             "scanner-detection": worker("detection", "scanner", 2),
             "scanner-scheduler": module("scanner_scheduler"),
         })
+    if notifications:
+        roles.update({
+            "scanner-inbox": [python, str(ROOT / "scripts/run_scanner_alerts.py"), "inbox"],
+            "scanner-delivery": [python, str(ROOT / "scripts/run_scanner_alerts.py"), "--concurrency", "2", "delivery"],
+            "price-alerts": [python, str(ROOT / "scripts/run_price_alerts.py")],
+        })
     return roles
 
 
-def child_environment(source: dict[str, str]) -> dict[str, str]:
+def child_environment(source: dict[str, str], notifications: bool = False, role: str = "api") -> dict[str, str]:
     env = dict(source)
     env["PYTHONPATH"] = os.pathsep.join((str(ROOT / "src"), str(ROOT)))
     env["PYTHONUNBUFFERED"] = "1"
-    # Browsing/bookmarks need no notification consumers or push delivery.
+    # Notification delivery requires an explicit launcher option.
     for key in ("SCANNER_EVENTS_ENABLED", "SCANNER_WATCHES_ENABLED", "SCANNER_PUSH_ENABLED"):
-        env[key] = "0"
+        env[key] = "1" if notifications else "0"
+    api_dsn = env.pop("SCANNER_API_DATABASE_URL", None)
+    worker_dsn = env.pop("SCANNER_WORKER_DATABASE_URL", None)
+    if notifications:
+        env.pop("SCANNER_DATABASE_URL", None)
+        dsn = worker_dsn if role in ("scanner-inbox", "scanner-delivery", "price-alerts") else api_dsn if role == "api" else None
+        if dsn:
+            env["SCANNER_DATABASE_URL"] = dsn
+        env["SCANNER_PUSH_ENABLED"] = "1" if role in ("scanner-delivery", "price-alerts") else "0"
     return env
 
 
@@ -163,7 +177,7 @@ def stop_children(children: dict[str, subprocess.Popen], grace: float = 25) -> N
         child.wait()
 
 
-def serve(scanner: bool) -> int:
+def serve(scanner: bool, notifications: bool = False) -> int:
     LOGS.mkdir(parents=True, exist_ok=True)
     with (LOGS / "launcher.lock").open("a+") as lock:
         try:
@@ -179,7 +193,7 @@ def serve(scanner: bool) -> int:
                 print("Port 8000 is already in use. Stop your old local API first; it was not modified.")
                 return 1
         children = {}
-        env = child_environment(os.environ)
+        env = child_environment(os.environ, notifications, "scanner-scheduler")
         previous_handlers = {}
 
         def stop(signum, frame):
@@ -188,15 +202,15 @@ def serve(scanner: bool) -> int:
         try:
             for sig in (signal.SIGINT, signal.SIGTERM):
                 previous_handlers[sig] = signal.signal(sig, stop)
-            for name, command in process_plan(sys.executable, scanner).items():
+            for name, command in process_plan(sys.executable, scanner, notifications).items():
                 fd = os.open(LOGS / f"{name}.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
                 with os.fdopen(fd, "ab", buffering=0) as output:
-                    children[name] = subprocess.Popen(command, cwd=ROOT, env=env,
+                    children[name] = subprocess.Popen(command, cwd=ROOT, env=child_environment(os.environ, notifications, name),
                         stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
                 print(f"Started {name}; log: logs/dev-backend/{name}.log", flush=True)
             if scanner:
                 # Explicit --scanner is the opt-in to bounded live market work.
-                # Registry validation/stream limits still apply; no alert events.
+                # Registry validation and stream limits still apply.
                 command = [sys.executable, str(ROOT / "scripts/manage_scanner.py"), "enable",
                     "--manifest", "config/scanner/binance-spot-pilot.json", "--intervals", "15m", "1h", "4h", "1d"]
                 with (LOGS / "scanner-enable.log").open("ab") as output:
@@ -230,18 +244,30 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("check", "commands", "start"))
     parser.add_argument("--scanner", action="store_true", help="Start and enable the 10-symbol Binance scanner pilot")
+    parser.add_argument("--notifications", action="store_true", help="Enable event and price alerts, inbox and push delivery (requires --scanner and migrated alert database)")
     args = parser.parse_args()
+    if args.notifications and not args.scanner:
+        parser.error("--notifications requires --scanner")
     if args.action == "commands":
-        for name, command in process_plan(sys.executable, args.scanner).items():
-            print(f"# {name}\nPYTHONPATH=src:. {shlex.join(command)}\n")
+        for name, command in process_plan(sys.executable, args.scanner, args.notifications).items():
+            flags = ""
+            if args.notifications:
+                source = "SCANNER_WORKER_DATABASE_URL" if name in ("scanner-inbox", "scanner-delivery", "price-alerts") else "SCANNER_API_DATABASE_URL"
+                flags = f'SCANNER_EVENTS_ENABLED=1 SCANNER_WATCHES_ENABLED=1 SCANNER_PUSH_ENABLED={int(name in ("scanner-delivery", "price-alerts"))} SCANNER_DATABASE_URL="${source}" '
+            print(f"# {name}\n{flags}PYTHONPATH=src:. {shlex.join(command)}\n")
         return 0
     from dotenv import load_dotenv
     load_dotenv(ROOT / ".env")
     os.chdir(ROOT)
+    if args.notifications:
+        missing = [key for key in ("SCANNER_API_DATABASE_URL", "SCANNER_WORKER_DATABASE_URL") if not os.getenv(key)]
+        if missing:
+            print("Notification setup required: " + ", ".join(missing) + ". See docs/event-follow-notifications.md.")
+            return 1
     if not check_configuration() or not check_connections():
         print("No application workers were started. See docs/local-ios-backend.md.")
         return 1
-    return serve(args.scanner) if args.action == "start" else 0
+    return serve(args.scanner, args.notifications) if args.action == "start" else 0
 
 
 if __name__ == "__main__":

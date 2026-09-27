@@ -109,6 +109,15 @@ class ScannerStore:
             for offset in range(0, len(rows), PAGE_SIZE):
                 fields[f"{pattern}:{offset // PAGE_SIZE}"] = json.dumps(
                     rows[offset:offset + PAGE_SIZE], allow_nan=False)
+        # One shared read for a chart's patterns, independent of viewer count.
+        by_instrument = {}
+        for rows in results.values():
+            for row in rows:
+                by_instrument.setdefault(row["instrument_id"], []).append(row)
+        fields.update({f"symbol:{instrument}": json.dumps(rows, allow_nan=False)
+                       for instrument, rows in by_instrument.items()})
+        metadata["symbol_index_version"] = 1
+        fields["metadata"] = json.dumps(metadata, allow_nan=False)
         # Fence staging too: a retry with a previously published token must not
         # overwrite its immutable pages, then delete the current snapshot when
         # the pointer guard notices that its lease has already been released.
@@ -161,6 +170,28 @@ class ScannerStore:
         rows = [row for page in data for row in json.loads(page)]
         begin = offset % PAGE_SIZE
         return rows[begin:begin + limit]
+
+    async def symbol_matches(self, metadata, instrument):
+        key = self.snapshot_key(metadata["snapshot"])
+        if metadata.get("symbol_index_version") == 1:
+            raw = await self.redis.hget(key, f"symbol:{instrument}")
+            if raw is None:
+                if not await self.redis.exists(key):
+                    raise ScannerSnapshotMissing()
+                return []
+            return json.loads(raw)
+        # Rolling upgrade: old immutable snapshots remain readable until expiry.
+        fields = [f"{pattern}:{page}"
+                  for pattern, members in metadata.get("members", {}).items()
+                  if instrument in members
+                  for page in range((metadata["counts"][pattern] + PAGE_SIZE - 1) // PAGE_SIZE)]
+        if not fields:
+            return []
+        pages = await self.redis.hmget(key, fields)
+        if any(page is None for page in pages):
+            raise ScannerSnapshotMissing()
+        return [row for page in pages for row in json.loads(page)
+                if row["instrument_id"] == instrument]
 
     async def previews(self, metadata, rows):
         """Read the exact detection snapshot, never current/provider candles."""

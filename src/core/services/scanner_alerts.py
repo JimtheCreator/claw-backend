@@ -1,8 +1,16 @@
 """Shared event inbox, set-based fan-out and bounded notification delivery."""
 import asyncio
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class PermanentDeliveryError(Exception):
+    pass
+
+
+class PushConfigurationError(RuntimeError):
+    """Provider credentials need operator attention; the device token is valid."""
     pass
 
 
@@ -32,7 +40,14 @@ async def deliver_one(repository, sender):
     except PermanentDeliveryError:
         await repository.finish_delivery(delivery, error='invalid_destination', permanent=True)
         return 'failed'
-    except Exception:
+    except PushConfigurationError:
+        log.error('Scanner push credentials rejected: check Firebase APNs key, Apple team, '
+                  'bundle ID and development/production environment. Device registration retained.')
+        await repository.finish_delivery(delivery, error='push_credentials_invalid')
+        return 'retry'
+    except Exception as exc:
+        # Exception messages can contain tokens, request payloads or credentials.
+        log.warning('Scanner delivery attempt failed (%s); retry scheduled', type(exc).__name__)
         await repository.finish_delivery(delivery, error='delivery_unavailable')
         return 'retry'
     accepted = await repository.finish_delivery(delivery, provider_id=provider_id)

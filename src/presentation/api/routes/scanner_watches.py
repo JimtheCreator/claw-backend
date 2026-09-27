@@ -4,17 +4,17 @@ import base64
 from datetime import datetime
 import json
 import os
-import ssl
 from typing import Annotated, Literal
 from uuid import UUID
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 
 from core.scanner.automation import AutomationRegistry
-from core.scanner.catalog import pattern_catalog
-from core.scanner.watches import WatchAction, WatchCreate, WatchLimitReached
+from core.scanner.catalog import INTERVAL_SECONDS, pattern_catalog
+from core.scanner.watches import WatchAction, WatchCreate, WatchLimitReached, FollowCreate, DeviceRegistration
 from infrastructure.database.supabase.scanner_watches import ScannerWatchRepository
+from infrastructure.database.supabase.tls import database_tls_context
 from presentation.api.dependencies.scanner_auth import scanner_user
 from presentation.api.routes.scanner import get_scanner_redis
 
@@ -32,7 +32,7 @@ async def get_watch_repository(request: Request):
                 dsn = os.getenv('SCANNER_DATABASE_URL')
                 if not dsn:
                     raise HTTPException(503, 'Pattern watch storage is not configured')
-                tls = ssl.create_default_context(cafile=os.getenv('SCANNER_DATABASE_CA_FILE'))
+                tls = database_tls_context(os.getenv('SCANNER_DATABASE_CA_FILE'))
                 request.app.state.scanner_watch_pool = await asyncpg.create_pool(
                     dsn, min_size=1, max_size=10, timeout=5, command_timeout=20,
                     statement_cache_size=0, ssl=tls)
@@ -71,7 +71,7 @@ async def create_watch(spec: WatchCreate, user=Depends(scanner_user),
 async def list_watches(user=Depends(scanner_user), repo=Depends(get_watch_repository),
                        status: Literal['active','paused','completed'] | None = None,
                        limit: Annotated[int, Query(ge=1, le=100)] = 50,
-                       offset: Annotated[int, Query(ge=0, le=1000)] = 0):
+                       offset: Annotated[int, Query(ge=0)] = 0):
     items = await repo.list(user, status=status, limit=limit, offset=offset)
     return {'items': items, 'next_offset': offset + len(items) if len(items) == limit else None}
 
@@ -111,3 +111,37 @@ async def watch_history(user=Depends(scanner_user), repo=Depends(get_watch_repos
         last = items[-1]
         next_cursor = base64.urlsafe_b64encode(json.dumps([last['created_at'].isoformat(), str(last['id'])]).encode()).decode()
     return {'items': items, 'next_cursor': next_cursor}
+
+
+@router.put('/follows/{group_id}/{pattern_id}')
+async def save_follow(spec: FollowCreate,
+                      group_id: Annotated[str, Path(pattern=r'^[A-Za-z0-9_-]{1,128}$')],
+                      pattern_id: Annotated[str, Path(pattern=r'^[a-z0-9_]{1,80}$')],
+                      user=Depends(scanner_user), repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    scope = next((c for c in scopes if c['manifest']['id'] == spec.universe), None)
+    if scope is None or not set(INTERVAL_SECONDS).issubset(scope['intervals']) or pattern_id not in {
+            p['id'] for p in pattern_catalog() if p['detector_id'] in scope['manifest']['detectors']}:
+        raise HTTPException(422, 'This pattern is not currently scanned on all supported timeframes')
+    return await repo.set_follow(user,group_id,pattern_id,spec)
+
+
+@router.delete('/follows/{group_id}/{pattern_id}', status_code=204)
+async def remove_follow(group_id: Annotated[str, Path(pattern=r'^[A-Za-z0-9_-]{1,128}$')],
+                        pattern_id: Annotated[str, Path(pattern=r'^[a-z0-9_]{1,80}$')],
+                        user=Depends(scanner_user), repo=Depends(get_watch_repository)):
+    # Removing a follow remains possible when its detector is disabled.
+    await repo.remove_follow(user,group_id,pattern_id)
+    return Response(status_code=204)
+
+
+@router.put('/devices/{installation_id}', status_code=204)
+async def register_device(installation_id: UUID, spec: DeviceRegistration,
+                          user=Depends(scanner_user), repo=Depends(get_watch_repository)):
+    await repo.register_device(user,installation_id,spec.token)
+    return Response(status_code=204)
+
+
+@router.delete('/devices/{installation_id}', status_code=204)
+async def remove_device(installation_id: UUID, user=Depends(scanner_user), repo=Depends(get_watch_repository)):
+    await repo.remove_device(user,installation_id)
+    return Response(status_code=204)

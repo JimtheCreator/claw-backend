@@ -77,6 +77,10 @@ async def database():
     migration = (ROOT/'migrations/20260917_scanner_watches.sql').read_text()
     await admin.execute(migration)
     await admin.execute(migration)  # Additive migration is repeatable.
+    follow_migration = (ROOT/'migrations/20260921_event_follows.sql').read_text()
+    await admin.execute(follow_migration)
+    await admin.execute(follow_migration)
+    await admin.execute('TRUNCATE scanner_alerts.devices')
     await admin.execute('''DO $$ BEGIN
         IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='scanner_api_test') THEN
             CREATE ROLE scanner_api_test LOGIN PASSWORD 'disposable-scanner-test-password'; END IF;
@@ -132,7 +136,7 @@ def test_authenticated_crud_and_database_rls_isolate_owners():
                 lambda token: {'uid':{'alice-token':'alice','bob-token':'bob'}[token], 'exp':time.time()+300})
             async def scopes():
                 manifest = json.loads((ROOT/'config/scanner/binance-spot-pilot.json').read_text())
-                return [{'manifest':dict(manifest,id=UNIVERSE),'intervals':[INTERVAL]}]
+                return [{'manifest':dict(manifest,id=UNIVERSE),'intervals':['15m','1h','4h','1d']}]
             app.dependency_overrides[enabled_scope] = scopes
             base = '/api/v1/scanner'
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
@@ -172,6 +176,24 @@ def test_authenticated_crud_and_database_rls_isolate_owners():
                 assert (await client.get(base+'/pattern-alerts/history?cursor=bad',headers=alice)).status_code == 422
                 assert (await client.delete(url,headers=alice)).status_code == 204
                 assert (await client.get(base+'/watches',headers=alice)).json()['items'] == []
+                follow_url = base+'/follows/group-a/'+PATTERN
+                follow_spec = {'universe':UNIVERSE,'interval':INTERVAL}
+                assert (await client.put(follow_url,json=follow_spec)).status_code == 401
+                first = await client.put(follow_url,headers=alice,json=follow_spec)
+                assert first.status_code == 200, first.text
+                repeated = await client.put(follow_url,headers=alice,json=follow_spec)
+                assert repeated.json()['watch_id'] == first.json()['watch_id']
+                assert (await client.put(follow_url,headers=alice,json=dict(follow_spec,user_id='bob'))).status_code == 422
+                assert (await client.delete(follow_url,headers=bob)).status_code == 204
+                assert len((await client.get(base+'/watches',headers=alice)).json()['items']) == 1
+                device_url = base+'/devices/'+str(uuid.uuid4())
+                assert (await client.put(device_url,json={'token':'valid-test-device-token-12345'})).status_code == 401
+                assert (await client.put(device_url,headers=alice,json={'token':'short'})).status_code == 422
+                assert (await client.put(device_url,headers=alice,json={'token':'valid-test-device-token-12345'})).status_code == 204
+                assert (await client.delete(device_url,headers=bob)).status_code == 204
+                async with db.api.transaction('alice') as con:
+                    assert await con.fetchval('SELECT count(*) FROM scanner_alerts.devices') == 1
+                assert (await client.delete(device_url,headers=alice)).status_code == 204
     asyncio.run(scenario())
 
 
@@ -363,4 +385,156 @@ def test_shared_inbox_pump_fans_out_to_2000_watches_without_market_io():
                 'identity_verifier':'offline test double; API ownership and real RLS verified',
                 'external_socket_attempts':0,'capacity_scope':'one shared detection; not concurrent HTTP users'}
             report.write_text(json.dumps(summary,indent=2)+'\n')
+    asyncio.run(scenario())
+
+
+def test_group_follows_share_delivery_and_mute_independently():
+    from core.scanner.watches import FollowCreate
+    async def scenario():
+        async with database() as db:
+            spec = FollowCreate(universe=UNIVERSE,interval=INTERVAL)
+            first = await db.api.set_follow('alice','group-a',PATTERN,spec)
+            again = await db.api.set_follow('alice','group-a',PATTERN,spec)
+            other = await db.api.set_follow('alice','group-b',PATTERN,spec)
+            assert first['watch_id'] == again['watch_id'] == other['watch_id']
+            assert len(await db.api.list('alice')) == 1
+            assert await db.api.list('bob') == []
+            assert await db.api.change('alice',first['watch_id'],'delete') is None
+            await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$2 WHERE id=$1',first['watch_id'],cutoff()-timedelta(seconds=1))
+            await accept(db.worker,detection_batch())
+            assert await fanout_all(db.worker) == 1
+            await db.api.set_follow('alice','group-a',PATTERN,spec.model_copy(update={'muted':True}))
+            assert (await db.api.list('alice'))[0]['status'] == 'active'
+            await db.api.remove_follow('bob','group-b',PATTERN)
+            await db.api.remove_follow('alice','group-b',PATTERN)
+            assert (await db.api.list('alice'))[0]['status'] == 'paused'
+            await db.api.remove_follow('alice','group-a',PATTERN)
+            await db.api.remove_follow('alice','group-a',PATTERN)
+            assert await db.api.list('alice') == []
+    asyncio.run(scenario())
+
+
+def test_legacy_interval_is_ignored_and_resume_does_not_replay_old_matches():
+    from core.scanner.watches import FollowCreate
+    async def scenario():
+        async with database() as db:
+            spec = FollowCreate(universe=UNIVERSE,interval=INTERVAL)
+            first = await db.api.set_follow('alice','a',PATTERN,spec)
+            await db.api.set_follow('alice','a',PATTERN,spec.model_copy(update={'interval':'1h'}))
+            current = await db.api.list('alice')
+            assert len(current) == 1 and current[0]['intervals'] == ['15m','1h','4h','1d']
+            assert current[0]['interval'] is None
+            assert current[0]['id'] == first['watch_id']
+            await db.api.set_follow('alice','a',PATTERN,spec.model_copy(update={'muted':True}))
+            await db.api.set_follow('alice','a',PATTERN,spec)
+            await accept(db.worker,detection_batch())
+            assert await fanout_all(db.worker) == 0
+    asyncio.run(scenario())
+
+
+def test_replacement_setup_does_not_renotify_symbol_followers():
+    from core.scanner.watches import FollowCreate
+    async def scenario():
+        async with database() as db:
+            followed = await db.api.set_follow('alice','a',PATTERN,FollowCreate(universe=UNIVERSE,interval=INTERVAL))
+            await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$2 WHERE id=$1',followed['watch_id'],cutoff()-timedelta(seconds=1))
+            await watch(db,'explicit-alert')
+            prior, _ = lifecycle_transition(None,*snapshot(cutoff()-timedelta(days=1),symbols=('BTCUSDT',)))
+            _, batch = lifecycle_transition(prior,*snapshot(cutoff(),symbols=('BTCUSDT',)))
+            assert next(e for e in batch['events'] if e['type']=='detected')['new_symbol'] is False
+            await accept(db.worker,batch)
+            assert await fanout_all(db.worker) == 1
+            assert await db.api.history('alice') == []
+            assert len(await db.api.history('explicit-alert')) == 1
+    asyncio.run(scenario())
+
+
+def test_device_ownership_transfer_and_receipts_are_account_scoped():
+    async def scenario():
+        async with database() as db:
+            installation = uuid.uuid4()
+            token = 'disposable-device-token-000001'
+            await db.api.register_device('alice',installation,token)
+            await db.api.register_device('alice',installation,token)
+            await db.api.register_device('bob',installation,token)
+            await db.api.remove_device('alice',installation)
+            async with db.api.transaction('alice') as con:
+                assert await con.fetchval('SELECT count(*) FROM scanner_alerts.devices') == 0
+            async with db.api.transaction('bob') as con:
+                assert await con.fetchval('SELECT count(*) FROM scanner_alerts.devices') == 1
+            await watch(db,'bob')
+            await accept(db.worker,detection_batch())
+            await fanout_all(db.worker)
+            delivery = await db.worker.claim_delivery()
+            assert (await db.worker.notification_devices(delivery))[0] == [token]
+            await db.worker.record_device_delivery(delivery,token)
+            await db.worker.record_device_delivery(delivery,token)
+            assert len((await db.worker.notification_devices(delivery))[1]) == 1
+            await db.api.remove_device('bob',installation)
+            assert (await db.worker.notification_devices(delivery))[0] == []
+    asyncio.run(scenario())
+
+
+def test_saved_follow_delivers_all_four_timeframes_without_duplicate_group_pushes():
+    from core.scanner.catalog import INTERVAL_SECONDS
+    from core.scanner.watches import FollowCreate
+    async def scenario():
+        async with database() as db:
+            saved = await db.api.set_follow('alice','a',PATTERN,FollowCreate(universe=UNIVERSE))
+            await db.api.set_follow('alice','b',PATTERN,FollowCreate(universe=UNIVERSE,interval='4h'))
+            explicit = await db.api.create('bob', WatchCreate(universe=UNIVERSE,pattern_id=PATTERN,interval='1h'))
+            await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$1',cutoff()-timedelta(days=1))
+            for interval, seconds in INTERVAL_SECONDS.items():
+                stamp = datetime.fromtimestamp(int(time.time())//seconds*seconds, timezone.utc)
+                def scoped(at, symbols=()):
+                    meta, rows = snapshot(at, symbols=symbols)
+                    meta['interval'] = interval
+                    for row in rows[PATTERN]:
+                        row['interval'] = interval
+                        row['pattern_start'] = (at-timedelta(seconds=seconds*2)).isoformat()
+                        row['pattern_end'] = (at-timedelta(seconds=seconds)).isoformat()
+                    return meta, rows
+                prior, _ = lifecycle_transition(None,*scoped(stamp-timedelta(seconds=seconds)))
+                _, batch = lifecycle_transition(prior,*scoped(stamp,('BTCUSDT',)))
+                await accept(db.worker,batch)
+            assert await fanout_all(db.worker) == 5
+            rows = await db.api.history('alice')
+            assert len(rows) == 4
+            assert {r['payload']['match']['interval'] for r in rows} == set(INTERVAL_SECONDS)
+            assert len(await db.api.history('bob')) == 1
+            # The delivery path retains the event timeframe, not the legacy watch field.
+            delivered = []
+            class Sender:
+                async def send(self, delivery):
+                    delivered.append(delivery['payload']['match']['interval'])
+                    return 'test-provider-id'
+            while (result := await deliver_one(db.worker,Sender())) is not None:
+                assert result == 'delivered'
+            assert sorted(delivered) == ['15m','1d','1h','1h','4h']
+            # Reprocessing the same inbox cannot enqueue a second notification.
+            assert await fanout_all(db.worker) == 0
+    asyncio.run(scenario())
+
+
+def test_existing_timeframe_follows_upgrade_preserves_group_mutes_and_deduplicates():
+    async def scenario():
+        async with database() as db:
+            for group, interval, muted in [('a','1h',True),('b','4h',False),('c','15m',True)]:
+                row = await db.admin.fetchrow("""INSERT INTO scanner_alerts.watches
+                    (user_id,universe,pattern_id,interval,origin,status)
+                    VALUES('alice',$1,$2,$3,'follow',$4) RETURNING id""",UNIVERSE,PATTERN,interval,'paused' if muted else 'active')
+                await db.admin.execute("""INSERT INTO scanner_alerts.follow_links(user_id,group_id,pattern_id,watch_id,muted)
+                    VALUES('alice',$1,$2,$3,$4)""",group,PATTERN,row['id'],muted)
+            explicit = await watch(db,'alice')
+            await db.worker.upgrade_follows()
+            await db.worker.upgrade_follows()
+            rows = await db.api.list('alice')
+            follows = [r for r in rows if r['origin']=='follow']
+            assert len(follows)==1 and follows[0]['status']=='active'
+            links = await db.admin.fetch('SELECT * FROM scanner_alerts.follow_links ORDER BY group_id')
+            assert len({r['watch_id'] for r in links})==1
+            assert [r['muted'] for r in links]==[True,False,True]
+            assert next(r for r in rows if r['id']==explicit['id'])['interval']==INTERVAL
+            await db.api.remove_follow('alice','b',PATTERN)
+            assert next(r for r in await db.api.list('alice') if r['origin']=='follow')['status']=='paused'
     asyncio.run(scenario())

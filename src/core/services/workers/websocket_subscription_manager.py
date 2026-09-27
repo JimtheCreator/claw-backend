@@ -559,6 +559,21 @@ class WebsocketSubscriptionManager:
                     stream_name = data['stream']
                     stream_data = data['data']
 
+                    if stream_name == '!miniTicker@arr':
+                        from core.alerts.price import valid_ticks
+                        await self._assert_gateway_owner()
+                        ticks = valid_ticks(stream_data, time.time()*1000)
+                        if ticks:
+                            client = redis_cache.get_redis_client()
+                            watched = await client.smembers('price_alerts:symbols')
+                            relevant = [t for t in stream_data if t.get('s') in watched]
+                            async with client.pipeline() as pipe:
+                                pipe.hset('price_alerts:quotes', mapping={t['symbol']:json.dumps(t) for t in ticks})
+                                if relevant:
+                                    pipe.xadd('price_alerts:ticks', {'ticks':json.dumps(relevant)},maxlen=600,approximate=True)
+                                await pipe.execute()
+                        continue
+
                     # ==================== TEMPORARY DEBUG LOGGING ====================
                     # Log the raw data for specific symbols before any checks
                     if 'solusdt' in stream_name:
@@ -812,6 +827,8 @@ class WebsocketSubscriptionManager:
     async def _reconcile_scanner_once(self, registry):
         await self._assert_gateway_owner()
         desired = streams_for(await registry.all())
+        if os.getenv('SCANNER_WATCHES_ENABLED') == '1':
+            desired.add('!miniTicker@arr')
         removed = self.scanner_streams - desired
         self.scanner_streams = desired
         self.retired_scanner_streams = (getattr(self, 'retired_scanner_streams', set()) | removed) - desired

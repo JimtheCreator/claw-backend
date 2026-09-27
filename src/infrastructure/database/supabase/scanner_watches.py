@@ -88,16 +88,118 @@ class ScannerWatchRepository:
             rows = await con.fetch('''SELECT * FROM scanner_alerts.watches WHERE user_id=$1
                 AND status<>'deleted' AND ($2::text IS NULL OR status=$2)
                 ORDER BY created_at DESC,id DESC LIMIT $3 OFFSET $4''', user_id, status, limit, offset)
-            return [dict(row) for row in rows]
+            return [dict(row, interval=None, intervals=list(INTERVAL_SECONDS)) if row['origin']=='follow' else dict(row) for row in rows]
 
     async def change(self, user_id, watch_id, action):
         target = {'pause': 'paused', 'resume': 'active', 'delete': 'deleted'}[action]
         async with self.transaction(user_id) as con:
             row = await con.fetchrow('''UPDATE scanner_alerts.watches SET status=$3,
                 armed_at=CASE WHEN $3='active' AND status<>'active' THEN clock_timestamp() ELSE armed_at END,
-                updated_at=clock_timestamp() WHERE id=$1 AND user_id=$2 AND status<>'deleted' RETURNING *''',
+                updated_at=clock_timestamp() WHERE id=$1 AND user_id=$2 AND status<>'deleted' AND origin='alert' RETURNING *''',
                 watch_id, user_id, target)
             return dict(row) if row else None
+
+    async def set_follow(self, user_id, group_id, pattern_id, spec):
+        async with self.transaction(user_id) as con:
+            await con.execute("SELECT pg_advisory_xact_lock(hashtextextended('scanner-watch:' || $1,0))", user_id)
+            previous = await con.fetchval("SELECT watch_id FROM scanner_alerts.follow_links WHERE user_id=$1 AND group_id=$2 AND pattern_id=$3", user_id, group_id, pattern_id)
+            if not previous and await con.fetchval("SELECT count(*) FROM scanner_alerts.follow_links WHERE user_id=$1", user_id) >= 1000:
+                raise WatchLimitReached()
+            row = await self._coalesce_follow(con, user_id, spec.universe, pattern_id)
+            if row is None:
+                if await con.fetchval("SELECT count(*) FROM scanner_alerts.watches WHERE user_id=$1 AND status<>'deleted'", user_id) >= MAX_WATCHES:
+                    raise WatchLimitReached()
+                # interval is a legacy NOT NULL field. For origin='follow' it is
+                # a canonical storage value only, never a notification filter.
+                row = await con.fetchrow("""INSERT INTO scanner_alerts.watches(user_id,universe,pattern_id,interval,origin,status)
+                    VALUES($1,$2,$3,'15m','follow',$4) RETURNING *""", user_id, spec.universe, pattern_id,
+                    'paused' if spec.muted else 'active')
+            await con.execute("""INSERT INTO scanner_alerts.follow_links(user_id,group_id,pattern_id,watch_id,muted)
+                VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id,group_id,pattern_id)
+                DO UPDATE SET watch_id=excluded.watch_id,muted=excluded.muted""", user_id,group_id,pattern_id,row['id'],spec.muted)
+            for identifier in {row['id'], previous} - {None}:
+                await self._refresh_follow(con, user_id, identifier)
+            return {'watch_id': row['id'], 'intervals': list(INTERVAL_SECONDS), 'muted': spec.muted}
+
+    @staticmethod
+    async def _coalesce_follow(con, user_id, universe, pattern_id):
+        """Merge old timeframe-specific follows, preserving each group's mute.
+
+        Caller holds the per-user advisory lock. Historical outbox records stay
+        attached to their original watch; deleting redundant watches cancels their
+        pending sends. New events use one shared watch for all groups/timeframes.
+        """
+        rows = await con.fetch("""SELECT * FROM scanner_alerts.watches
+            WHERE user_id=$1 AND universe=$2 AND pattern_id=$3 AND origin='follow'
+              AND status<>'deleted' ORDER BY created_at,id FOR UPDATE""", user_id, universe, pattern_id)
+        if not rows:
+            return None
+        row = rows[0]
+        redundant = [r['id'] for r in rows[1:]]
+        if redundant:
+            await con.execute("""UPDATE scanner_alerts.follow_links SET watch_id=$2
+                WHERE user_id=$1 AND watch_id=ANY($3::uuid[])""", user_id, row['id'], redundant)
+            await con.execute("""UPDATE scanner_alerts.watches SET status='deleted',updated_at=clock_timestamp()
+                WHERE user_id=$1 AND id=ANY($2::uuid[])""", user_id, redundant)
+        if row['interval'] != '15m':
+            await con.execute("UPDATE scanner_alerts.watches SET interval='15m',updated_at=clock_timestamp() WHERE id=$1", row['id'])
+        return row
+
+    async def upgrade_follows(self):
+        """Repeatable data-only upgrade, using the restricted worker role."""
+        async with self.transaction() as con:
+            owners = await con.fetch("""SELECT DISTINCT user_id FROM scanner_alerts.watches
+                WHERE origin='follow' AND status<>'deleted'""")
+        for owner in owners:
+            user_id = owner['user_id']
+            async with self.transaction() as con:
+                await con.execute("SELECT pg_advisory_xact_lock(hashtextextended('scanner-watch:' || $1,0))", user_id)
+                specs = await con.fetch("""SELECT DISTINCT universe,pattern_id FROM scanner_alerts.watches
+                    WHERE user_id=$1 AND origin='follow' AND status<>'deleted'""", user_id)
+                for spec in specs:
+                    row = await self._coalesce_follow(con, user_id, spec['universe'], spec['pattern_id'])
+                    await self._refresh_follow(con, user_id, row['id'])
+        return len(owners)
+
+    @staticmethod
+    async def _refresh_follow(con, user_id, watch_id):
+        await con.execute("""WITH desired AS (
+            SELECT CASE WHEN count(*)=0 THEN 'deleted' WHEN bool_and(muted) THEN 'paused' ELSE 'active' END AS status
+            FROM scanner_alerts.follow_links WHERE watch_id=$2 AND user_id=$1)
+            UPDATE scanner_alerts.watches w SET status=d.status,
+             armed_at=CASE WHEN d.status='active' AND w.status<>'active' THEN clock_timestamp() ELSE armed_at END,
+             updated_at=clock_timestamp() FROM desired d WHERE w.id=$2 AND w.user_id=$1 AND w.origin='follow'""", user_id,watch_id)
+
+    async def remove_follow(self, user_id, group_id, pattern_id):
+        async with self.transaction(user_id) as con:
+            await con.execute("SELECT pg_advisory_xact_lock(hashtextextended('scanner-watch:' || $1,0))", user_id)
+            old = await con.fetchval("""DELETE FROM scanner_alerts.follow_links
+                WHERE user_id=$1 AND group_id=$2 AND pattern_id=$3 RETURNING watch_id""", user_id,group_id,pattern_id)
+            if old:
+                await self._refresh_follow(con,user_id,old)
+
+    async def register_device(self, user_id, installation_id, token):
+        async with self.transaction(user_id) as con:
+            await con.execute('SELECT scanner_alerts.register_device($1,$2)', installation_id,token)
+
+    async def remove_device(self, user_id, installation_id):
+        async with self.transaction(user_id) as con:
+            await con.execute('DELETE FROM scanner_alerts.devices WHERE user_id=$1 AND installation_id=$2', user_id,installation_id)
+
+    async def notification_devices(self, delivery):
+        async with self.transaction() as con:
+            rows = await con.fetch("""SELECT token FROM scanner_alerts.devices WHERE user_id=$1
+                AND updated_at>clock_timestamp()-interval '90 days'""", delivery['user_id'])
+            receipts = await con.fetch('SELECT token_hash FROM scanner_alerts.device_receipts WHERE outbox_id=$1', delivery['id'])
+            return [r['token'] for r in rows], {r['token_hash'] for r in receipts}
+
+    async def record_device_delivery(self, delivery, token, *, invalid=False):
+        async with self.transaction() as con:
+            if invalid:
+                await con.execute('DELETE FROM scanner_alerts.devices WHERE user_id=$1 AND token=$2', delivery['user_id'],token)
+                return
+            await con.execute("""INSERT INTO scanner_alerts.device_receipts(outbox_id,token_hash)
+                VALUES($1,$2) ON CONFLICT DO NOTHING""", delivery['id'],hashlib.sha256(token.encode()).hexdigest())
 
     async def history(self, user_id, *, limit=20, before=None):
         async with self.transaction(user_id) as con:
@@ -161,8 +263,10 @@ class ScannerWatchRepository:
             if event['kind'] == 'detected' and eligible:
                 result = await con.fetchrow('''WITH matching AS MATERIALIZED (
                     SELECT id,user_id,mode FROM scanner_alerts.watches
-                    WHERE status='active' AND universe=$1 AND pattern_id=$2 AND interval=$3
+                    WHERE status='active' AND universe=$1 AND pattern_id=$2
+                      AND (origin='follow' OR interval=$3)
                       AND armed_at<$4 AND (cardinality(symbols)=0 OR $5=ANY(symbols))
+                      AND (origin='alert' OR ($7::jsonb->>'new_symbol')::boolean IS TRUE)
                     ORDER BY id FOR UPDATE), inserted AS (
                     INSERT INTO scanner_alerts.outbox(user_id,watch_id,event_id,payload,expires_at)
                     SELECT user_id,id,$6,$7::jsonb,$8 FROM matching ON CONFLICT DO NOTHING RETURNING watch_id
@@ -180,7 +284,7 @@ class ScannerWatchRepository:
     async def claim_delivery(self):
         async with self.transaction() as con:
             # Claim one indexed candidate. Never sweep the whole backlog per send.
-            row = await con.fetchrow('''SELECT o.*,w.status AS watch_status,w.armed_at,
+            row = await con.fetchrow('''SELECT o.*,w.status AS watch_status,w.armed_at,w.universe,
                 e.epoch=h.epoch AS current_definition,clock_timestamp() AS now
                 FROM scanner_alerts.outbox o JOIN scanner_alerts.watches w ON w.id=o.watch_id
                 JOIN scanner_alerts.events e ON e.event_id=o.event_id
@@ -202,7 +306,7 @@ class ScannerWatchRepository:
             updated = await con.fetchrow('''UPDATE scanner_alerts.outbox SET status='sending',attempts=attempts+1,
                 lease_token=$2,lease_until=clock_timestamp()+interval '120 seconds',
                 next_attempt_at=clock_timestamp()+interval '120 seconds' WHERE id=$1 RETURNING *''', row['id'], token)
-            return dict(updated, payload=json.loads(updated['payload']))
+            return dict(updated, payload=json.loads(updated['payload']), universe=row['universe'])
 
     async def delivery_allowed(self, delivery):
         async with self.transaction() as con:
