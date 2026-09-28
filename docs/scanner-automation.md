@@ -73,8 +73,8 @@ acknowledgement does not force another detection run. See
 - Enabling/disabling is explicit via the operator CLI; an API read never enables,
   schedules, repairs or detects anything.
 - The continuous pilot admits at most **200 distinct permanent streams** across
-  all enabled configurations. At four intervals that permits at most 50 distinct
-  symbols; the supplied manifest uses 10 symbols / 40 streams. This is a rollout
+  all enabled configurations. At five intervals that permits at most 40 distinct
+  symbols; the supplied manifest uses 10 symbols / 50 streams. This is a rollout
   guard, not full-market coverage. Existing charts share the gateway's 600-stream
   application ceiling; this pilot does not reserve capacity against arbitrary
   chart demand. Coverage/freshness and bootstrap budgets remain the safeguards.
@@ -134,7 +134,7 @@ PYTHONPATH=src:. .venv/bin/python -m core.services.workers.scanner_scheduler
 Then enable the manifest explicitly:
 
 ```sh
-PYTHONPATH=src:. .venv/bin/python scripts/manage_scanner.py enable --manifest config/scanner/binance-spot-pilot.json --intervals 15m 1h 4h 1d
+PYTHONPATH=src:. .venv/bin/python scripts/manage_scanner.py enable --manifest config/scanner/binance-spot-pilot.json --intervals 15m 30m 1h 4h 1d
 ```
 
 Inspect or stop future pilot work:
@@ -184,8 +184,8 @@ in-process ASGI reads restricted to Redis read commands. The runtime recorded
 zero external Python socket attempts. It does not exercise an actual Binance
 stream, REST repair response or gateway process failure. See
 [validation and reproduction](scanner-validation.md).
-The optional burst passes 200 instrument jobs across 50 synthetic-data symbols
-and four intervals. [Geometry and workload results](scanner-qualification.md)
+The optional burst now exercises 200 instrument jobs across 40 synthetic-data symbols
+and five intervals. The previously recorded benchmark used 50 symbols and four intervals. [Geometry and workload results](scanner-qualification.md)
 also document the detector fixes and remaining accuracy gaps.
 
 This completes **continuous operation for the bounded Binance pilot in code**.

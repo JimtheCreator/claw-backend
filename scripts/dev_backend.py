@@ -212,11 +212,11 @@ def serve(scanner: bool, notifications: bool = False) -> int:
                 # Explicit --scanner is the opt-in to bounded live market work.
                 # Registry validation and stream limits still apply.
                 command = [sys.executable, str(ROOT / "scripts/manage_scanner.py"), "enable",
-                    "--manifest", "config/scanner/binance-spot-pilot.json", "--intervals", "15m", "1h", "4h", "1d"]
+                    "--manifest", "config/scanner/binance-spot-pilot.json", "--intervals", "15m", "30m", "1h", "4h", "1d"]
                 with (LOGS / "scanner-enable.log").open("ab") as output:
                     subprocess.run(command, cwd=ROOT, env=env, stdout=output,
                         stderr=subprocess.STDOUT, check=True, timeout=30)
-                print("Binance pilot enabled: 10 symbols, four timeframes. First snapshots may take a few minutes.")
+                print("Binance pilot enabled: 10 symbols, five timeframes. First snapshots may take a few minutes.")
             print("API: http://localhost:8000/docs | Ctrl-C stops this launcher's processes.", flush=True)
             print("Use a second terminal for ngrok; see docs/local-ios-backend.md.", flush=True)
             while True:

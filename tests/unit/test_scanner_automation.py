@@ -72,6 +72,21 @@ def test_100_scheduler_replicas_dispatch_once_and_completed_job_is_not_replayed(
     asyncio.run(scenario())
 
 
+def test_half_hour_dispatch_uses_closed_1800_second_boundary_and_own_stream():
+    async def scenario():
+        async with redis_client() as redis:
+            await AutomationRegistry(redis).enable(MANIFEST, ["30m"])
+            assert streams_for(await AutomationRegistry(redis).all()) == {"btcusdt@kline_30m"}
+            enqueue = AsyncMock()
+            assert await schedule_once(redis, enqueue) == 1
+            candidate, interval, cutoff, version, token = enqueue.call_args.args
+            seconds, _ = await redis.time()
+            assert interval == "30m"
+            assert cutoff == (int(seconds) - SCHEDULE_GRACE) // 1800 * 1800
+            assert await ScanDispatch(redis, candidate, interval, cutoff, version).valid(token)
+    asyncio.run(scenario())
+
+
 def test_abandoned_dispatch_recovers_but_old_token_cannot_finish_successor():
     async def scenario():
         async with redis_client() as redis:

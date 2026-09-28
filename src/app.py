@@ -145,7 +145,7 @@ if __name__ == "__main__":
 # 3. .venv/bin/python scripts/dev_backend.py start --scanner
 #    One terminal supervises API, market feeds, chart/analysis worker, gateway,
 #    scanner ingestion, detection and scheduler. Ctrl-C stops its processes.
-#    --scanner explicitly enables the 10-symbol Binance pilot (15m/1h/4h/1d).
+#    --scanner explicitly enables the 10-symbol Binance pilot (15m/30m/1h/4h/1d).
 #    Alerts/push delivery are separate and are not started by this launcher.
 #    Logs: logs/dev-backend/*.log | Full guide: docs/local-ios-backend.md
 #    To print each underlying PYTHONPATH command:
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 # PYTHONPATH=src:. python -m celery -A src.core.services.workers.celery_worker:celery_app worker --pool=prefork --concurrency=2 --queues=scanner_ingestion --hostname=ios-ingestion@%h --loglevel=info
 # PYTHONPATH=src:. python -m celery -A src.core.services.workers.celery_worker:celery_app worker --pool=prefork --concurrency=2 --queues=scanner --hostname=ios-detection@%h --loglevel=info
 # PYTHONPATH=src:. python -m core.services.workers.scanner_scheduler
-# PYTHONPATH=src:. python scripts/manage_scanner.py enable --manifest config/scanner/binance-spot-pilot.json --intervals 15m 1h 4h 1d
+# PYTHONPATH=src:. python scripts/manage_scanner.py enable --manifest config/scanner/binance-spot-pilot.json --intervals 15m 30m 1h 4h 1d
 # PYTHONPATH=src:. python scripts/manage_scanner.py status
 # PYTHONPATH=src:. python scripts/manage_scanner.py disable --universe binance-spot-pilot
 # notification_worker and scanner inbox/delivery are OPTIONAL ALERT processes,

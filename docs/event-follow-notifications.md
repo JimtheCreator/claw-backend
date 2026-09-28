@@ -3,7 +3,7 @@
 ## Behavior
 
 Saving a scanned pattern in iOS follows new matching symbols on all four scanner
-timeframes: 15m, 1h, 4h and 1d. Changing the browsing timeframe only changes results.
+timeframes: 15m, 30m, 1h, 4h and 1d. Changing the browsing timeframe only changes results.
 Each watchlist group retains its own follow/mute preference. Groups following the
 same universe/pattern share one notification rule. Removing one group
 reference preserves other groups; muting all references pauses the rule. Resuming
@@ -94,7 +94,7 @@ not accepted. Public catalog, summaries and matches remain public.
 
 - `PUT /api/v1/scanner/follows/{group_id}/{pattern_id}` with
   `{"universe":"binance-spot-pilot","muted":false}`.
-  Idempotent upsert; validates the pattern is enabled on all four timeframes. Existing watch is reused.
+  Idempotent upsert; validates the pattern is enabled on all five timeframes. Existing watch is reused.
 - `DELETE /api/v1/scanner/follows/{group_id}/{pattern_id}` is idempotent and works
   even when the detector is disabled. IDs are namespace keys scoped to the owner;
   this endpoint does not grant access to the legacy group API.
@@ -182,3 +182,7 @@ historical deliveries remain intact. The upgrade is repeatable, uses the existin
 restricted worker role, and requires no schema change or new provider requests.
 Restart the API and inbox worker together when deploying this change. The normal
 local launcher command is unchanged.
+
+## 30-minute scanner support
+
+Apply `migrations/20260927_scanner_30m.sql` after the existing watch/follow migrations, then restart the API, scanner and notification workers. The local launcher enables 15m, 30m, 1h, 4h and 1d (50 shared symbol streams). Existing event follows include 30m automatically; explicit pattern alerts retain their saved interval. The first 30m snapshot establishes a baseline without replaying existing matches as new notifications.

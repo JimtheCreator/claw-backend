@@ -51,7 +51,7 @@ Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` an
    ```
 
    Leave this terminal running. `--scanner` explicitly enables the existing
-   **10-symbol Binance pilot**, on **15m, 1h, 4h and 1d**. Its first preparation
+   **10-symbol Binance pilot**, on **15m, 30m, 1h, 4h and 1d**. Its first preparation
    may need to fetch missing closed-candle windows through the shared provider
    limiter. Let the initial snapshots warm; repeatedly restarting will not help.
    Some catalog patterns are not enabled by this pilot. A ready scan may correctly
@@ -198,7 +198,7 @@ notification production/delivery disabled; Home rings are local unread indicator
 
 Verification for this change: scanner/launcher unit suites passed, including 1,000
 concurrent in-process preview reads without repeating detector or candle loading.
-The local stack also produced fresh snapshots for all four intervals and all ten
+The local stack also produced fresh snapshots for all five intervals and all ten
 pilot symbols, with real stored-candle previews. This does not establish production
 capacity for 1,000 simultaneous users. The broad unit suite currently cannot collect
 `test_price_alert_manager.py` because it imports the obsolete

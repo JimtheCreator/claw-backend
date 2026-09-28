@@ -42,7 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, default=ROOT / "logs/scanner-runtime-report.json")
     parser.add_argument("--burst", action="store_true",
-                        help="Also exercise 50 synthetic symbols across all four intervals (200 jobs)")
+                        help="Also exercise 40 synthetic symbols across all five intervals (200 jobs)")
     parser.add_argument("--recovery", action="store_true",
                         help="Kill disposable worker children at instrument/publication checkpoints")
     parser.add_argument("--alerts", action="store_true",

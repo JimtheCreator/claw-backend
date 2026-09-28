@@ -2,8 +2,10 @@
 import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-INTERVAL_SECONDS = {"15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
+ScanInterval = Literal["15m", "30m", "1h", "4h", "1d"]
+INTERVAL_SECONDS = {"15m": 900, "30m": 1800, "1h": 3600, "4h": 14400, "1d": 86400}
 
 
 @lru_cache(maxsize=1)

@@ -6,13 +6,13 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from redis.exceptions import RedisError
 
-from core.scanner.catalog import INTERVAL_SECONDS, pattern_catalog
+from core.scanner.catalog import INTERVAL_SECONDS, ScanInterval, pattern_catalog
 from infrastructure.database.redis.cache import redis_cache
 from infrastructure.database.redis.scanner_store import ScannerStore, ScannerSnapshotMissing
 
 router = APIRouter(prefix="/scanner", tags=["Market Scanner"])
 Universe = Annotated[str, Query(pattern=r"^[a-z0-9][a-z0-9-]{0,63}$")]
-Interval = Literal["15m", "1h", "4h", "1d"]
+Interval = ScanInterval
 Snapshot = Annotated[str | None, Query(pattern=r"^[a-f0-9]{32}$")]
 
 

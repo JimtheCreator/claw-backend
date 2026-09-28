@@ -22,6 +22,13 @@ def test_watch_symbols_are_canonical_and_identity_cannot_be_supplied():
             WatchCreate(pattern_id='bullish_engulfing', **extra)
 
 
+def test_half_hour_pattern_watch_and_inbox_stream_are_supported():
+    from core.services.workers.scanner_alert_worker import EVENT_STREAM
+    assert WatchCreate(pattern_id='bullish_engulfing', interval='30m').interval == '30m'
+    assert EVENT_STREAM.fullmatch('scanner:v1:{binance-spot-pilot:30m}:events')
+    assert not EVENT_STREAM.fullmatch('scanner:v1:{binance-spot-pilot:3m}:events')
+
+
 def test_firebase_sdk_must_verify_signature_and_revocation(monkeypatch):
     app = object()
     verify = Mock(return_value={'uid':'alice'})

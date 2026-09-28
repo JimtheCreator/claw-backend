@@ -80,6 +80,9 @@ async def database():
     follow_migration = (ROOT/'migrations/20260921_event_follows.sql').read_text()
     await admin.execute(follow_migration)
     await admin.execute(follow_migration)
+    interval_migration = (ROOT/'migrations/20260927_scanner_30m.sql').read_text()
+    await admin.execute(interval_migration)
+    await admin.execute(interval_migration)
     await admin.execute('TRUNCATE scanner_alerts.devices')
     await admin.execute('''DO $$ BEGIN
         IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='scanner_api_test') THEN
@@ -136,7 +139,7 @@ def test_authenticated_crud_and_database_rls_isolate_owners():
                 lambda token: {'uid':{'alice-token':'alice','bob-token':'bob'}[token], 'exp':time.time()+300})
             async def scopes():
                 manifest = json.loads((ROOT/'config/scanner/binance-spot-pilot.json').read_text())
-                return [{'manifest':dict(manifest,id=UNIVERSE),'intervals':['15m','1h','4h','1d']}]
+                return [{'manifest':dict(manifest,id=UNIVERSE),'intervals':['15m','30m','1h','4h','1d']}]
             app.dependency_overrides[enabled_scope] = scopes
             base = '/api/v1/scanner'
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
@@ -422,7 +425,7 @@ def test_legacy_interval_is_ignored_and_resume_does_not_replay_old_matches():
             first = await db.api.set_follow('alice','a',PATTERN,spec)
             await db.api.set_follow('alice','a',PATTERN,spec.model_copy(update={'interval':'1h'}))
             current = await db.api.list('alice')
-            assert len(current) == 1 and current[0]['intervals'] == ['15m','1h','4h','1d']
+            assert len(current) == 1 and current[0]['intervals'] == ['15m','30m','1h','4h','1d']
             assert current[0]['interval'] is None
             assert current[0]['id'] == first['watch_id']
             await db.api.set_follow('alice','a',PATTERN,spec.model_copy(update={'muted':True}))
@@ -475,14 +478,14 @@ def test_device_ownership_transfer_and_receipts_are_account_scoped():
     asyncio.run(scenario())
 
 
-def test_saved_follow_delivers_all_four_timeframes_without_duplicate_group_pushes():
+def test_saved_follow_delivers_all_five_timeframes_without_duplicate_group_pushes():
     from core.scanner.catalog import INTERVAL_SECONDS
     from core.scanner.watches import FollowCreate
     async def scenario():
         async with database() as db:
             saved = await db.api.set_follow('alice','a',PATTERN,FollowCreate(universe=UNIVERSE))
             await db.api.set_follow('alice','b',PATTERN,FollowCreate(universe=UNIVERSE,interval='4h'))
-            explicit = await db.api.create('bob', WatchCreate(universe=UNIVERSE,pattern_id=PATTERN,interval='1h'))
+            explicit = await db.api.create('bob', WatchCreate(universe=UNIVERSE,pattern_id=PATTERN,interval='30m'))
             await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$1',cutoff()-timedelta(days=1))
             for interval, seconds in INTERVAL_SECONDS.items():
                 stamp = datetime.fromtimestamp(int(time.time())//seconds*seconds, timezone.utc)
@@ -497,9 +500,9 @@ def test_saved_follow_delivers_all_four_timeframes_without_duplicate_group_pushe
                 prior, _ = lifecycle_transition(None,*scoped(stamp-timedelta(seconds=seconds)))
                 _, batch = lifecycle_transition(prior,*scoped(stamp,('BTCUSDT',)))
                 await accept(db.worker,batch)
-            assert await fanout_all(db.worker) == 5
+            assert await fanout_all(db.worker) == 6
             rows = await db.api.history('alice')
-            assert len(rows) == 4
+            assert len(rows) == 5
             assert {r['payload']['match']['interval'] for r in rows} == set(INTERVAL_SECONDS)
             assert len(await db.api.history('bob')) == 1
             # The delivery path retains the event timeframe, not the legacy watch field.
@@ -510,7 +513,7 @@ def test_saved_follow_delivers_all_four_timeframes_without_duplicate_group_pushe
                     return 'test-provider-id'
             while (result := await deliver_one(db.worker,Sender())) is not None:
                 assert result == 'delivered'
-            assert sorted(delivered) == ['15m','1d','1h','1h','4h']
+            assert sorted(delivered) == ['15m','1d','1h','30m','30m','4h']
             # Reprocessing the same inbox cannot enqueue a second notification.
             assert await fanout_all(db.worker) == 0
     asyncio.run(scenario())

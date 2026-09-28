@@ -5,9 +5,12 @@ import logging
 import re
 
 from core.services.scanner_alerts import consume_events, deliver_one
+from core.scanner.catalog import INTERVAL_SECONDS
 from infrastructure.database.redis.scanner_events import ScannerEventStream
 
 log = logging.getLogger(__name__)
+EVENT_STREAM = re.compile(r'scanner:v1:\{[a-z0-9][a-z0-9-]{0,63}:('
+                          + '|'.join(map(re.escape, INTERVAL_SECONDS)) + r')\}:events')
 
 
 class ScannerInboxPump:
@@ -24,7 +27,7 @@ class ScannerInboxPump:
         for key in keys:
             if isinstance(key, bytes):
                 key = key.decode()
-            if not re.fullmatch(r'scanner:v1:\{[a-z0-9][a-z0-9-]{0,63}:(15m|1h|4h|1d)\}:events', key):
+            if not EVENT_STREAM.fullmatch(key):
                 continue
             stream = self.streams.setdefault(key, ScannerEventStream(self.redis, key[:-7]))
             self.streams.move_to_end(key)

@@ -1,13 +1,14 @@
 """Saved pattern watch contract. Public browsing never depends on this module."""
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from .catalog import ScanInterval
 
 
 class WatchCreate(BaseModel):
     model_config = ConfigDict(extra='forbid')
     universe: str = Field(default='binance-spot-pilot', pattern=r'^[a-z0-9][a-z0-9-]{0,63}$')
     pattern_id: str = Field(pattern=r'^[a-z0-9_]{1,80}$')
-    interval: Literal['15m', '1h', '4h', '1d'] = '15m'
+    interval: ScanInterval = '15m'
     symbols: list[str] = Field(default_factory=list, max_length=50)
     mode: Literal['once', 'repeat'] = 'repeat'
 
@@ -38,7 +39,7 @@ class FollowCreate(BaseModel):
     model_config = ConfigDict(extra='forbid')
     universe: str = Field(default='binance-spot-pilot', pattern=r'^[a-z0-9][a-z0-9-]{0,63}$')
     # Accepted for older clients; saved follows always cover every scanner interval.
-    interval: Literal['15m','1h','4h','1d'] | None = Field(default=None, deprecated=True)
+    interval: ScanInterval | None = Field(default=None, deprecated=True)
     muted: bool = False
 
 

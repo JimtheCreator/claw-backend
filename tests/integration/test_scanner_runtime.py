@@ -152,14 +152,14 @@ def test_real_worker_pipeline_reuse_correction_and_shared_reads(workers):
 
 
 @pytest.mark.skipif(os.getenv("SCANNER_RUNTIME_BURST") != "1", reason="Enable with --burst")
-def test_real_worker_four_interval_burst(workers):
+def test_real_worker_five_interval_burst(workers):
     """Bounded synthetic close workload; not a market-accuracy or user-load test."""
     from tests.fixtures.scanner_geometry import geometry_rows
 
     async def scenario():
         manifest = json.loads((ROOT / "config/scanner/binance-spot-pilot.json").read_text())
         manifest.update(id="runtime-burst", symbols=manifest["symbols"] +
-                        [f"FIXTURE{i:03d}USDT" for i in range(40)])
+                        [f"FIXTURE{i:03d}USDT" for i in range(30)])
         corpus = json.loads((ROOT / "tests/fixtures/scanner/geometry.json").read_text())
         async with Redis.from_url(os.environ["REDIS_URL"], decode_responses=True) as redis:
             seconds, _ = await redis.time()
@@ -205,7 +205,7 @@ def test_real_worker_four_interval_burst(workers):
                     observer.cancel()
                     await asyncio.gather(observer, return_exceptions=True)
                 elapsed = time.monotonic() - started
-                assert all(s["coverage"]["ready"] == 50 for s in snapshots)
+                assert all(s["coverage"]["ready"] == len(manifest["symbols"]) for s in snapshots)
                 computed = sum(s["processing"]["computed"] for s in snapshots)
                 reused = sum(s["processing"]["reused"] for s in snapshots)
                 assert computed == 200 and reused == 0
@@ -216,13 +216,13 @@ def test_real_worker_four_interval_burst(workers):
                 report_path = Path(os.environ["SCANNER_RUNTIME_REPORT"])
                 report = json.loads(report_path.read_text())
                 report["burst"] = {
-                    "fixture": "50 symbols (40 synthetic identities), varied synthetic geometry and price scales",
+                    "fixture": "40 symbols (30 synthetic identities), varied synthetic geometry and price scales",
                     "intervals": list(cutoffs), "instrument_jobs": 200,
                     "computed": computed, "reused": reused, "detector_evaluations": evaluations,
                     "seconds_from_dispatch": round(elapsed, 3), "queue_depth_peak_sampled": peaks,
                     "queue_depth_sampling_seconds": .05,
                     "coverage": {s["interval"]: s["coverage"] for s in snapshots},
-                    "note": "All four latest-due cutoffs enqueued together; not an exchange stream, recorded feed or client load test.",
+                    "note": "All five latest-due cutoffs enqueued together; not an exchange stream, recorded feed or client load test.",
                 }
                 report_path.write_text(json.dumps(report, indent=2) + "\n")
             finally:
