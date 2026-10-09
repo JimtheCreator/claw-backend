@@ -74,6 +74,10 @@ def detection_batch(*, symbols=('BTCUSDT',), stamp=None, version='v1'):
 async def database():
     dsn = os.environ['SCANNER_DATABASE_URL']
     admin = await asyncpg.connect(dsn, ssl=False)
+    if await admin.fetchval("SELECT to_regclass('scanner_alerts.watches') IS NOT NULL"):
+        # Each test replays historical migrations too. Clear disposable rows
+        # first so an old unique index cannot conflict with new scoped fixtures.
+        await admin.execute('TRUNCATE scanner_alerts.watches,scanner_alerts.batches,scanner_alerts.heads,scanner_alerts.events,scanner_alerts.outbox CASCADE')
     migration = (ROOT/'migrations/20260917_scanner_watches.sql').read_text()
     await admin.execute(migration)
     await admin.execute(migration)  # Additive migration is repeatable.
@@ -83,6 +87,16 @@ async def database():
     interval_migration = (ROOT/'migrations/20260927_scanner_30m.sql').read_text()
     await admin.execute(interval_migration)
     await admin.execute(interval_migration)
+    market_migration = (ROOT/'migrations/20261001_scanner_market_scope.sql').read_text()
+    await admin.execute(market_migration)
+    await admin.execute(market_migration)
+    retention_migration = (ROOT/'migrations/20261001_scanner_retention.sql').read_text()
+    await admin.execute(retention_migration)
+    await admin.execute(retention_migration)
+    for filename in ('20260926_symbol_price_alerts.sql', '20261003_price_alert_markets.sql'):
+        price_migration = (ROOT/'migrations'/filename).read_text()
+        await admin.execute(price_migration)
+        await admin.execute(price_migration)
     await admin.execute('TRUNCATE scanner_alerts.devices')
     await admin.execute('''DO $$ BEGIN
         IF NOT EXISTS(SELECT FROM pg_roles WHERE rolname='scanner_api_test') THEN
@@ -239,6 +253,96 @@ def test_redis_commit_ack_crash_replay_and_once_fanout():
             assert len(older) == 1 and older[0]['id'] != history[0]['id']
             async with db.api.transaction('unrelated') as con:
                 assert await con.fetchval('SELECT count(*) FROM scanner_alerts.outbox') == 0
+    asyncio.run(scenario())
+
+
+def test_bounded_inbox_cleanup_preserves_live_detections_and_locked_rows():
+    async def scenario():
+        async with database() as db:
+            await watch(db)
+            # Expired detections, a superseded definition, and a baseline can
+            # be acknowledged together without generating notifications.
+            await accept(db.worker, detection_batch(stamp=cutoff()-timedelta(days=1)))
+            stale = detection_batch()
+            await accept(db.worker, stale)
+            _, reset = lifecycle_transition(None, *snapshot(cutoff(), version='v2'))
+            await accept(db.worker, reset)
+            live = detection_batch(version='v2')
+            # Baseline and detection at the same close share a batch identity;
+            # create the live observation in a separate source scope instead.
+            live['scope'][2] = 'live-test'
+            from core.scanner.events import _digest
+            live['batch_id'] = _digest([live['scope'], live['epoch'], live['data_as_of']])
+            for event in live['events']:
+                match = event['match']
+                event['event_id'] = _digest([live['batch_id'], event['type'],
+                    match['instrument_id'], match['pattern_id'], match['pattern_start']])
+            await accept(db.worker, live)
+            # An in-flight event stays with its owning worker.
+            async with db.worker.transaction() as con:
+                await con.fetchrow('SELECT event_id FROM scanner_alerts.events WHERE event_id=$1 FOR UPDATE',
+                                   stale['events'][0]['event_id'])
+                assert await db.worker.retire_ineligible_events(limit=1) == 1
+                assert await db.worker.retire_ineligible_events() == 1
+                assert await db.worker.retire_ineligible_events() == 0
+            assert await db.worker.retire_ineligible_events() == 1
+            pending = await db.admin.fetch('SELECT event_id FROM scanner_alerts.events WHERE processed_at IS NULL')
+            assert [row['event_id'] for row in pending] == [live['events'][0]['event_id']]
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.events') == 4
+            assert await db.api.history('alice') == []
+            # The remaining detection can still fan out normally.
+            await db.admin.execute("UPDATE scanner_alerts.watches SET universe='live-test'")
+            assert await fanout_all(db.worker) == 1
+            for invalid in (0, 1001, True):
+                with pytest.raises(ValueError):
+                    await db.worker.retire_ineligible_events(limit=invalid)
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize('batch_size', [1, 4])
+def test_batch_fanout_preserves_once_rules_under_concurrent_workers(batch_size):
+    async def scenario():
+        async with database() as db:
+            await watch(db, 'repeat')
+            await watch(db, 'once', mode='once')
+            await watch(db, 'btc', symbols=['BTCUSDT'])
+            paused = await watch(db, 'paused')
+            await db.api.change('paused', paused['id'], 'pause')
+            await accept(db.worker, detection_batch(symbols=['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT']))
+            results = await asyncio.gather(*(db.worker.fanout_batch(limit=batch_size) for _ in range(4)))
+            assert sum(r['processed'] for r in results) == 4
+            assert sum(r['queued'] for r in results) == 6
+            assert sum(r['completed'] for r in results) == 1
+            assert len(await db.api.history('repeat')) == 4
+            assert len(await db.api.history('once')) == 1
+            assert len(await db.api.history('btc')) == 1
+            assert await db.api.history('paused') == []
+            assert (await db.worker.fanout_batch())['queued'] == 0
+            for limit in (0, 101, True):
+                with pytest.raises(ValueError):
+                    await db.worker.fanout_batch(limit=limit)
+    asyncio.run(scenario())
+
+
+def test_unwatched_detection_batch_does_not_delay_or_discard_matching_alerts():
+    async def scenario():
+        async with database() as db:
+            await watch(db, symbols=['BTCUSDT'])
+            symbols = ['BTCUSDT'] + [f'COIN{i:03}USDT' for i in range(600)]
+            batch = detection_batch(symbols=symbols)
+            await accept(db.worker, batch)
+            locked = next(e['event_id'] for e in batch['events'] if e['match']['symbol'] == 'COIN000USDT')
+            async with db.worker.transaction() as con:
+                await con.fetchrow('SELECT event_id FROM scanner_alerts.events WHERE event_id=$1 FOR UPDATE', locked)
+                assert await db.worker.retire_ineligible_events(limit=200, include_unwatched=True) == 200
+                assert await db.worker.retire_ineligible_events(include_unwatched=True) == 399
+                assert await db.worker.retire_ineligible_events(include_unwatched=True) == 0
+            assert await db.worker.retire_ineligible_events(include_unwatched=True) == 1
+            assert await fanout_all(db.worker) == 1
+            assert len(await db.api.history('alice')) == 1
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.events') == 601
+            assert not await accept(db.worker, batch)  # Replay cannot resurrect handled events.
+            assert await fanout_all(db.worker) == 0
     asyncio.run(scenario())
 
 
@@ -540,4 +644,164 @@ def test_existing_timeframe_follows_upgrade_preserves_group_mutes_and_deduplicat
             assert next(r for r in rows if r['id']==explicit['id'])['interval']==INTERVAL
             await db.api.remove_follow('alice','b',PATTERN)
             assert next(r for r in await db.api.list('alice') if r['origin']=='follow')['status']=='paused'
+    asyncio.run(scenario())
+
+
+def test_market_scope_consent_fanout_and_inflight_preference_change():
+    from core.scanner.watches import ScopedWatchCreate
+    from presentation.api.routes.scanner_watches import scoped_router
+    async def scenario():
+        async with database() as db:
+            # Legacy consent is persisted explicitly, including after a
+            # repeatable migration. It must never acquire forex by default.
+            legacy=await watch(db,'legacy')
+            assert legacy['market_scope']=='crypto'
+            await db.admin.execute((ROOT/'migrations/20261001_scanner_market_scope.sql').read_text())
+            assert (await db.api.get('legacy',legacy['id']))['market_scope']=='crypto'
+            for scope in ('crypto','forex','all'):
+                item=await db.api.create(scope,ScopedWatchCreate(pattern_id=PATTERN,interval=INTERVAL,market_scope=scope))
+                await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$2 WHERE id=$1',item['id'],cutoff()-timedelta(seconds=1))
+            # Separate lifecycle streams retain provider-qualified identities.
+            meta0,rows0=snapshot(cutoff()-timedelta(days=1))
+            meta1,rows1=snapshot(cutoff(),symbols=('EURUSD',))
+            for meta,rows in [(meta0,rows0),(meta1,rows1)]:
+                meta.update(provider='massive',market='forex',universe_id='massive-forex')
+                for match in rows[PATTERN]:
+                    match.update(provider='massive',market='forex',instrument_id='massive:forex:EURUSD')
+            state,_=lifecycle_transition(None,meta0,rows0)
+            fx=lifecycle_transition(state,meta1,rows1)[1]
+            await accept(db.worker,fx)
+            await accept(db.worker,detection_batch())
+            assert await db.worker.retire_ineligible_events(include_unwatched=True) == 0
+            assert (await db.worker.fanout_batch())['queued']==5 # legacy+crypto+all, then forex+all
+            assert len(await db.api.history('legacy'))==1
+            assert len(await db.api.history('crypto'))==1
+            assert len(await db.api.history('forex'))==1
+            assert len(await db.api.history('all'))==2
+            # Claim a queued delivery, then narrow consent before sending.
+            delivery=await db.worker.claim_delivery()
+            assert await db.worker.delivery_allowed(delivery)
+            opposite='crypto' if delivery['payload']['match']['market']=='forex' else 'forex'
+            await db.api.change_scope(delivery['user_id'],delivery['watch_id'],opposite)
+            assert not await db.worker.delivery_allowed(delivery)
+            assert await db.api.change_scope('wrong-owner',delivery['watch_id'],'all') is None
+            # Missing market_scope is a real HTTP validation error in v2.
+            app=FastAPI(); app.include_router(scoped_router,prefix='/api/v2')
+            app.state.scanner_watch_pool=db.api_pool
+            app.state.scanner_identity_verifier=FirebaseIDVerifier(lambda token:{'uid':'new','exp':time.time()+300})
+            async def scopes():
+                return [dict(manifest=dict(id=UNIVERSE,provider='binance',market='spot',symbols=['BTCUSDT'],detectors=['engulfing']),intervals=[INTERVAL])]
+            app.dependency_overrides[enabled_scope]=scopes
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
+                headers={'Authorization':'Bearer test-token'}
+                spec=dict(pattern_id=PATTERN,interval=INTERVAL)
+                assert (await client.post('/api/v2/scanner/watches',headers=headers,json=spec)).status_code==422
+                result=await client.post('/api/v2/scanner/watches',headers=headers,json=dict(spec,market_scope='crypto'))
+                assert result.status_code==201,result.text
+                assert result.json()['market_scope']=='crypto'
+    asyncio.run(scenario())
+
+
+def test_follow_scopes_remain_separate_and_editing_one_group_preserves_others():
+    from core.scanner.watches import ScopedFollowCreate
+    async def scenario():
+        async with database() as db:
+            crypto=await db.api.set_follow('alice','crypto-group',PATTERN,ScopedFollowCreate(market_scope='crypto'))
+            forex=await db.api.set_follow('alice','forex-group',PATTERN,ScopedFollowCreate(market_scope='forex'))
+            assert crypto['watch_id']!=forex['watch_id']
+            await db.worker.upgrade_follows()
+            assert len(await db.api.list('alice'))==2
+            changed=await db.api.set_follow('alice','forex-group',PATTERN,ScopedFollowCreate(market_scope='all'))
+            assert changed['market_scope']=='all'
+            assert (await db.api.get('alice',crypto['watch_id']))['market_scope']=='crypto'
+            assert await db.api.get('alice',forex['watch_id']) is None
+            assert len(await db.api.list('alice'))==2
+    asyncio.run(scenario())
+
+
+def test_retention_is_bounded_preserves_pending_and_prevents_old_replay_pushes():
+    async def scenario():
+        async with database() as db:
+            saved=await watch(db)
+            old=cutoff()-timedelta(days=120)
+            batch=detection_batch(stamp=old)
+            await accept(db.worker,batch)
+            assert await fanout_all(db.worker)==0
+            event=await db.admin.fetchval("SELECT event_id FROM scanner_alerts.events WHERE kind='detected' LIMIT 1")
+            ids={}
+            for status in ('delivered','failed','cancelled','expired','pending','sending'):
+                # Separate watches avoid the delivery uniqueness constraint.
+                w=await watch(db,'retention-'+status)
+                ids[status]=await db.admin.fetchval('''INSERT INTO scanner_alerts.outbox
+                    (user_id,watch_id,event_id,payload,status,created_at,expires_at,lease_until)
+                    VALUES($1,$2,$3,'{}',$4,$5::timestamptz,$5::timestamptz+interval '1 day',
+                        CASE WHEN $4='sending' THEN clock_timestamp()+interval '2 minutes' ELSE NULL END)
+                    RETURNING id''','retention-'+status,w['id'],event,status,old)
+                await db.admin.execute('INSERT INTO scanner_alerts.device_receipts VALUES($1,$2)',ids[status],'fixture')
+            # Old terminal record with an active lease must also survive.
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET lease_until=clock_timestamp()+interval '2 minutes' WHERE id=$1",ids['cancelled'])
+            await db.admin.execute('UPDATE scanner_alerts.batches SET received_at=$1',old)
+            stats=await db.worker.prune_terminal_history(limit=2)
+            assert stats==dict(outbox=2,events=0,batches=0)
+            stats=await db.worker.prune_terminal_history(limit=2)
+            assert stats['outbox']==1 and stats['events']==0
+            remaining=await db.admin.fetch('SELECT id,status FROM scanner_alerts.outbox')
+            assert {r['status'] for r in remaining}=={'cancelled','pending','sending'}
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.device_receipts')==3
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.watches WHERE id=$1',saved['id'])==1
+            # Complete the retained test work, then prove referential cleanup.
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET status='expired',lease_until=NULL")
+            stats=await db.worker.prune_terminal_history()
+            assert stats['outbox']==3 and stats['events']>0 and stats['batches']==1
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.heads')==1
+            assert await accept(db.worker,batch) is True
+            assert await fanout_all(db.worker)==0
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.outbox')==0
+            # Fresh deliveries and unprocessed events remain operator-visible.
+            fresh=detection_batch(version='fresh')
+            await accept(db.worker,fresh)
+            await db.worker.prune_terminal_history()
+            assert await db.admin.fetchval('SELECT count(*) FROM scanner_alerts.events WHERE processed_at IS NULL')>0
+    asyncio.run(scenario())
+
+
+def test_promote_legacy_watches_preserves_consent_links_and_is_idempotent():
+    from core.scanner.watches import FollowCreate
+    async def scenario():
+        async with database() as db:
+            explicit = await db.api.create('alice', WatchCreate(universe='binance-spot-pilot',
+                pattern_id=PATTERN,interval='1h',symbols=['BTCUSDT'],mode='once'))
+            follow = await db.api.set_follow('alice','group',PATTERN,FollowCreate())
+            promoted = await db.worker.promote_binance_watches()
+            assert len(promoted) == 2
+            saved = await db.api.get('alice',explicit['id'])
+            assert saved['universe']=='binance-spot-full' and saved['market_scope']=='crypto'
+            assert saved['symbols']==['BTCUSDT'] and saved['interval']=='1h' and saved['mode']=='once'
+            link = await db.admin.fetchrow('SELECT * FROM scanner_alerts.follow_links')
+            assert str(link['watch_id'])==str(follow['watch_id'])
+            assert await db.worker.promote_binance_watches()==[]
+    asyncio.run(scenario())
+
+
+def test_partial_forex_lifecycle_reaches_only_consented_watchers():
+    from core.scanner.watches import ScopedWatchCreate
+    async def scenario():
+        async with database() as db:
+            for scope in ('crypto','forex','all'):
+                item=await db.api.create(scope,ScopedWatchCreate(pattern_id=PATTERN,interval=INTERVAL,market_scope=scope))
+                await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$2 WHERE id=$1',item['id'],cutoff()-timedelta(seconds=1))
+            def fx(stamp, symbols):
+                meta, rows = snapshot(stamp, symbols=symbols)
+                meta.update(provider='massive',market='forex',universe_id='massive-forex',
+                            coverage={'eligible':2,'ready':1},instrument_coverage={'EURUSD':'ready','USDJPY':'gapped'})
+                for match in rows[PATTERN]:
+                    match.update(provider='massive',market='forex',instrument_id='massive:forex:EURUSD')
+                return meta,rows
+            state,_=lifecycle_transition(None,*fx(cutoff()-timedelta(days=1),()))
+            _,batch=lifecycle_transition(state,*fx(cutoff(),('EURUSD',)))
+            await accept(db.worker,batch)
+            assert await fanout_all(db.worker)==2
+            assert len(await db.api.history('crypto'))==0
+            assert len(await db.api.history('forex'))==1
+            assert len(await db.api.history('all'))==1
     asyncio.run(scenario())

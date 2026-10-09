@@ -120,11 +120,25 @@ PYTHONPATH=src:. .venv/bin/python -m core.services.workers.websocket_subscriptio
 ```
 
 ```sh
-PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner_ingestion --loglevel=info
+PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner_control,scanner_ingestion --loglevel=info
 ```
 
 ```sh
-PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner --loglevel=info
+PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner,scanner_binance_spot_15m,scanner_binance_spot_30m,scanner_binance_spot_1h,scanner_binance_spot_4h,scanner_binance_spot_1d,scanner_massive_forex_15m,scanner_massive_forex_30m,scanner_massive_forex_1h,scanner_massive_forex_4h,scanner_massive_forex_1d,scanner_massive_crypto_15m,scanner_massive_crypto_30m,scanner_massive_crypto_1h,scanner_massive_crypto_4h,scanner_massive_crypto_1d --loglevel=info
+```
+
+Detection uses a lane per provider/market/timeframe, with Redis round-robin
+consumption and prefetch one. Consume all listed lanes when deploying the new
+task routes; the original `scanner` lane remains for older/manual tasks. Scan
+preparation and publication use `scanner_control` so candle-write backlogs do
+not put them at the back of `scanner_ingestion`.
+
+Recovery is isolated by provider; slow Forex recovery cannot occupy the Binance
+recovery slots. Consume both queues in full-universe deployments:
+
+```sh
+PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner_backfill,scanner_backfill_15m,scanner_backfill_30m,scanner_backfill_1h,scanner_backfill_4h,scanner_backfill_1d --hostname=backfill-binance@%h --loglevel=info
+PYTHONPATH=src:. .venv/bin/celery -A src.core.services.workers.celery_worker worker --pool=prefork --concurrency=2 --queues=scanner_backfill_forex,scanner_backfill_forex_15m,scanner_backfill_forex_30m,scanner_backfill_forex_1h,scanner_backfill_forex_4h,scanner_backfill_forex_1d --hostname=backfill-forex@%h --loglevel=info
 ```
 
 ```sh

@@ -13,6 +13,7 @@ from infrastructure.database.redis.cache import redis_cache
 # Import your existing modules
 from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
+from infrastructure.database.market_rollout import market_data_store, persist_market_batch
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.utils.shared_elements import INTERVAL_MINUTES, calculate_start_time
 
@@ -183,22 +184,14 @@ def process_telegram_update(update_data):
 # === DATA FETCHING TASKS =========================================
 # ===================================================================
 
-@celery_app.task(name="src.core.services.tasks.save_market_data_task")
+@celery_app.task(name="src.core.services.tasks.save_market_data_task",
+                 autoretry_for=(Exception,), retry_backoff=True,
+                 dont_autoretry_for=(ValueError, TypeError),
+                 retry_backoff_max=60, retry_kwargs={'max_retries': 5})
 def save_market_data_task(data_list_json):
     """Celery task to save a batch of market data."""
-    repo = InfluxDBMarketDataRepository()
-    
-    # --- THIS IS THE CHANGE ---
-    # Replace 'parse_raw' with 'model_validate_json' for Pydantic V2
-    data_entities = [MarketDataEntity.model_validate_json(item) for item in data_list_json]
-    
-    if not data_entities:
-        logger.info("No data to save.")
-        return
-        
-    logger.info(f"Worker saving batch of {len(data_entities)} records.")
-    asyncio.run(repo.save_market_data_bulk(data_entities))
-    logger.info("Worker finished saving batch.")
+    saved = asyncio.run(persist_market_batch(data_list_json, InfluxDBMarketDataRepository))
+    logger.info("Worker saved %s market records.", saved)
 
 async def fetch_history_sequential_batched(symbol: str, interval: str):
     """Fetch history for one symbol using smart batching"""
@@ -207,7 +200,7 @@ async def fetch_history_sequential_batched(symbol: str, interval: str):
     REQUESTS_PER_BATCH = 5  # Send 5 requests together
     DELAY_BETWEEN_BATCHES = 2.0  # 2 seconds between batches
     
-    repo = InfluxDBMarketDataRepository()
+    repo = market_data_store(InfluxDBMarketDataRepository)
     binance = BinanceMarketData()
     await binance.ensure_connected()
     
@@ -343,7 +336,7 @@ def verify_and_backfill_data_task(interval: str, symbols: list = None):
     """
     if symbols is None:
         # Get all symbols that have data in the database for this interval
-        repo = InfluxDBMarketDataRepository()
+        repo = market_data_store(InfluxDBMarketDataRepository)
         symbols_to_check = asyncio.run(repo.get_all_symbols_for_interval(interval))
         logger.info(f"Auto-discovered {len(symbols_to_check)} symbols from database for interval '{interval}'")
     else:
@@ -360,7 +353,7 @@ def verify_and_backfill_data_task(interval: str, symbols: list = None):
 
 async def verify_symbol_data(symbol: str, interval: str):
     """The core async logic for verifying and backfilling a single symbol."""
-    repo = InfluxDBMarketDataRepository()
+    repo = market_data_store(InfluxDBMarketDataRepository)
     binance = BinanceMarketData()
     await binance.ensure_connected()
 
@@ -436,7 +429,7 @@ def dispatch_verification_for_interval(interval: str):
     Gets all symbols for an interval and dispatches a separate verification
     task for each one.
     """
-    repo = InfluxDBMarketDataRepository()
+    repo = market_data_store(InfluxDBMarketDataRepository)
     symbols_to_check = asyncio.run(repo.get_all_symbols_for_interval(interval))
     logger.info(f"Dispatching verification tasks for {len(symbols_to_check)} symbols for interval '{interval}'")
     

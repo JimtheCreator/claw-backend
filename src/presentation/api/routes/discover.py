@@ -5,6 +5,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from core.services.market_cache_service import MarketCacheService
 from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
+from presentation.api.market_routes import enrich_market_routes
+from core.services.forex_quotes import prewarm_change_references
 
 router = APIRouter(tags=["Discover"])
 
@@ -14,8 +16,12 @@ router = APIRouter(tags=["Discover"])
 # at request time.
 limiter = Limiter(key_func=get_remote_address)
 
+class DiscoverInstrument(MarketInstrumentEntity):
+    market: Optional[str] = None
+    scanner_universe: Optional[str] = None
+
 class DiscoverPaginatedResponse(BaseModel):
-    items: List[MarketInstrumentEntity]
+    items: List[DiscoverInstrument]
     page: int
     limit: int
     total: int
@@ -35,7 +41,7 @@ async def get_discover_feed(
     cache_service: MarketCacheService = Depends(get_cache_service)
 ):
     if search and search.strip():
-        return await cache_service.search_instruments(
+        result = await cache_service.search_instruments(
             query=search,
             category=category,
             page=page,
@@ -46,8 +52,13 @@ async def get_discover_feed(
             client_ip=get_remote_address(request)
         )
     else:
-        return await cache_service.get_discover_page(
+        result = await cache_service.get_discover_page(
             category=category,
             page=page,
             limit=limit
         )
+    result['items'] = await enrich_market_routes(
+        [item.model_dump() for item in result['items']], cache_service.redis._redis)
+    prewarm_change_references(cache_service.redis._redis,
+        [item['symbol'] for item in result['items'] if item.get('source') == 'massive' and item.get('market') == 'forex'])
+    return result

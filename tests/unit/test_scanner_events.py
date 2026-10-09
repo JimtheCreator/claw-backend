@@ -199,3 +199,121 @@ def test_retrying_a_committed_publication_token_cannot_destroy_its_snapshot():
             assert await stream.checkpoint() == checkpoint
             assert await redis.xlen(stream.stream_key) == 1
     asyncio.run(scenario())
+
+
+def partial_snapshot(index=0, *, matched=False, btc='ready', eth='gapped'):
+    meta, rows = snapshot(index, matched=matched)
+    meta['coverage'] = {'eligible': 2, 'ready': int(btc == 'ready') + int(eth == 'ready')}
+    meta['instrument_coverage'] = {'BTCUSDT': btc, 'ETHUSDT': eth}
+    return meta, rows
+
+
+def test_ready_symbol_emits_even_when_another_symbol_is_gapped():
+    state, _ = lifecycle_transition(None, *partial_snapshot())
+    state, batch = lifecycle_transition(state, *partial_snapshot(1, matched=True))
+    assert [e['type'] for e in batch['events']] == ['detected']
+    assert batch['events'][0]['match']['symbol'] == 'BTCUSDT'
+    state, batch = lifecycle_transition(state, *partial_snapshot(2))
+    assert [e['type'] for e in batch['events']] == ['no_longer_detected']
+
+
+def test_unavailable_symbol_never_ends_and_recovery_does_not_realert():
+    state, _ = lifecycle_transition(None, *partial_snapshot(matched=True))
+    state, batch = lifecycle_transition(state, *partial_snapshot(1, btc='gapped', eth='ready'))
+    assert batch['events'] == [] and state['matches']
+    state, batch = lifecycle_transition(state, *partial_snapshot(2, matched=True, eth='ready'))
+    assert batch['events'] == []
+    _, batch = lifecycle_transition(state, *partial_snapshot(3, eth='ready'))
+    assert [e['type'] for e in batch['events']] == ['no_longer_detected']
+
+
+def test_late_same_close_ready_symbol_baselines_without_a_second_batch():
+    state, _ = lifecycle_transition(None, *partial_snapshot(btc='pending', eth='ready'))
+    state, batch = lifecycle_transition(state, *partial_snapshot(matched=True, eth='ready'))
+    assert batch['events'] == []
+    _, batch = lifecycle_transition(state, *partial_snapshot(1, matched=True, eth='ready'))
+    assert batch['events'] == []
+
+
+def test_partial_detector_matches_are_not_eligible_for_delivery():
+    state, _ = lifecycle_transition(None, *partial_snapshot(eth='ready'))
+    state, batch = lifecycle_transition(state, *partial_snapshot(1, matched=True, btc='partial', eth='ready'))
+    assert not batch['events'] and not state['matches']
+
+
+def test_inconsistent_instrument_coverage_fails_closed():
+    meta, rows = partial_snapshot()
+    meta['coverage']['ready'] = 2
+    with pytest.raises(ValueError):
+        lifecycle_transition(None, meta, rows)
+
+
+def test_inbox_reads_active_and_known_streams_without_waiting_for_keyspace_scan():
+    from unittest.mock import AsyncMock
+    from core.scanner.automation import CONFIG_KEY
+    from core.services.workers.scanner_alert_worker import ScannerInboxPump
+    async def scenario():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            await redis.hset(CONFIG_KEY, 'events-test', '{}')
+            # Model a large Redis keyspace where SCAN hasn't found this stream.
+            redis.scan = AsyncMock(return_value=(12345, []))
+            store = ScannerStore(redis, 'events-test', '15m')
+            await store.publish(await store.claim(), *snapshot(matched=False), emit_events=True)
+            await store.publish(await store.claim(), *snapshot(1), emit_events=True)
+            repo = AsyncMock()
+            repo.fanout_batch.return_value = {'processed': 0, 'queued': 0, 'completed': 0}
+            repo.retire_ineligible_events.return_value = 0
+            pump = ScannerInboxPump(redis, repo, 'inbox-test')
+            assert (await pump.tick())['consumed'] == 1
+            assert (await pump.tick())['consumed'] == 1
+            await redis.hdel(CONFIG_KEY, 'events-test')
+            await store.publish(await store.claim(), *snapshot(2, matched=False), emit_events=True)
+            assert (await pump.tick())['consumed'] == 1
+            assert repo.accept_batch.await_count == 3
+    asyncio.run(scenario())
+
+
+def test_inbox_yields_after_slow_fanout_without_cancelling_the_transaction(monkeypatch):
+    from unittest.mock import AsyncMock
+    from core.services.workers import scanner_alert_worker as worker
+
+    async def scenario():
+        clock = [0.0]
+        monkeypatch.setattr(worker.time, 'monotonic', lambda: clock[0])
+        redis = AsyncMock()
+        redis.hkeys.return_value = []
+        redis.scan.return_value = (0, [])
+        repo = AsyncMock()
+        repo.retire_ineligible_events.return_value = 500
+
+        async def slow_transaction():
+            clock[0] += 3
+            return {'processed': 16, 'queued': 16, 'completed': 0}
+
+        repo.fanout_batch.side_effect = slow_transaction
+        pump = worker.ScannerInboxPump(redis, repo, 'slow-inbox')
+        assert await pump.tick() == {'consumed': 0, 'processed': 516, 'queued': 16}
+        assert repo.fanout_batch.await_count == 1
+        await pump.tick()
+        assert redis.scan.await_count == 2
+        assert repo.fanout_batch.await_count == 2
+
+    asyncio.run(scenario())
+
+
+def test_superseded_snapshots_keep_navigation_grace_without_days_of_progress_copies():
+    from infrastructure.database.redis.scanner_store import SUPERSEDED_SNAPSHOT_SECONDS
+    async def run():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            store = ScannerStore(redis, "test", "1d")
+            first = await store.publish(await store.claim(), *snapshot(), emit_events=True)
+            old = store.snapshot_key(first["snapshot"])
+            assert await redis.ttl(old) > 86400
+            second = await store.publish(await store.claim(), *snapshot(1), emit_events=True)
+            assert 0 < await redis.ttl(old) <= SUPERSEDED_SNAPSHOT_SECONDS
+            assert await store.metadata(first["snapshot"]) == first
+            assert (await store.metadata())["snapshot"] == second["snapshot"]
+            assert await redis.ttl(store.snapshot_key(second["snapshot"])) > 86400
+            stream = ScannerEventStream(redis, store.prefix)
+            assert await redis.ttl(stream.state_key) == -1
+    asyncio.run(run())

@@ -4,6 +4,8 @@ import re
 import uuid
 
 from core.scanner.engine import utc_iso
+from core.scanner.automation import DISPATCH_SECONDS
+from infrastructure.database.redis.scanner_payload import encode, decode
 
 _RECORD = """
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
@@ -38,7 +40,9 @@ return redis.call('DEL', KEYS[1])
 """
 
 FINALIZE_RETRY_SECONDS = 30
-MAX_FINALIZE_RETRIES = 24  # Covers a 660s scope lease; never an unlimited broker loop.
+# Keep publishing for the whole repair lease. The old 12-minute cap stopped
+# reporting progress while the 25-minute Forex repair batch was still running.
+MAX_FINALIZE_RETRIES = DISPATCH_SECONDS // FINALIZE_RETRY_SECONDS
 
 
 class InstrumentBatch:
@@ -49,6 +53,7 @@ class InstrumentBatch:
         self.symbols = dispatch.candidate["manifest"]["symbols"]
         self.prefix = dispatch.prefix + ":attempt:" + token
         self.results_key = self.prefix + ":results"
+        self.observations_key = self.prefix + ":observations"
 
     def check_symbol(self, symbol):
         if symbol not in self.symbols:
@@ -68,12 +73,27 @@ class InstrumentBatch:
                     or outcome["data_as_of"] != utc_iso(self.dispatch.cutoff)):
                 raise ValueError("Outcome version or cutoff mismatch")
         count = await self.redis.eval(_RECORD, 2, self.dispatch.lease_key, self.results_key,
-            self.token, symbol, json.dumps(outcome, allow_nan=False), self.dispatch.ttl)
+            self.token, symbol, encode(outcome), DISPATCH_SECONDS + 120)
         return count >= len(self.symbols)
 
     async def outcomes(self):
         values = await self.redis.hmget(self.results_key, self.symbols)
-        return {symbol: json.loads(raw) for symbol, raw in zip(self.symbols, values) if raw is not None}
+        observations = await self.redis.hmget(self.observations_key, self.symbols)
+        return {symbol: decode(final if final is not None else observed)
+                for symbol, final, observed in zip(self.symbols, values, observations)
+                if final is not None or observed is not None}
+
+    async def observe_missing(self, symbol, outcome):
+        """Expose verified missing history while its repair remains unfinished."""
+        self.check_symbol(symbol)
+        if outcome['symbol'] != symbol or outcome['status'] not in (
+                'warming', 'stale', 'gapped', 'invalid_data', 'error'):
+            raise ValueError('Only unavailable candle windows can be provisional')
+        await self.redis.eval(_RECORD, 2, self.dispatch.lease_key, self.observations_key,
+            self.token, symbol, encode(outcome), DISPATCH_SECONDS + 120)
+
+    async def completed_count(self):
+        return await self.redis.hlen(self.results_key)
 
     async def claim_finalize_retry(self):
         guard = self.dispatch.publication_guard(self.token)

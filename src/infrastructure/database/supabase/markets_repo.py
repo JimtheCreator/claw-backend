@@ -89,7 +89,7 @@ class MarketRepository(CryptoRepository):
         # Redis by MarketCacheService._enrich_with_live_data) - not real
         # columns on market_instruments, so they must never be sent to Supabase.
         data = [
-            inst.model_dump(exclude_none=True, exclude={"price", "change", "sparkline"})
+            inst.model_dump(exclude_none=True, exclude={"id", "price", "change", "sparkline"})
             for inst in instruments
         ]
 
@@ -116,11 +116,17 @@ class MarketRepository(CryptoRepository):
     async def get_active_instruments(self) -> List[MarketInstrumentEntity]:
         try:
             loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.table(self.market_instruments).select("*").eq("is_active", True).execute()
-            )
-            return [MarketInstrumentEntity(**item) for item in response.data]
+            instruments = []
+            # PostgREST caps individual responses; a single select silently
+            # truncated the combined market catalog at 1,000 instruments.
+            for offset in range(0, 100000, 1000):
+                response = await loop.run_in_executor(None, lambda start=offset:
+                    self.client.table(self.market_instruments).select("*")
+                    .eq("is_active", True).order("id").range(start, start+999).execute())
+                instruments.extend(MarketInstrumentEntity(**item) for item in response.data)
+                if len(response.data) < 1000:
+                    return instruments
+            raise RuntimeError("Market catalog exceeds configured bound")
         except Exception as e:
             logger.error(f"Failed to fetch active instruments from database: {e}")
             return []

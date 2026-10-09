@@ -113,7 +113,8 @@ class BinanceMarketData:
         
         # WebSocket management
         self._websocket_connections = {}
-        self._max_websocket_connections = 5  # Limit WebSocket connections
+        from core.scanner.capacity import gateway_limits
+        self._max_websocket_connections = gateway_limits()[0]
         self._websocket_lock = asyncio.Lock()
 
     async def connect(self):
@@ -457,64 +458,36 @@ class BinanceMarketData:
                 "quoteVolume": "0"
             }
         
-    # In client.py - REMOVE the old get_websocket_connection_managed and 
-# get_websocket_connection methods, and replace with this:
+    @staticmethod
+    def _websocket_is_open(ws):
+        if ws is None:
+            return False
+        state = getattr(ws, 'state', None)
+        if state is not None:
+            return getattr(state, 'name', None) == 'OPEN'
+        return getattr(ws, 'closed', None) is False
 
     async def get_websocket_connection_managed(self, stream_key: str, socket_url: str):
-        """
-        Get or create a WebSocket connection with unified abuse prevention.
-        This method ensures all WebSocket connections go through the same safeguards.
-        
-        NOTE: This is specifically for the WebSocket subscription manager.
-        Do NOT use this during client initialization.
+        """Reuse open sockets and enforce the same capacity as the gateway.
+
+        Connection attempts use a shared budget here, including legacy callers.
+        Reaching capacity never evicts a healthy subscribed connection.
         """
         async with self._websocket_lock:
-            # Check if connection already exists and is valid
-            if stream_key in self._websocket_connections:
-                ws = self._websocket_connections[stream_key]
-                try:
-                    # Try to verify it's still alive
-                    if ws and hasattr(ws, 'close') and not getattr(ws, 'closed', False):
-                        logger.info(f"Reusing existing WebSocket connection: {stream_key}")
-                        return ws
-                except:
-                    pass
-                # Remove dead connection
-                self._websocket_connections.pop(stream_key, None)
-            
-            # Check connection limit
-            active_connections = sum(
-                1 for ws in self._websocket_connections.values() 
-                if ws and not getattr(ws, 'closed', True)
-            )
-            
-            if active_connections >= self._max_websocket_connections:
-                # Close oldest connection
-                oldest_key = next(iter(self._websocket_connections), None)
-                if oldest_key:
-                    oldest_ws = self._websocket_connections.pop(oldest_key)
-                    if oldest_ws and hasattr(oldest_ws, 'close'):
-                        try:
-                            await oldest_ws.close()
-                        except:
-                            pass
-                    logger.info(f"Closed oldest WebSocket connection: {oldest_key}")
-            
-            # Create new connection
-            try:
-                logger.info(f"Creating new WebSocket connection: {stream_key} to {socket_url}")
-                websocket = await websockets.connect(
-                    socket_url,
-                    ping_interval=20,
-                    ping_timeout=10,
-                    close_timeout=10
-                )
-                self._websocket_connections[stream_key] = websocket
-                logger.info(f"Created WebSocket connection: {stream_key}")
-                return websocket
-            except Exception as e:
-                logger.error(f"Failed to create WebSocket connection {stream_key}: {e}")
-                raise
+            existing = self._websocket_connections.get(stream_key)
+            if self._websocket_is_open(existing):
+                return existing
+            self._websocket_connections.pop(stream_key, None)
+            active = sum(self._websocket_is_open(ws) for ws in self._websocket_connections.values())
+            if active >= self._max_websocket_connections:
+                raise ProviderRequestDeferred('Configured WebSocket capacity is occupied', retry_after=5)
+            await RedisRateLimiter(redis_client=self.global_limiter.get_client(),
+                key_prefix='binance_gateway_connect', max_per_second=1,
+                max_per_minute=10, max_wait_seconds=3).acquire(1)
+            websocket = await websockets.connect(socket_url, ping_interval=20,
+                ping_timeout=10, close_timeout=10)
+            self._websocket_connections[stream_key] = websocket
+            return websocket
 
     async def remove_websocket_connection(self, stream_key: str):
         """Remove a WebSocket connection from tracking"""
@@ -646,36 +619,7 @@ class BinanceMarketData:
             return []
 
     async def get_websocket_connection(self, stream_key: str, socket_url: str):
-        """Get or create a WebSocket connection with connection limits"""
-        async with self._websocket_lock:
-            # Check connection limit
-            active_connections = sum(
-                1 for ws in self._websocket_connections.values() 
-                if ws and not ws.closed
-            )
-            
-            if active_connections >= self._max_websocket_connections:
-                # Close oldest connection
-                oldest_key = next(iter(self._websocket_connections))
-                oldest_ws = self._websocket_connections.pop(oldest_key)
-                if oldest_ws and not oldest_ws.closed:
-                    await oldest_ws.close()
-                    logger.info(f"Closed oldest WebSocket connection: {oldest_key}")
-            
-            # Create new connection
-            try:
-                websocket = await websockets.connect(
-                    socket_url,
-                    ping_interval=20,
-                    ping_timeout=10,
-                    close_timeout=10
-                )
-                self._websocket_connections[stream_key] = websocket
-                logger.info(f"Created WebSocket connection: {stream_key}")
-                return websocket
-            except Exception as e:
-                logger.error(f"Failed to create WebSocket connection {stream_key}: {e}")
-                raise
+        return await self.get_websocket_connection_managed(stream_key, socket_url)
 
     async def get_realtime_metrics(self, symbol: str) -> AsyncGenerator[dict, None]:
         """WebSocket-based real-time updates with connection management"""

@@ -21,34 +21,35 @@ class PriceAlertRepository(ScannerWatchRepository):
     async def existing_price(self,user,spec):
         async with self.transaction(user) as con:
             row=await con.fetchrow('SELECT * FROM scanner_alerts.price_rules WHERE id=$1 AND user_id=$2',spec.request_id,user)
-            if row and any(row[k]!=v for k,v in {'symbol':spec.symbol,'kind':spec.kind,'direction':spec.direction,'amount':spec.amount,'reference_price':spec.reference_price}.items()):
+            if row and any(row[k]!=v for k,v in {'symbol':spec.symbol,'kind':spec.kind,'direction':spec.direction,'amount':spec.amount,'reference_price':spec.reference_price,'provider':spec.provider,'market':spec.market,'price_basis':spec.price_basis}.items()):
                 raise ValueError('Request ID already used for another alert')
             return dict(row) if row else None
 
     async def watched_symbols(self):
         async with self.transaction() as con:
-            return [r['symbol'] for r in await con.fetch("SELECT DISTINCT symbol FROM scanner_alerts.price_rules WHERE status='active'")]
+            return [r['symbol'] for r in await con.fetch("SELECT DISTINCT symbol FROM scanner_alerts.price_rules WHERE status='active' AND provider='binance' AND market='spot'")]
 
     async def create_price(self, user, spec):
         async with self.transaction(user) as con:
             await con.execute("SELECT pg_advisory_xact_lock(hashtextextended('price-rule:' || $1,0))", user)
             existing = await con.fetchrow('SELECT * FROM scanner_alerts.price_rules WHERE id=$1 AND user_id=$2', spec.request_id,user)
             if existing:
-                if any(existing[k] != v for k,v in {'symbol':spec.symbol,'kind':spec.kind,'direction':spec.direction,'amount':spec.amount,'reference_price':spec.reference_price}.items()):
+                if any(existing[k] != v for k,v in {'symbol':spec.symbol,'kind':spec.kind,'direction':spec.direction,'amount':spec.amount,'reference_price':spec.reference_price,'provider':spec.provider,'market':spec.market,'price_basis':spec.price_basis}.items()):
                     raise ValueError('Request ID already used for another alert')
                 return dict(existing)
             if await con.fetchval("SELECT count(*) FROM scanner_alerts.price_rules WHERE user_id=$1 AND status='active'",user) >= 100:
                 raise WatchLimitReached()
             return dict(await con.fetchrow('''INSERT INTO scanner_alerts.price_rules
-                (id,user_id,symbol,kind,direction,amount,reference_price,target) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *''',
-                spec.request_id,user,spec.symbol,spec.kind,spec.direction,spec.amount,spec.reference_price,spec.target))
+                (id,user_id,symbol,kind,direction,amount,reference_price,target,provider,market,price_basis) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *''',
+                spec.request_id,user,spec.symbol,spec.kind,spec.direction,spec.amount,spec.reference_price,spec.target,spec.provider,spec.market,spec.price_basis))
 
-    async def list_prices(self,user,symbol=None,*,limit=100,offset=0):
+    async def list_prices(self,user,symbol=None,*,limit=100,offset=0,provider=None,market=None):
         async with self.transaction(user) as con:
             return [dict(r) for r in await con.fetch('''SELECT r.*,o.status AS delivery_status FROM scanner_alerts.price_rules r
                 LEFT JOIN scanner_alerts.price_outbox o ON o.rule_id=r.id
                 WHERE r.user_id=$1 AND ($2::text IS NULL OR r.symbol=$2) AND r.status<>'cancelled'
-                ORDER BY (r.status='active') DESC,r.created_at DESC,r.id DESC LIMIT $3 OFFSET $4''',user,symbol,limit,offset)]
+                AND ($5::text IS NULL OR r.provider=$5) AND ($6::text IS NULL OR r.market=$6)
+                ORDER BY (r.status='active') DESC,r.created_at DESC,r.id DESC LIMIT $3 OFFSET $4''',user,symbol,limit,offset,provider,market)]
 
     async def cancel_price(self,user,identifier):
         async with self.transaction(user) as con:
@@ -58,11 +59,15 @@ class PriceAlertRepository(ScannerWatchRepository):
         if not ticks: return 0
         async with self.transaction() as con:
             rows = await con.fetch('''WITH ticks AS (
-                SELECT symbol,price::numeric AS price,to_timestamp(time/1000.0) AS stamp
-                FROM jsonb_to_recordset($1::jsonb) AS t(symbol text,price text,time bigint)),
+                SELECT symbol,price::numeric AS price,to_timestamp(time/1000.0) AS stamp,
+                    coalesce(provider,'binance') AS provider,coalesce(market,'spot') AS market,
+                    coalesce(price_basis,'last_trade') AS price_basis
+                FROM jsonb_to_recordset($1::jsonb) AS t(symbol text,price text,time bigint,provider text,market text,price_basis text)),
               matched AS (SELECT r.id,t.price,t.stamp FROM scanner_alerts.price_rules r
                 JOIN LATERAL (SELECT t.price,t.stamp FROM ticks t
-                  WHERE t.symbol=r.symbol AND t.stamp>=r.created_at AND t.stamp>clock_timestamp()-interval '30 seconds'
+                  WHERE t.symbol=r.symbol AND t.provider=r.provider AND t.market=r.market AND t.price_basis=r.price_basis
+                    AND t.stamp>=r.created_at AND t.stamp<=clock_timestamp()+interval '5 seconds'
+                    AND t.stamp>clock_timestamp()-CASE WHEN t.provider='massive' THEN interval '1 hour' ELSE interval '30 seconds' END
                     AND ((r.direction='above' AND t.price>=r.target) OR (r.direction='below' AND t.price<=r.target))
                   ORDER BY t.stamp,t.price LIMIT 1) t ON true
                 WHERE r.status='active' AND r.symbol IN (SELECT symbol FROM ticks)
@@ -71,7 +76,8 @@ class PriceAlertRepository(ScannerWatchRepository):
                 FROM matched m WHERE r.id=m.id AND r.status='active' RETURNING r.*,m.price)
               INSERT INTO scanner_alerts.price_outbox(rule_id,user_id,payload,expires_at)
                 SELECT id,user_id,jsonb_build_object('symbol',symbol,'price',price::text,'target',target::text,
-                    'direction',direction,'kind',kind,'amount',amount::text),clock_timestamp()+interval '1 hour'
+                    'direction',direction,'kind',kind,'amount',amount::text,
+                    'provider',provider,'market',market,'price_basis',price_basis),triggered_at+interval '1 hour'
                 FROM triggered ON CONFLICT(rule_id) DO NOTHING RETURNING id''',json.dumps(ticks))
             return len(rows)
 

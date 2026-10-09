@@ -16,6 +16,7 @@ from typing import Optional
 from common.logger import logger
 from src.infrastructure.database.supabase.markets_repo import MarketRepository
 from infrastructure.database.redis.cache import redis_cache
+from presentation.api.market_routes import enrich_market_routes
 
 router = APIRouter(tags=["Watchlist Sync"])
 
@@ -35,7 +36,10 @@ async def sync_watchlist(user_id: str, since: Optional[str] = Query(default=None
         server_updated_at = await repo.get_watchlist_last_updated(user_id)
         now = datetime.now(timezone.utc).isoformat()
 
-        if since and server_updated_at and server_updated_at <= since:
+        routing_updated_at = await redis_cache._redis.get("market:routing:updated_at")
+        if isinstance(routing_updated_at, bytes): routing_updated_at = routing_updated_at.decode()
+        latest = max(filter(None, [server_updated_at, routing_updated_at]), default=None)
+        if since and latest and latest <= since:
             return {"unchanged": True, "synced_at": now}
 
         groups = await repo.get_watchlist_groups(user_id)
@@ -52,6 +56,8 @@ async def sync_watchlist(user_id: str, since: Optional[str] = Query(default=None
                 item["price"] = ticker.get("price", 0.0)
                 item["change"] = ticker.get("change", 0.0)
                 item["sparkline"] = sparkline
+
+            await enrich_market_routes(items, redis_cache._redis)
 
         return {"unchanged": False, "groups": groups, "items": items, "synced_at": now}
     except HTTPException:

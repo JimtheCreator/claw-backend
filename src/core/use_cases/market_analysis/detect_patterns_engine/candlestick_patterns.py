@@ -4,6 +4,7 @@ Candlestick pattern detection functions. Import and use the pattern_registry for
 """
 
 from .pattern_registry import register_pattern, strict_errors_enabled
+from .shared_features import shared_feature
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Optional, Tuple
@@ -20,6 +21,7 @@ from common.logger import logger
 TREND_SMA_PERIOD = 50
 
 
+@shared_feature
 def _pattern_trend_context(closes: np.ndarray, n_pattern_candles: int, period: int = TREND_SMA_PERIOD) -> Dict[str, bool]:
     """
     Returns {"downtrend": bool, "uptrend": bool} evaluated on data strictly
@@ -47,6 +49,7 @@ def _pattern_trend_context(closes: np.ndarray, n_pattern_candles: int, period: i
     }
 
 
+@shared_feature
 def _rolling_range_stats(highs: np.ndarray, lows: np.ndarray, period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
     """
     Per-candle range (high-low) plus a trailing EMA of range (ATR-style,
@@ -74,6 +77,7 @@ def _rolling_range_stats(highs: np.ndarray, lows: np.ndarray, period: int = 14) 
     return ranges, range_avg
 
 
+@shared_feature
 def _rolling_body_stats(opens: np.ndarray, closes: np.ndarray, period: int = 14) -> Tuple[np.ndarray, np.ndarray]:
     """
     Body size per candle plus a trailing EMA of body size (Wilder/Pine-style

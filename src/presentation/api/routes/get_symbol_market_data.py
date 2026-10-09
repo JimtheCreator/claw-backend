@@ -115,7 +115,8 @@ async def get_market_data(
 
         if isinstance(result, dict) and "error" in result:
             logger.warning(f"Error from fetch function: {result}")
-            return result
+            raise HTTPException(status_code=503, detail="Chart history is temporarily unavailable",
+                                headers={"Retry-After": "5"})
 
         response_data = []
         for entity in result:
@@ -148,7 +149,8 @@ async def get_market_data(
         raise
     except Exception as e:
         logger.exception("Unexpected error in get_market_data")
-        return {"error": "An unexpected error occurred while processing your request"}
+        raise HTTPException(status_code=503, detail="Chart history is temporarily unavailable",
+                            headers={"Retry-After": "5"}) from e
 
 @router.websocket("/ws/market/cryptos/stream-market-data/{symbol}")
 async def websocket_stream_market_data(

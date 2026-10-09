@@ -1,5 +1,6 @@
 """Consume the shared price stream and deliver the durable price outbox."""
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -16,6 +17,17 @@ from infrastructure.database.firebase.price_notifications import FirebasePriceSe
 
 log=logging.getLogger(__name__)
 STREAM='price_alerts:ticks'; GROUP='price-rules-v1'
+
+async def consume_forex(redis, repo, stop, ready):
+    from core.services.forex_price_alerts import consume, READY
+    while not stop.is_set():
+        try:
+            await consume(redis, repo, stop, ready)
+        except Exception as exc:
+            with contextlib.suppress(Exception):
+                await redis.delete(READY)
+            log.warning('Forex price ingestion retry (%s)', type(exc).__name__)
+            await asyncio.sleep(2)
 
 async def consume(redis,repo,stop,ready=None):
     try: await redis.xgroup_create(STREAM,GROUP,id='0',mkstream=True)
@@ -90,11 +102,15 @@ async def main():
     for sig in (signal.SIGINT,signal.SIGTERM): loop.add_signal_handler(sig,stop.set)
     pool=await asyncpg.create_pool(os.environ['SCANNER_DATABASE_URL'],min_size=2,max_size=4,statement_cache_size=0,
         ssl=database_tls_context(os.getenv('SCANNER_DATABASE_CA_FILE')),command_timeout=20)
-    async with Redis.from_url(os.environ['REDIS_URL'],decode_responses=True) as redis:
+    async with Redis.from_url(os.environ['REDIS_URL'],decode_responses=True,
+                              socket_connect_timeout=5, socket_timeout=10) as redis:
         repo=PriceAlertRepository(pool)
-        log.info('Price alerts ready: shared Binance feed + persistent delivery queue')
+        log.info('Price alerts ready: shared Binance feed + persistent delivery queue; Forex consumer=%s',
+                 os.getenv('MASSIVE_FOREX_PRICE_ALERTS_ENABLED', '0') == '1')
         ready = asyncio.Event()
         tasks=[asyncio.create_task(consume(redis,repo,stop,ready)),asyncio.create_task(refresh_symbols(redis,repo,stop))]
+        if os.getenv('MASSIVE_FOREX_PRICE_ALERTS_ENABLED', '0') == '1':
+            tasks.append(asyncio.create_task(consume_forex(redis,repo,stop,ready)))
         tasks += [asyncio.create_task(deliver(repo,stop,ready)) for _ in range(2)]
         await stop.wait()
         for task in tasks: task.cancel()

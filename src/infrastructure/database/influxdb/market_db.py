@@ -3,6 +3,7 @@ from influxdb_client import InfluxDBClient
 from core.interfaces.market_data_repository import MarketDataRepository
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 import os
+import json
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.exceptions import InfluxDBError
 from common.logger import logger
@@ -319,51 +320,10 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
             return []
 
     async def _get_downsampled_data_reverse(
-        self,
-        symbol: str,
-        interval: str,
-        start_time: datetime,
-        end_time: datetime,
-        page: int = 1,
-        page_size: int = 500
-    ) -> list[MarketDataEntity]:
-        """Get downsampled data in reverse order for chart rendering optimization"""
-        target_points = 300
-        date_range_seconds = (end_time - start_time).total_seconds()
-        window_seconds = max(int(date_range_seconds / target_points), 60)
-        window_duration = self._seconds_to_flux_duration(window_seconds)
-        offset = (page - 1) * page_size
-
-        query = f'''
-        from(bucket: "{self.bucket}")
-        |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
-        |> filter(fn: (r) => r._measurement == "market_data")
-        |> filter(fn: (r) => r.symbol == "{symbol}")
-        |> filter(fn: (r) => r.interval == "{interval}")
-        |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
-        |> aggregateWindow(every: {window_duration}, fn: first, createEmpty: false)
-        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-        |> sort(columns: ["_time"], desc: true)
-        |> limit(n: {page_size}, offset: {offset})
-        '''
-
-        try:
-            result = self.client.query_api().query(query)
-            parsed_records = []
-            for table in result:
-                for record in table.records:
-                    parsed = self.parse_flux_record(record)
-                    if parsed:
-                        try:
-                            parsed_records.append(MarketDataEntity(**parsed))
-                        except ValidationError as e:
-                            logger.error(f"Invalid MarketDataEntity: {str(e)}")
-
-            logger.info(f"Retrieved {len(parsed_records)} downsampled records (REVERSE) from InfluxDB for {symbol} ({interval})")
-            return parsed_records
-        except Exception as e:
-            logger.error(f"InfluxDB reverse downsampling query error: {str(e)}")
-            return []
+        self, symbol, interval, start_time, end_time, page=1, page_size=500
+    ):
+        return await self._display_sample(symbol, interval, start_time, end_time,
+                                          page, page_size, reverse=True)
 
     async def get_all_timestamps_for_symbol(
         self,
@@ -396,81 +356,36 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         return " or ".join([f'r._field == "{field}"' for field in fields])
 
     async def _get_downsampled_data(
-        self,
-        symbol: str,
-        interval: str,
-        start_time: datetime,
-        end_time: datetime,
-        page: int = 1,
-        page_size: int = 500
-    ) -> list[MarketDataEntity]:
-        """Get downsampled data for chart rendering optimization"""
-        target_points = 300
-        date_range_seconds = (end_time - start_time).total_seconds()
-        window_seconds = max(int(date_range_seconds / target_points), 60)
-        window_duration = self._seconds_to_flux_duration(window_seconds)
-        offset = (page - 1) * page_size
+        self, symbol, interval, start_time, end_time, page=1, page_size=500
+    ):
+        return await self._display_sample(symbol, interval, start_time, end_time,
+                                          page, page_size, reverse=False)
 
-        # --- FIX ---
-        # The previous query used a custom `fn` in `aggregateWindow` that was syntactically
-        # incorrect for InfluxDB v2.7+. The correct approach is to group the data,
-        # then use `reduce()` to create the OHLCV record for each window. This
-        # ensures the output is a stream of records as expected by the subsequent `pivot` function.
-        query = f'''
-        from(bucket: "{self.bucket}")
+    async def _display_sample(self, symbol, interval, start_time, end_time,
+                              page, page_size, *, reverse):
+        # Preserve the established first-candle-per-window display behavior.
+        # After pivot, fields are columns; reducing by _field erased OHLCV in
+        # the former ascending path. Both directions now use the same rows.
+        from infrastructure.database.display_sampling import display_window_seconds
+        duration = display_window_seconds(end_time-start_time)
+        offset = (page-1)*page_size
+        literal = lambda value: json.dumps(value, ensure_ascii=False)
+        query = f'''from(bucket: {literal(self.bucket)})
         |> range(start: {start_time.isoformat()}, stop: {end_time.isoformat()})
         |> filter(fn: (r) => r._measurement == "market_data")
-        |> filter(fn: (r) => r.symbol == "{symbol}")
-        |> filter(fn: (r) => r.interval == "{interval}")
+        |> filter(fn: (r) => r.symbol == {literal(symbol)} and r.interval == {literal(interval)})
         |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
-        |> aggregateWindow(every: {window_duration}, fn: first, createEmpty: false)
-        |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-        |> group(columns: ["_time", "symbol", "interval"])
-        |> reduce(
-            identity: {{
-                open: 0.0,
-                high: 0.0,
-                low: 0.0,
-                close: 0.0,
-                volume: 0.0,
-                time: time(v: 0),
-                symbol: "",
-                interval: ""
-            }},
-            fn: (r, accumulator) => ({{
-                open: if r._field == "open" then r._value else accumulator.open,
-                high: if r._field == "high" then r._value else accumulator.high,
-                low: if r._field == "low" then r._value else accumulator.low,
-                close: if r._field == "close" then r._value else accumulator.close,
-                volume: if r._field == "volume" then r._value else accumulator.volume,
-                time: r._time,
-                symbol: r.symbol,
-                interval: r.interval
-            }})
-        )
-        |> sort(columns: ["time"], desc: false)
-        |> limit(n: {page_size}, offset: {offset})
-        '''
-
-        try:
-            result = self.client.query_api().query(query)
-            parsed_records = []
-            for table in result:
-                for record in table.records:
-                    # Adjust parsing for the new query structure
-                    parsed = self.parse_flux_record(record)
-                    if parsed:
-                        try:
-                            # The record now directly contains the fields
-                            parsed_records.append(MarketDataEntity(**parsed))
-                        except ValidationError as e:
-                            logger.error(f"Invalid MarketDataEntity: {str(e)}")
-
-            logger.info(f"Retrieved {len(parsed_records)} downsampled records from InfluxDB for {symbol} ({interval})")
-            return parsed_records
-        except Exception as e:
-            logger.error(f"InfluxDB downsampling query error: {str(e)}")
-            return []
+        |> aggregateWindow(every: {duration}s, fn: first, createEmpty: false)
+        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> group(columns: [])
+        |> sort(columns: ["_time"], desc: {str(reverse).lower()})
+        |> limit(n: {page_size}, offset: {offset})'''
+        # An unavailable store must not masquerade as an empty history window.
+        result = await asyncio.to_thread(self.query_api.query, query)
+        return [MarketDataEntity(symbol=symbol, interval=interval,
+                    timestamp=record.get_time(),
+                    **{field:record.values[field] for field in ("open","high","low","close","volume")})
+                for table in result for record in table.records]
 
     def _seconds_to_flux_duration(self, seconds: int) -> str:
         """Convert seconds to a Flux duration string"""
@@ -506,8 +421,9 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
         return False
 
     async def save_market_data_bulk(self, data_list: list[MarketDataEntity]) -> None:
+        from influxdb_client.client.write_api import SYNCHRONOUS
         try:
-            with self.client.write_api() as write_api:
+            with self.client.write_api(write_options=SYNCHRONOUS) as write_api:
                 points = [
                     Point("market_data")
                     .tag("symbol", entity.symbol)
@@ -523,9 +439,10 @@ class InfluxDBMarketDataRepository(MarketDataRepository):
                 for point, entity in zip(points, data_list):
                     if entity.taker_buy_volume is not None:
                         point.field("taker_buy_volume", entity.taker_buy_volume)
-                write_api.write(bucket=self.bucket, record=points)
+                await asyncio.to_thread(write_api.write, bucket=self.bucket, record=points)
         except Exception as e:
-            logger.error(f"InfluxDB bulk write error: {str(e)}")
+            logger.error('InfluxDB bulk write failed (%s)', type(e).__name__)
+            raise
             
     async def delete_market_data(
         self,

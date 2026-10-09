@@ -1,3 +1,4 @@
+from core.services.forex_quotes import prewarm_change_references
 # user_symbol_watchlist.py (Updated)
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -137,6 +138,7 @@ async def get_watchlist_tickers(request: TickersRequest):
         cached_sparklines = await redis_cache._redis.hmget("live_sparklines", request.symbols)
 
         response_data = []
+        forex_symbols = []
         for i, symbol in enumerate(request.symbols):
             # Process ticker data
             ticker_item = cached_tickers[i]
@@ -144,6 +146,8 @@ async def get_watchlist_tickers(request: TickersRequest):
             change = 0.0
             if ticker_item:
                 ticker_info = json.loads(ticker_item)
+                if ticker_info.get('provider') == 'massive' and ticker_info.get('market') == 'forex':
+                    forex_symbols.append(symbol)
                 price = ticker_info.get("price", 0.0)
                 change = ticker_info.get("change", 0.0)
 
@@ -160,6 +164,7 @@ async def get_watchlist_tickers(request: TickersRequest):
                 "sparkline": sparkline
             })
         
+        prewarm_change_references(redis_cache._redis, forex_symbols)
         return response_data
 
     except Exception as e:

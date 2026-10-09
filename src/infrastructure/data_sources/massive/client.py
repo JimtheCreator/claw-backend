@@ -2,9 +2,11 @@ import httpx
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
-from infrastructure.database.redis.rate_limiter import RedisRateLimiter, ProviderRequestDeferred
+from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 from infrastructure.data_sources.provider_backoff import defer_if_throttled
 from common.logger import logger
+from .policy import rest_budget
+from urllib.parse import urljoin, urlparse, parse_qsl
 
 
 def _to_polygon_fx_ticker(symbol: str) -> str:
@@ -23,15 +25,7 @@ class MassiveClient:
         self.api_key = os.getenv("MASSIVE_API_KEY")
         self.base_url = os.getenv("MASSIVE_API_URL")
 
-        self.rate_limiter = RedisRateLimiter(
-            max_per_minute=5,
-            max_per_second=2,
-            key_prefix="massive_rl",
-            max_wait_seconds=90.0,  # forex ticker + sparkline services share this
-            # 5/min budget, so a caller may need to wait longer than the
-            # default 30s for its turn instead of giving up and firing an
-            # unbudgeted request that risks a 429.
-        )
+        self.rate_limiter = rest_budget()
 
     async def get_forex_pairs(self, max_pages: int = 10) -> List[Dict[str, Any]]:
         """Fetch the full fx ticker universe, following `next_url` pagination.
@@ -54,32 +48,35 @@ class MassiveClient:
                     await defer_if_throttled(self.rate_limiter, response.status_code, response.headers)
                     response.raise_for_status()
                     data = response.json()
-                    all_results.extend(data.get("results", []))
+                    page_rows = data.get("results", [])
+                    if any(r.get('market') != 'fx' or not r.get('ticker', '').startswith('C:') for r in page_rows):
+                        raise ValueError('Non-Forex instrument in Forex catalog')
+                    all_results.extend(page_rows)
 
                     next_url = data.get("next_url")
                     if not next_url:
                         break
+                    next_url = urljoin(self.base_url+'/', next_url)
+                    if ((urlparse(next_url).scheme, urlparse(next_url).netloc) !=
+                            (urlparse(self.base_url).scheme, urlparse(self.base_url).netloc)):
+                        raise ValueError('Untrusted Massive pagination origin')
                     # Polygon-style pagination strips the API key from
                     # next_url for security; it must be re-attached, and
                     # `params` must be cleared since next_url already
                     # encodes the cursor + original query params.
-                    params = {"apiKey": self.api_key}
+                    params = dict(parse_qsl(urlparse(next_url).query))
+                    params["apiKey"] = self.api_key
                 else:
-                    logger.warning(
-                        f"Massive fx pagination hit max_pages={max_pages} "
-                        f"with more pages remaining (next_url still present) -- "
-                        f"results may be incomplete."
-                    )
+                    raise ValueError('Forex catalog pagination exceeded its bound')
             return all_results
         except ProviderRequestDeferred:
             raise
         except Exception as e:
             logger.warning(
-                f"Massive API unavailable ({type(e).__name__}: {e}) after "
-                f"{len(all_results)} page(s) fetched. Returning what was "
-                f"retrieved so far rather than fabricating fallback data."
+                f"Massive API unavailable ({type(e).__name__}) after "
+                f"{len(all_results)} records fetched. Incomplete catalogs are rejected."
             )
-            return all_results
+            raise RuntimeError('Complete Forex catalog unavailable') from None
 
     async def search_forex_pairs(self, query: str) -> List[Dict[str, Any]]:
         """Targeted lookup for a single query, used by the on-demand
@@ -102,7 +99,7 @@ class MassiveClient:
         except ProviderRequestDeferred:
             raise
         except Exception as e:
-            logger.warning(f"Massive search API unavailable ({type(e).__name__}: {e}) for query '{query}'.")
+            logger.warning(f"Massive search API unavailable ({type(e).__name__}) for query '{query}'.")
             return []
 
     # ------------------------------------------------------------------
@@ -136,7 +133,7 @@ class MassiveClient:
             raise
         except Exception as e:
             logger.warning(
-                f"Massive forex snapshot unavailable ({type(e).__name__}: {e}). "
+                f"Massive forex snapshot unavailable ({type(e).__name__}). "
                 f"Returning empty list rather than fabricating prices."
             )
             return []
@@ -189,7 +186,7 @@ class MassiveClient:
             except Exception as e:
                 logger.warning(
                     f"Massive grouped daily fx unavailable for {date_str} "
-                    f"({type(e).__name__}: {e})."
+                    f"({type(e).__name__})."
                 )
 
             target -= timedelta(days=1)
@@ -249,6 +246,6 @@ class MassiveClient:
         except Exception as e:
             logger.warning(
                 f"Massive forex aggregates unavailable for {symbol} "
-                f"({type(e).__name__}: {e})."
+                f"({type(e).__name__})."
             )
             return []

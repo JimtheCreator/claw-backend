@@ -62,7 +62,7 @@ def test_busy_finalizer_deduplicates_retry_and_publishes_after_scope_release(mon
             f.submit.assert_called_once()
             retry = f.submit.call_args.kwargs
             assert retry["countdown"] == FINALIZE_RETRY_SECONDS
-            assert retry["queue"] == "scanner"
+            assert retry["queue"] == "scanner_control"
             await f.store.release(owner)
             result = await f.tasks.finalize_batch(*retry["args"])
             assert result["status"] == "published" and result["coverage"]["ready"] == 1

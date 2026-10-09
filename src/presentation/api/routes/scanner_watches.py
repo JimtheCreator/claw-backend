@@ -12,13 +12,15 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Res
 
 from core.scanner.automation import AutomationRegistry
 from core.scanner.catalog import INTERVAL_SECONDS, pattern_catalog
-from core.scanner.watches import WatchAction, WatchCreate, WatchLimitReached, FollowCreate, DeviceRegistration
+from core.scanner.watches import (WatchAction, WatchCreate, WatchLimitReached, FollowCreate,
+                                 DeviceRegistration, ScopedWatchCreate, WatchScopeUpdate, ScopedFollowCreate)
 from infrastructure.database.supabase.scanner_watches import ScannerWatchRepository
 from infrastructure.database.supabase.tls import database_tls_context
 from presentation.api.dependencies.scanner_auth import scanner_user
 from presentation.api.routes.scanner import get_scanner_redis
 
 router = APIRouter(prefix='/scanner', tags=['Pattern Watches'])
+scoped_router = APIRouter(prefix='/scanner', tags=['Scoped Pattern Watches'])
 
 
 async def get_watch_repository(request: Request):
@@ -53,12 +55,24 @@ async def enabled_scope():
         raise HTTPException(503, 'Scanner configuration is unavailable') from None
 
 
+def current_watch_universe(spec, scopes):
+    """Old app versions retain crypto consent while leaving the retired pilot."""
+    if spec.universe == 'binance-spot-pilot' and any(
+            c['manifest']['id'] == 'binance-spot-full' and c['manifest'].get('events_enabled')
+            for c in scopes):
+        return spec.model_copy(update={'universe': 'binance-spot-full'})
+    return spec
+
+
 @router.post('/watches', status_code=201)
 async def create_watch(spec: WatchCreate, user=Depends(scanner_user),
                        repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    spec = current_watch_universe(spec, scopes)
     scope = next((c for c in scopes if c['manifest']['id'] == spec.universe), None)
     if scope is None:
         raise HTTPException(422, 'Scanner universe is not enabled')
+    if scope['manifest']['market'] == 'forex':
+        raise HTTPException(422, 'Forex watches require an explicit market scope through API v2')
     variants = {p['id'] for p in pattern_catalog() if p['detector_id'] in scope['manifest']['detectors']}
     if spec.pattern_id not in variants or spec.interval not in scope['intervals']:
         raise HTTPException(422, 'Pattern or interval is not enabled in this universe')
@@ -67,12 +81,68 @@ async def create_watch(spec: WatchCreate, user=Depends(scanner_user),
     return await repo.create(user, spec)
 
 
+def validate_scoped_watch(spec, scopes):
+    markets = {'crypto', 'forex'} if spec.market_scope == 'all' else {spec.market_scope}
+    candidates = [c for c in scopes
+        if (spec.universe == 'all-markets' or c['manifest']['id'] == spec.universe)
+        and ('forex' if c['manifest']['market'] == 'forex' else 'crypto') in markets]
+    eligible = [c for c in candidates if spec.interval in c['intervals'] and spec.pattern_id in {
+        p['id'] for p in pattern_catalog() if p['detector_id'] in c['manifest']['detectors']}]
+    if not eligible:
+        raise HTTPException(422, 'No enabled scanner matches this market, pattern and interval')
+    symbols = {s for c in eligible for s in c['manifest']['symbols']}
+    if not set(spec.symbols) <= symbols:
+        raise HTTPException(422, 'Symbol is outside the selected market scope')
+
+
+@scoped_router.post('/watches', status_code=201)
+async def create_scoped_watch(spec: ScopedWatchCreate, user=Depends(scanner_user),
+                              repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    spec = current_watch_universe(spec, scopes)
+    validate_scoped_watch(spec, scopes)
+    item = await repo.create(user, spec)
+    scope = next((s['manifest'] for s in scopes if s['manifest']['id'] == spec.universe), None)
+    if scope:
+        item.update(provider=scope['provider'], market=scope['market'])
+    return item
+
+
+@scoped_router.patch('/watches/{watch_id}/market-scope')
+async def update_watch_scope(watch_id: UUID, spec: WatchScopeUpdate, user=Depends(scanner_user),
+                             repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    watch = await repo.get(user, watch_id)
+    if watch is None or watch['origin'] != 'alert':
+        raise HTTPException(404, 'Pattern watch not found')
+    # Preserve any explicitly narrowed universe and symbol restrictions.
+    candidate = ScopedWatchCreate(universe=watch['universe'], pattern_id=watch['pattern_id'],
+        interval=watch['interval'], symbols=watch['symbols'], market_scope=spec.market_scope)
+    validate_scoped_watch(candidate, scopes)
+    result = await repo.change_scope(user, watch_id, spec.market_scope)
+    if result is None:
+        raise HTTPException(404, 'Pattern watch not found')
+    return result
+
+
 @router.get('/watches')
 async def list_watches(user=Depends(scanner_user), repo=Depends(get_watch_repository),
                        status: Literal['active','paused','completed'] | None = None,
                        limit: Annotated[int, Query(ge=1, le=100)] = 50,
                        offset: Annotated[int, Query(ge=0)] = 0):
     items = await repo.list(user, status=status, limit=limit, offset=offset)
+    # Add routing identity without making saved-alert reads depend on scanner
+    # availability. A missing identity must never imply a different provider.
+    try:
+        async with asyncio.timeout(3):
+            scopes = await enabled_scope()
+    except (HTTPException, TimeoutError):
+        scopes = []
+    routes = {s['manifest']['id']: s['manifest'] for s in scopes}
+    for item in items:
+        scope = routes.get(item['universe'])
+        if scope:
+            item.update(provider=scope['provider'], market=scope['market'])
+        elif item['universe'] == 'binance-spot-pilot':
+            item.update(provider='binance', market='spot')
     return {'items': items, 'next_offset': offset + len(items) if len(items) == limit else None}
 
 
@@ -118,11 +188,24 @@ async def save_follow(spec: FollowCreate,
                       group_id: Annotated[str, Path(pattern=r'^[A-Za-z0-9_-]{1,128}$')],
                       pattern_id: Annotated[str, Path(pattern=r'^[a-z0-9_]{1,80}$')],
                       user=Depends(scanner_user), repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    spec = current_watch_universe(spec, scopes)
     scope = next((c for c in scopes if c['manifest']['id'] == spec.universe), None)
-    if scope is None or not set(INTERVAL_SECONDS).issubset(scope['intervals']) or pattern_id not in {
+    if scope is None or scope['manifest']['market'] == 'forex' or not set(INTERVAL_SECONDS).issubset(scope['intervals']) or pattern_id not in {
             p['id'] for p in pattern_catalog() if p['detector_id'] in scope['manifest']['detectors']}:
         raise HTTPException(422, 'This pattern is not currently scanned on all supported timeframes')
     return await repo.set_follow(user,group_id,pattern_id,spec)
+
+
+@scoped_router.put('/follows/{group_id}/{pattern_id}')
+async def save_scoped_follow(spec: ScopedFollowCreate,
+                      group_id: Annotated[str, Path(pattern=r'^[A-Za-z0-9_-]{1,128}$')],
+                      pattern_id: Annotated[str, Path(pattern=r'^[a-z0-9_]{1,80}$')],
+                      user=Depends(scanner_user), repo=Depends(get_watch_repository), scopes=Depends(enabled_scope)):
+    spec = current_watch_universe(spec, scopes)
+    for interval in INTERVAL_SECONDS:
+        validate_scoped_watch(ScopedWatchCreate(universe=spec.universe, pattern_id=pattern_id,
+            interval=interval, market_scope=spec.market_scope), scopes)
+    return await repo.set_follow(user, group_id, pattern_id, spec)
 
 
 @router.delete('/follows/{group_id}/{pattern_id}', status_code=204)

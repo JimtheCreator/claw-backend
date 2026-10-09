@@ -6,6 +6,7 @@ import time
 
 from core.scanner.catalog import INTERVAL_SECONDS
 from infrastructure.database.redis.lease import RedisLease, LeaseLost
+from infrastructure.database.redis.scanner_payload import encode, decode
 
 _PUBLISH = """
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
@@ -34,19 +35,19 @@ class InstrumentResultCache:
         while True:
             raw = await self.redis.get(result_key)
             if raw is not None:
-                return json.loads(raw), True
+                return decode(raw), True
             if await lease.acquire():
                 try:
                     # Publication may have raced the first GET and our claim.
                     raw = await self.redis.get(result_key)
                     if raw is not None:
-                        return json.loads(raw), True
+                        return decode(raw), True
                     result = await compute()
                     # Share partial outcomes briefly, but do not freeze transient
                     # detector failures for an entire bar interval.
                     ttl = self.ttl if result["status"] == "ready" else 5
                     accepted = await self.redis.eval(_PUBLISH, 2, lease_key, result_key,
-                        lease.token, json.dumps(result, allow_nan=False), ttl)
+                        lease.token, encode(result), ttl)
                     if not accepted:
                         raise LeaseLost("Instrument result ownership expired")
                     return result, False

@@ -34,12 +34,13 @@ enables events inside its isolated environment to verify this path.
 
 | Observation | Behavior |
 |---|---|
-| First complete snapshot | Save baseline; emit one `baseline_reset`, no flood of existing matches |
-| A new instrument/pattern appears on the next complete close | Emit `detected` |
+| First observation | Save a baseline for ready instruments; emit one `baseline_reset`, no flood of existing matches |
+| A new instrument/pattern appears on its next complete close | Emit `detected`, even when other instruments are unavailable |
 | Same pattern start persists with new price, score or end anchor | Update checkpoint without another event |
 | Pattern start changes | End the old instance and detect the replacement |
 | Match absent from a complete next-close scan | Emit `no_longer_detected`; this is not a trading invalidation signal |
-| Partial, pending, warming or error coverage | Do not change lifecycle state; unknown is not absence |
+| Partial, pending, warming or error instrument | Preserve its last known state without emitting; other ready instruments continue |
+| Instrument becomes ready after a gap | Establish its baseline without a false new-match alert |
 | Same-close correction | Refresh baseline without another transition event |
 | Older snapshot | Leave lifecycle checkpoint unchanged |
 | Changed detector/universe definition or missed close | Emit `baseline_reset`; do not infer transitions through an observation gap |
@@ -51,6 +52,17 @@ and independently labeled recorded examples remain qualification work. Repeated
 delivery of a batch retains its identifiers; downstream processing must be
 idempotent. Different universes have separate streams, so subscriber matching
 must use the saved scope rather than blindly consume every universe.
+
+Snapshots with `instrument_coverage` track the last complete close per instrument.
+Older snapshots without that evidence retain the complete-universe requirement.
+Coverage totals must agree with instrument statuses. Same-close late completions
+update the baseline silently, preserving immutable event batch identities.
+
+The October 4 expanded rollout enables `binance-spot-full` and `massive-forex`
+events and disables pilot events. Existing pilot watches move to the full Binance
+profile with IDs, symbol filters, intervals, market consent and follow links
+preserved. Older client requests naming the pilot resolve to the full profile
+only while its events are enabled. Initial activation does not replay history.
 
 ## Publication and retention
 

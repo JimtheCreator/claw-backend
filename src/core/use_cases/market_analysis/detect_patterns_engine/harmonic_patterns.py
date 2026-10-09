@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import argrelextrema
+from .shared_features import shared_feature
 from typing import Dict, List, Tuple, Optional, Any
 from .pattern_registry import register_pattern, strict_errors_enabled
 from common.logger import logger
@@ -8,6 +8,7 @@ class PatternValidator:
     """Enhanced pattern validation with market context"""
     
     @staticmethod
+    @shared_feature
     def calculate_atr(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, period: int = 14) -> float:
         """Calculate Average True Range for dynamic thresholds"""
         if len(highs) < period + 1:
@@ -25,6 +26,7 @@ class PatternValidator:
         return np.mean(tr_values[-period:])
     
     @staticmethod
+    @shared_feature
     def detect_market_regime(closes: np.ndarray, period: int = 50) -> str:
         """Detect if market is trending or ranging"""
         if len(closes) < period:
@@ -81,6 +83,7 @@ class PatternValidator:
         is_mature = reversal_strength > 0.5
         return is_mature, reversal_strength
 
+@shared_feature
 def find_significant_swings(ohlcv: dict, atr_multiplier: float = 3.0) -> List[Tuple[int, float, str]]:
     """
     Finds significant swing points (peaks and troughs) using ATR-based threshold.

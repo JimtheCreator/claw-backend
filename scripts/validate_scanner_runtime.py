@@ -42,12 +42,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, default=ROOT / "logs/scanner-runtime-report.json")
     parser.add_argument("--burst", action="store_true",
-                        help="Also exercise 40 synthetic symbols across all five intervals (200 jobs)")
+                        help="Also exercise synthetic symbols across five intervals")
+    parser.add_argument("--burst-symbols", type=int, default=64,
+                        help="Synthetic burst size, 64–2000 (default: 64)")
     parser.add_argument("--recovery", action="store_true",
                         help="Kill disposable worker children at instrument/publication checkpoints")
     parser.add_argument("--alerts", action="store_true",
                         help="Also validate watches, inbox and outbox in disposable Postgres; no real pushes")
+    parser.add_argument('--forex-price-capacity', action='store_true',
+                        help='Include Forex quote burst/recovery measurements in disposable Redis/Postgres; implies --alerts')
+    parser.add_argument('--forex-price-quotes', type=int, default=30000,
+                        help='Synthetic Forex burst size, 3000–90000 (default: 30000)')
     args = parser.parse_args()
+    if not 64 <= args.burst_symbols <= 2000:
+        parser.error('Burst symbol count must be between 64 and 2000')
+    if not 3000 <= args.forex_price_quotes <= 90000:
+        parser.error('Forex quote count must be between 3000 and 90000')
+    args.alerts = args.alerts or args.forex_price_capacity
     base_env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL")
                 if key in os.environ}
     docker_env = dict(base_env)
@@ -69,6 +80,8 @@ def main():
                str(ROOT / "tests/integration/scanner_stack.compose.yml")]
     if args.alerts:
         compose += ["--profile", "alerts"]
+    if args.forex_price_capacity:
+        compose += ['--profile', 'durable']
     report = args.report.resolve()
     report.parent.mkdir(parents=True, exist_ok=True)
     report.unlink(missing_ok=True)
@@ -87,25 +100,43 @@ def main():
             env = dict(base_env)
             env.update(SCANNER_RUNTIME_TEST="1", PYTHON_DOTENV_DISABLED="1",
                        PYTHONPATH=str(ROOT / "src") + os.pathsep + str(ROOT),
-                       REDIS_URL="redis://" + port("redis", 6379) + "/0",
+                       REDIS_URL="redis://" + port('redis-durable' if args.forex_price_capacity else 'redis', 6379) + "/0",
                        INFLUXDB_URL="http://" + port("influx", 8086),
                        INFLUXDB_TOKEN="disposable-scanner-test-token",
                        INFLUXDB_ORG="scanner-test", INFLUXDB_BUCKET="scanner-test",
                        SCANNER_RUNTIME_DIR=str(work), SCANNER_RUNTIME_REPORT=str(report),
                        SCANNER_RUNTIME_BURST="1" if args.burst else "0",
+                       SCANNER_RUNTIME_BURST_SYMBOLS=str(args.burst_symbols),
                        SCANNER_RUNTIME_RECOVERY="1" if args.recovery else "0",
+                       FOREX_PRICE_CAPACITY_TEST='1' if args.forex_price_capacity else '0',
+                       FOREX_PRICE_CAPACITY_QUOTES=str(args.forex_price_quotes),
                        SCANNER_EVENTS_ENABLED="1",
+                       SCANNER_STREAM_BUDGET=str(max(500,args.burst_symbols*5)) if args.burst else "200",
                        SCANNER_EGRESS_LOG=str(work / "egress.log"))
+            if args.burst and args.burst_symbols > 100:
+                env.update(BINANCE_WS_CONNECTIONS='16', BINANCE_WS_STREAMS_PER_CONNECTION='800')
             if args.alerts:
                 env.update(SCANNER_RUNTIME_ALERTS="1", SCANNER_WATCHES_ENABLED="1",
                     SCANNER_DATABASE_URL="postgresql://scanner_test:disposable-scanner-test-password@"
                         + port("postgres", 5432) + "/scanner_test")
-            for queue in ("scanner", "scanner_ingestion"):
+            if args.forex_price_capacity:
+                container = subprocess.check_output(compose + ['ps', '-q', 'redis-durable'],
+                    cwd=work, env=docker_env, text=True).strip()
+                env.update(SCANNER_CAPACITY_REDIS_CONTAINER=container,
+                           SCANNER_CAPACITY_DOCKER_ENDPOINT=endpoint,
+                           SCANNER_CAPACITY_COMPOSE_PROJECT=project)
+            for queue in ("scanner", "scanner_ingestion", "scanner_backfill"):
                 handle = (work / f"worker-{queue}.log").open("w")
                 handles.append(handle)
                 processes.append(subprocess.Popen([sys.executable, "-m", "celery", "-A",
                     "tests.integration.scanner_runtime_worker:celery_app", "worker", "--pool=prefork",
-                    "--concurrency=2", "--queues=" + queue, "--without-gossip", "--without-mingle",
+                    "--concurrency=2", "--queues=" + ("scanner_control,scanner_ingestion"
+                        if queue == "scanner_ingestion" else ','.join(['scanner_backfill','scanner_backfill_forex'] +
+                            [f'{prefix}_{tf}' for prefix in ('scanner_backfill','scanner_backfill_forex')
+                             for tf in ('15m','30m','1h','4h','1d')])
+                        if queue == "scanner_backfill" else ','.join(['scanner'] +
+                            [f'scanner_{market}_{tf}' for market in ('binance_spot','massive_forex','massive_crypto')
+                             for tf in ('15m','30m','1h','4h','1d')])), "--without-gossip", "--without-mingle",
                     "--without-heartbeat", "--loglevel=INFO", "--hostname=" + queue + "@%h"],
                     cwd=work, env=env, stdout=handle, stderr=subprocess.STDOUT,
                     start_new_session=True))
@@ -114,8 +145,10 @@ def main():
             if args.alerts:
                 test_paths.append(str(ROOT / "tests/integration/test_scanner_alerts_runtime.py"))
                 test_paths.append(str(ROOT / "tests/integration/test_symbol_price_runtime.py"))
+            if args.forex_price_capacity:
+                test_paths.append(str(ROOT / 'tests/integration/test_forex_price_capacity.py'))
             result = subprocess.run([sys.executable, "-m", "pytest", "-q", *test_paths],
-                cwd=work, env=env, timeout=600 if args.burst else 360)
+                cwd=work, env=env, timeout=1800 if args.burst else 900 if args.forex_price_capacity else 360)
             if result.returncode:
                 raise SystemExit(result.returncode)
             if (work / "egress.log").exists():

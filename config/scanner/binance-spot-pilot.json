@@ -2,6 +2,39 @@
   "id": "binance-spot-pilot",
   "provider": "binance",
   "market": "spot",
-  "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "LINKUSDT", "LTCUSDT", "AVAXUSDT"],
-  "detectors": ["rectangle", "triangle", "head_and_shoulders", "double_top", "double_bottom", "triple_top", "triple_bottom", "wedge_rising", "wedge_falling", "flag_bullish", "flag_bearish", "channel", "engulfing", "doji", "morning_star", "evening_star", "hammer", "gartley", "bat", "abcd"]
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "ADAUSDT",
+    "DOGEUSDT",
+    "LINKUSDT",
+    "LTCUSDT",
+    "AVAXUSDT"
+  ],
+  "detectors": [
+    "rectangle",
+    "triangle",
+    "head_and_shoulders",
+    "double_top",
+    "double_bottom",
+    "triple_top",
+    "triple_bottom",
+    "wedge_rising",
+    "wedge_falling",
+    "flag_bullish",
+    "flag_bearish",
+    "channel",
+    "engulfing",
+    "doji",
+    "morning_star",
+    "evening_star",
+    "hammer",
+    "gartley",
+    "bat",
+    "abcd"
+  ],
+  "events_enabled": false
 }

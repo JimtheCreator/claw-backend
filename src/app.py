@@ -33,7 +33,7 @@ from presentation.api.routes.watchlist import watchlist_groups
 from presentation.api.routes.watchlist import user_symbol_watchlist
 from presentation.api.routes.discover import router as discover_router
 from presentation.api.routes.scanner import router as scanner_router
-from presentation.api.routes.scanner_watches import router as scanner_watches_router
+from presentation.api.routes.scanner_watches import router as scanner_watches_router, scoped_router as scanner_scoped_router
 from presentation.api.routes.symbol_alerts import router as symbol_alerts_router
 from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred
 
@@ -123,6 +123,7 @@ app.include_router(watchlist_groups.router, prefix="/api/v1", tags=["Watchlist G
 app.include_router(discover_router, prefix="/api/v1", tags=["Discover"])
 app.include_router(scanner_router, prefix="/api/v1")
 app.include_router(scanner_watches_router, prefix="/api/v1")
+app.include_router(scanner_scoped_router, prefix="/api/v2")
 app.include_router(symbol_alerts_router, prefix="/api/v1")
 
 # Health check endpoint

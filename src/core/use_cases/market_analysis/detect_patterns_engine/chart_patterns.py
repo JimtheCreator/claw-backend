@@ -3,7 +3,7 @@
 Chart pattern detection functions. Import and use the pattern_registry for registration.
 """
 import numpy as np
-from scipy.signal import argrelextrema
+from .shared_features import argrelextrema
 from .pattern_registry import register_pattern, strict_errors_enabled
 from typing import Dict, Any, Optional
 from common.logger import logger
@@ -320,7 +320,7 @@ async def detect_zigzag(ohlcv: dict) -> Optional[Dict[str, Any]]:
         lows = np.array(ohlcv['low'])
         timestamps = ohlcv.get('timestamp', None)
         pattern_type = "zigzag"
-        from scipy.signal import argrelextrema
+        from .shared_features import argrelextrema
         # Find swing highs/lows using extrema detection
         swing_highs = argrelextrema(np.array(highs), np.greater, order=2)[0]
         swing_lows = argrelextrema(np.array(lows), np.less, order=2)[0]
@@ -1830,7 +1830,7 @@ async def detect_broadening_wedge(ohlcv: dict) -> Optional[Dict[str, Any]]:
         if n < 8:
             return None
         # Find local maxima/minima
-        from scipy.signal import argrelextrema
+        from .shared_features import argrelextrema
         high_peaks = argrelextrema(highs, np.greater, order=2)[0]
         low_troughs = argrelextrema(lows, np.less, order=2)[0]
         if len(high_peaks) < 2 or len(low_troughs) < 2:

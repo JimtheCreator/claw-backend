@@ -35,6 +35,66 @@ from src.core.services.workers.celery_worker import celery_app
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_recovery_turn_survives_expired_dispatch_and_membership_refresh():
+    from infrastructure.database.redis.scanner_recovery_order import RecoveryOrder
+    async def run():
+        async with Redis.from_url(os.environ['REDIS_URL'], decode_responses=True) as redis:
+            manifest = dict(id='runtime-recovery-order', provider='binance', market='spot',
+                            symbols=['BTCUSDT', 'ETHUSDT', 'SOLUSDT'], detectors=['engulfing'])
+            registry = AutomationRegistry(redis)
+            before = await registry.enable(manifest, ['15m'])
+            order = RecoveryOrder(redis, before, '15m')
+            try:
+                seconds = int((await redis.time())[0])
+                cutoff = (seconds - SCHEDULE_GRACE) // 900 * 900
+                dispatch = ScanDispatch(redis, before, '15m', cutoff, detector_version())
+                token = await dispatch.claim()
+                assert await dispatch.valid(token)
+                await order.started('BTCUSDT')
+                await redis.delete(dispatch.lease_key)
+                assert not await dispatch.valid(token)
+                updated = await registry.enable(dict(manifest, symbols=['BTCUSDT', 'SOLUSDT', 'NEWUSDT']), ['15m'])
+                restarted = RecoveryOrder(redis, updated, '15m')
+                assert await restarted.symbols_by_turn() == ['SOLUSDT', 'NEWUSDT', 'BTCUSDT']
+                await restarted.started('SOLUSDT')
+                assert await restarted.symbols_by_turn() == ['NEWUSDT', 'BTCUSDT', 'SOLUSDT']
+            finally:
+                await registry.disable(manifest['id'])
+                await redis.delete(order.key)
+    asyncio.run(run())
+
+
+def test_dynamic_membership_refresh_is_shared_and_invalidates_old_jobs():
+    from unittest.mock import AsyncMock
+    from core.scanner.universe_refresh import refresh_once, DUE_KEY
+    from core.scanner.automation import candidate_reference, resolve_candidate, streams_for
+    async def run():
+        async with Redis.from_url(os.environ['REDIS_URL'],decode_responses=True) as redis:
+            registry = AutomationRegistry(redis)
+            manifest = dict(id='membership-check',provider='binance',market='spot',
+                symbols=['BTCUSDT'],detectors=['engulfing'],events_enabled=False,
+                membership_source='binance-exchange-info')
+            before = await registry.enable(manifest,['15m'])
+            try:
+                provider = AsyncMock(return_value={'symbols':[
+                    dict(symbol='BTCUSDT',status='BREAK',isSpotTradingAllowed=True),
+                    dict(symbol='ETHUSDT',status='TRADING',isSpotTradingAllowed=True)]})
+                results = await asyncio.gather(*(refresh_once(redis,provider) for _ in range(8)))
+                provider.assert_awaited_once()
+                assert sum(result['updated'] for result in results) == 1
+                current = next(row for row in await registry.all() if row['manifest']['id']==manifest['id'])
+                assert streams_for([current]) == {'ethusdt@kline_15m'}
+                assert current['manifest']['events_enabled'] is False
+                assert await resolve_candidate(redis,candidate_reference(before)) is None
+                assert await registry.enable(manifest,['15m'],expected_revision=before['revision']) is None
+                await registry.disable(manifest['id'])
+                assert await registry.enable(manifest,['15m'],expected_revision=current['revision']) is None
+            finally:
+                await registry.disable(manifest['id'])
+                await redis.delete(DUE_KEY)
+    asyncio.run(run())
+
+
 @pytest.fixture(scope="module")
 def workers():
     # The outer runner owns cleanup, including when pytest times out or crashes.
@@ -158,14 +218,18 @@ def test_real_worker_five_interval_burst(workers):
 
     async def scenario():
         manifest = json.loads((ROOT / "config/scanner/binance-spot-pilot.json").read_text())
+        count = int(os.getenv('SCANNER_RUNTIME_BURST_SYMBOLS','64'))
+        assert 64 <= count <= 2000
+        synthetic_count = count-len(manifest['symbols'])
         manifest.update(id="runtime-burst", symbols=manifest["symbols"] +
-                        [f"FIXTURE{i:03d}USDT" for i in range(30)])
+                        [f"FIXTURE{i:04d}USDT" for i in range(synthetic_count)])
         corpus = json.loads((ROOT / "tests/fixtures/scanner/geometry.json").read_text())
         async with Redis.from_url(os.environ["REDIS_URL"], decode_responses=True) as redis:
             seconds, _ = await redis.time()
             due = (seconds - SCHEDULE_GRACE) // 900 * 900
             remaining = due + 900 + SCHEDULE_GRACE - seconds
-            if remaining < 180:
+            minimum_window = 600 if count>500 else 180
+            if remaining < minimum_window:
                 await asyncio.sleep(remaining + 1)
                 seconds, _ = await redis.time()
             cutoffs = {interval: (seconds - SCHEDULE_GRACE) // step * step
@@ -200,7 +264,7 @@ def test_real_worker_five_interval_burst(workers):
                         celery_app.send_task("src.core.services.scanner_ingestion_tasks.prepare_scanner_scan",
                             args=[candidate, interval, cutoff, version, token], queue="scanner_ingestion")
                     snapshots = await asyncio.gather(*(wait_snapshot(redis, manifest["id"], interval,
-                        timeout=150) for interval in cutoffs))
+                        timeout=540 if count>500 else 150) for interval in cutoffs))
                 finally:
                     observer.cancel()
                     await asyncio.gather(observer, return_exceptions=True)
@@ -208,16 +272,18 @@ def test_real_worker_five_interval_burst(workers):
                 assert all(s["coverage"]["ready"] == len(manifest["symbols"]) for s in snapshots)
                 computed = sum(s["processing"]["computed"] for s in snapshots)
                 reused = sum(s["processing"]["reused"] for s in snapshots)
-                assert computed == 200 and reused == 0
+                jobs = count*len(cutoffs)
+                assert computed == jobs and reused == 0
                 assert all(s["issue_count"] == 0 for s in snapshots)
                 evaluations = sum(stats["evaluated"] for s in snapshots for stats in s["detector_coverage"].values())
-                assert evaluations == 4000
+                assert evaluations == jobs*20
                 assert not Path(os.environ["SCANNER_EGRESS_LOG"]).exists()
                 report_path = Path(os.environ["SCANNER_RUNTIME_REPORT"])
                 report = json.loads(report_path.read_text())
                 report["burst"] = {
-                    "fixture": "40 symbols (30 synthetic identities), varied synthetic geometry and price scales",
-                    "intervals": list(cutoffs), "instrument_jobs": 200,
+                    "fixture": f"{count} symbols ({synthetic_count} synthetic identities), varied synthetic geometry and price scales",
+                    "intervals": list(cutoffs), "instrument_jobs": jobs,
+                    "repair_dispatch": "independent per-instrument jobs (>50 symbols)",
                     "computed": computed, "reused": reused, "detector_evaluations": evaluations,
                     "seconds_from_dispatch": round(elapsed, 3), "queue_depth_peak_sampled": peaks,
                     "queue_depth_sampling_seconds": .05,
@@ -274,6 +340,7 @@ def test_real_redis_atomic_publication_guard(change):
             # A complete candidate would stage a baseline event if its atomic
             # ownership/configuration/cutoff guard were bypassed.
             metadata = dict(metadata, data_as_of=utc_iso(cutoff),
+                            instrument_coverage={'BTCUSDT': 'ready'},
                             coverage=dict(metadata["coverage"], ready=1, pending=0))
             owner = await store.claim()
             guard = dispatch.publication_guard(token)

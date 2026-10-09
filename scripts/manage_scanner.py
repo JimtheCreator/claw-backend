@@ -1,4 +1,4 @@
-"""Enable/disable the continuous pilot explicitly. Does not start processes."""
+"""Manage continuous scanner profiles without starting processes."""
 import argparse
 import asyncio
 import json
@@ -16,7 +16,15 @@ async def manage(args):
     async with Redis.from_url(os.environ["REDIS_URL"], decode_responses=True,
                               socket_connect_timeout=5, socket_timeout=10) as redis:
         registry = AutomationRegistry(redis)
-        if args.action == "enable":
+        if args.action == "bootstrap":
+            from infrastructure.database.redis.scanner_queue_upgrade import move_history_repairs
+            moved = await move_history_repairs(redis)
+            print(f"History jobs moved to the backfill queue: {moved}")
+            # Startup must preserve operator-selected coverage and revisions.
+            # A fresh installation needs an explicit profile, never a silent pilot.
+            if not await registry.all():
+                raise RuntimeError("No scanner profiles configured. Enable a discovered manifest first.")
+        elif args.action == "enable":
             manifest = json.loads(args.manifest.read_text())
             await registry.enable(manifest, args.intervals)
         elif args.action == "disable":
@@ -34,6 +42,7 @@ def main():
     disable = sub.add_parser("disable")
     disable.add_argument("--universe", required=True)
     sub.add_parser("status")
+    sub.add_parser("bootstrap")
     asyncio.run(manage(parser.parse_args()))
 
 

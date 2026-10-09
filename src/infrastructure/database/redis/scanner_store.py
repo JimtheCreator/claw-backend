@@ -2,6 +2,9 @@
 import json
 import re
 import uuid
+from datetime import datetime, timezone
+from core.scanner.market_sessions import closed_session_snapshot
+from infrastructure.database.redis.scanner_payload import encode, decode
 
 from core.scanner.catalog import INTERVAL_SECONDS
 from core.scanner.events import lifecycle_transition
@@ -10,6 +13,7 @@ from infrastructure.database.redis.scanner_events import (
 )
 
 PAGE_SIZE = 100
+SUPERSEDED_SNAPSHOT_SECONDS = 600  # Grace for in-flight pages and chart previews.
 LEASE_SECONDS = 660  # Longer than the scanner task's hard 600-second limit.
 _STAGE = """
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
@@ -18,7 +22,7 @@ redis.call('HSET', KEYS[2], unpack(ARGV, 3))
 redis.call('EXPIRE', KEYS[2], ARGV[2])
 return 1
 """
-_PUBLISH = """
+_PUBLISH = f"""
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
 if redis.call('EXISTS', KEYS[3]) == 0 then return 0 end
 if #KEYS > 5 then
@@ -37,7 +41,17 @@ if ARGV[4] ~= '' then
     redis.call('XADD', KEYS[5], '*', 'payload', ARGV[4])
 end
 if ARGV[3] ~= '' then redis.call('SET', KEYS[4], ARGV[3]) end
+local previous = redis.call('GET', KEYS[2])
 redis.call('SET', KEYS[2], ARGV[1], 'EX', ARGV[2])
+-- The current snapshot keeps its full freshness/session lifetime. Superseded
+-- progress snapshots need only a navigation grace, not up to two more days.
+-- Events/checkpoints are self-contained and are never trimmed here.
+if previous and previous ~= ARGV[1] then
+    local old_key = string.sub(KEYS[3], 1, -33) .. previous
+    if redis.call('TTL', old_key) > {SUPERSEDED_SNAPSHOT_SECONDS} then
+        redis.call('EXPIRE', old_key, {SUPERSEDED_SNAPSHOT_SECONDS})
+    end
+end
 redis.call('DEL', KEYS[1])
 return 1
 """
@@ -89,7 +103,11 @@ class ScannerStore:
 
     async def publish(self, token, metadata, results, *, guard=None, emit_events=False):
         key = self.snapshot_key(token)
-        metadata = dict(metadata, snapshot=token)
+        now = datetime.now(timezone.utc)
+        metadata = closed_session_snapshot(dict(metadata, snapshot=token), now)
+        ttl = self.ttl
+        if metadata.get('session', {}).get('market_state') == 'closed':
+            ttl = max(ttl, int((datetime.fromisoformat(metadata['fresh_until']) - now).total_seconds()) + 600)
         charts = metadata.pop("_charts", {})
         stream = ScannerEventStream(self.redis, self.prefix)
         state_payload, batch_payload = "", ""
@@ -103,7 +121,7 @@ class ScannerStore:
                 if max(len(state_payload.encode()), len(batch_payload.encode())) > MAX_EVENT_BYTES:
                     raise ScannerEventBacklogFull("Scanner event batch/checkpoint exceeds the configured byte bound")
         fields = {"metadata": json.dumps(metadata, allow_nan=False)}
-        fields.update({f"chart:{instrument}": json.dumps(candles, allow_nan=False)
+        fields.update({f"chart:{instrument}": encode(candles)
                        for instrument, candles in charts.items()})
         for pattern, rows in results.items():
             for offset in range(0, len(rows), PAGE_SIZE):
@@ -122,11 +140,11 @@ class ScannerStore:
         # overwrite its immutable pages, then delete the current snapshot when
         # the pointer guard notices that its lease has already been released.
         arguments = [value for item in fields.items() for value in item]
-        staged = await self.redis.eval(_STAGE, 2, self.lease_key, key, token, self.ttl, *arguments)
+        staged = await self.redis.eval(_STAGE, 2, self.lease_key, key, token, ttl, *arguments)
         if staged != 1:
             raise ScannerLeaseLost("Scanner lease expired or snapshot token already staged")
         keys = [self.lease_key, self.current_key, key, stream.state_key, stream.stream_key]
-        args = [token, self.ttl, state_payload, batch_payload, MAX_EVENT_BATCHES]
+        args = [token, ttl, state_payload, batch_payload, MAX_EVENT_BATCHES]
         if guard is not None:
             # The current deployment uses standalone Redis. The dispatch and
             # configuration keys have different hash tags, so this scheduled
@@ -204,7 +222,7 @@ class ScannerStore:
             geometry = row.get("geometry")
             preview = None
             if data and geometry:
-                candles = json.loads(data)
+                candles = decode(data)
                 first = max(0, geometry["start_index"] - 8)
                 # Short candlestick setups retain at least 24 bars of context.
                 first = min(first, max(0, len(candles) - 24))

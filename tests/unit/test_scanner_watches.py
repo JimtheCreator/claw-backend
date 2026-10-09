@@ -226,3 +226,36 @@ def test_transient_failure_logs_type_without_provider_payload(caplog):
     asyncio.run(scenario())
     assert 'TimeoutError' in caplog.text
     assert 'secret-device-token' not in caplog.text
+
+
+def test_scoped_watch_requires_consent_and_checks_enabled_market():
+    from core.scanner.watches import ScopedWatchCreate
+    from presentation.api.routes.scanner_watches import validate_scoped_watch
+    with pytest.raises(ValidationError):
+        ScopedWatchCreate(pattern_id='bullish_engulfing')
+    with pytest.raises(ValidationError):
+        ScopedWatchCreate(pattern_id='bullish_engulfing',market_scope='everything')
+    scopes=[dict(manifest=dict(id='binance-spot-pilot',provider='binance',market='spot',
+        symbols=['BTCUSDT'],detectors=['engulfing']),intervals=['15m']),
+        dict(manifest=dict(id='massive-forex',provider='massive',market='forex',
+        symbols=['EURUSD'],detectors=['engulfing']),intervals=['15m'])]
+    for market,symbol in [('crypto','BTCUSDT'),('forex','EURUSD'),('all','EURUSD')]:
+        validate_scoped_watch(ScopedWatchCreate(pattern_id='bullish_engulfing',market_scope=market,symbols=[symbol]),scopes)
+    with pytest.raises(HTTPException):
+        validate_scoped_watch(ScopedWatchCreate(pattern_id='bullish_engulfing',market_scope='crypto',symbols=['EURUSD']),scopes)
+    with pytest.raises(HTTPException):
+        validate_scoped_watch(ScopedWatchCreate(pattern_id='bullish_engulfing',market_scope='forex',universe='binance-spot-pilot'),scopes)
+
+
+def test_retired_pilot_requests_use_full_universe_without_changing_consent():
+    from presentation.api.routes.scanner_watches import current_watch_universe
+    from core.scanner.watches import ScopedWatchCreate, FollowCreate
+    enabled = [{'manifest': {'id': 'binance-spot-full', 'events_enabled': True}}]
+    spec = ScopedWatchCreate(universe='binance-spot-pilot', pattern_id='ascending_triangle',
+                             interval='1h', symbols=['BTCUSDT'], market_scope='crypto')
+    converted = current_watch_universe(spec, enabled)
+    assert converted.universe == 'binance-spot-full'
+    assert converted.market_scope == 'crypto' and converted.symbols == ['BTCUSDT']
+    assert converted.interval == '1h'
+    assert current_watch_universe(spec, []).universe == 'binance-spot-pilot'
+    assert current_watch_universe(FollowCreate(), enabled).universe == 'binance-spot-full'

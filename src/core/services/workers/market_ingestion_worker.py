@@ -41,7 +41,7 @@ async def run_market_ingestion():
         if success:
             cache_service = MarketCacheService()
             t0 = time.monotonic()
-            await cache_service.warm_cache(all_instruments)
+            await cache_service.warm_cache()
             logger.info(f"[ingestion] Cache warm done in {time.monotonic() - t0:.2f}s.")
             logger.info(f"[ingestion] Market symbol ingestion and cache warming complete in {time.monotonic() - start:.2f}s total.")
         else:

@@ -2,6 +2,7 @@ import asyncio
 import copy
 import importlib
 import json
+import time
 from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, Mock
 
@@ -12,7 +13,7 @@ import pytest
 from core.scanner.automation import AutomationRegistry, ScanDispatch, schedule_once
 from core.scanner.engine import scan_universe, scan_instrument, detector_version, empty_instrument
 from infrastructure.database.redis.scanner_instruments import InstrumentResultCache
-from infrastructure.database.redis.scanner_batch import InstrumentBatch
+from infrastructure.database.redis.scanner_batch import InstrumentBatch, MAX_FINALIZE_RETRIES
 from infrastructure.database.redis.scanner_store import ScannerStore
 from infrastructure.database.redis.lease import RedisLease, LeaseLost
 from tests.unit.test_market_scanner import MANIFEST, NOW, CUTOFF, candles, fake_registry, source
@@ -201,7 +202,7 @@ def wire_workers(monkeypatch, server, cutoff):
     load = AsyncMock(return_value=candles(cutoff))
     repo = Mock(return_value=NS(client=NS(close=Mock())))
     monkeypatch.setattr(tasks, "InfluxDBMarketDataRepository", repo)
-    monkeypatch.setattr(tasks, "FinalizedBinanceCandles", lambda _: NS(load=load))
+    monkeypatch.setattr(tasks, "scanner_candles", lambda _, *args: NS(load=load))
     instrument_submit, finalize_submit = Mock(), Mock()
     monkeypatch.setattr(tasks.scan_market_instrument, "apply_async", instrument_submit)
     monkeypatch.setattr(tasks.finalize_scanner_batch, "apply_async", finalize_submit)
@@ -219,6 +220,7 @@ def test_independent_jobs_publish_pending_then_complete_without_read_api_changes
             assert result == {"status": "dispatched", "instruments": 2}
             repo.assert_not_called()  # Fan-out is independent of candle storage/CPU.
             assert final.call_args.kwargs["countdown"] == 180
+            assert final.call_args.kwargs["queue"] == 'scanner_control'
             assert (await tasks.execute_scheduled(*args))["instruments"] == 0
             await tasks.execute_instrument(*args, "BTCUSDT")
             await tasks.execute_instrument(*args, "BTCUSDT")  # Broker redelivery.
@@ -267,4 +269,134 @@ def test_disabled_dispatch_cannot_read_or_publish_instrument_result(monkeypatch)
             repo.assert_not_called()
             submit.assert_not_called()
             final.assert_not_called()
+    asyncio.run(scenario())
+
+
+def test_large_repair_watchdog_keeps_owner_until_bounded_wait_expires(monkeypatch):
+    # Redis deliberately refuses a 30s retry near the next candle boundary.
+    # This test exercises the retry budget, so hold its clock inside the window.
+    clock = int(time.time()) // 900 * 900 + 120
+    monkeypatch.setattr(time, 'time', lambda: clock)
+    async def scenario():
+        server = fakeredis.FakeServer()
+        async with client(server) as redis:
+            manifest = dict(MANIFEST, symbols=[f'FIXTURE{i}USDT' for i in range(51)])
+            args = await scheduled_fixture(redis, manifest)
+            tasks, repo, load, submit, final = wire_workers(monkeypatch, server, args[2])
+            dispatch = ScanDispatch(redis, *args[:-1])
+            batch = InstrumentBatch(dispatch, args[-1])
+            waiting = await tasks.finalize_batch(*args)
+            assert waiting['status'] == 'published'
+            assert waiting['coverage']['pending'] == 51
+            store = ScannerStore(redis, manifest['id'], args[1])
+            first = await store.metadata()
+            assert first['coverage']['pending'] == 51
+            assert await redis.ttl(dispatch.lease_key) > 60
+            assert final.call_args.kwargs['countdown'] == 30
+            assert await dispatch.valid(args[-1])
+            repo.assert_not_called()
+            assert await tasks.finalize_batch(*args) == dict(status='waiting_for_instruments', completed=0, eligible=51)
+            assert (await store.metadata())['snapshot'] == first['snapshot']
+            final.assert_called_once()  # Broker duplicate does not end the wait.
+            # Exhaust the bounded watchdog budget; expose honest pending
+            # coverage and release to retry rather than waiting indefinitely.
+            retry = final.call_args.kwargs['args'][-1]
+            await redis.set(batch.prefix + ':finalize_retries', MAX_FINALIZE_RETRIES)
+            result = await tasks.finalize_batch(*args, retry_token=retry)
+            assert result['status'] == 'published'
+            assert result['coverage']['pending'] == 51
+            assert 0 < await redis.ttl(dispatch.lease_key) <= 60
+    asyncio.run(scenario())
+
+
+def test_repair_watchdog_does_not_replace_more_complete_same_window(monkeypatch):
+    clock = int(time.time()) // 900 * 900 + 120
+    monkeypatch.setattr(time, 'time', lambda: clock)
+    async def scenario():
+        server = fakeredis.FakeServer()
+        async with client(server) as redis:
+            manifest = dict(MANIFEST, symbols=[f'FIXTURE{i}USDT' for i in range(51)])
+            args = await scheduled_fixture(redis, manifest)
+            tasks, _, _, _, _ = wire_workers(monkeypatch, server, args[2])
+            from core.scanner.engine import assemble_snapshot
+            outcomes = {s: empty_instrument(s, 'warming', 'warming') for s in manifest['symbols']}
+            metadata, rows = assemble_snapshot(manifest, args[1], args[2], outcomes, version=args[3])
+            store = ScannerStore(redis, manifest['id'], args[1])
+            previous = await store.publish(await store.claim(), metadata, rows)
+            result = await tasks.finalize_batch(*args)
+            assert result['status'] == 'kept_more_complete_snapshot'
+            assert result['coverage']['pending'] == 0
+            assert (await store.metadata())['snapshot'] == previous['snapshot']
+            assert await ScanDispatch(redis, *args[:-1]).valid(args[-1])
+    asyncio.run(scenario())
+
+
+def test_cached_symbols_publish_while_other_symbols_wait_for_recovery(monkeypatch):
+    clock = int(time.time()) // 900 * 900 + 120
+    monkeypatch.setattr(time, 'time', lambda: clock)
+    async def scenario():
+        server = fakeredis.FakeServer()
+        async with client(server) as redis:
+            symbols = ['BTCUSDT', 'ETHUSDT'] + [f'FIXTURE{i}USDT' for i in range(49)]
+            args = await scheduled_fixture(redis, dict(MANIFEST, symbols=symbols))
+            tasks, _, load, _, _ = wire_workers(monkeypatch, server, args[2])
+            ingestion = importlib.import_module('core.services.scanner_ingestion_tasks')
+            repair = Mock()
+            monkeypatch.setattr(ingestion.prepare_scanner_instrument, 'apply_async', repair)
+            first = await tasks.finalize_batch(*args)
+            assert first['coverage']['pending'] == 51
+            await tasks.execute_instrument(*args, 'BTCUSDT', recover_missing=True)
+            repair.assert_not_called()
+            progress = await tasks.finalize_batch(*args)
+            assert progress['coverage']['ready'] == 1
+            assert progress['coverage']['pending'] == 50
+            load.return_value = []
+            outcome = await tasks.execute_instrument(*args, 'ETHUSDT', recover_missing=True)
+            assert outcome['status'] == 'repair_queued'
+            assert repair.call_args.kwargs['queue'] == 'scanner_backfill_15m'
+            from core.scanner.automation import SCHEDULE_GRACE
+            assert repair.call_args.kwargs['expires'].timestamp() == args[2] + 900 + SCHEDULE_GRACE
+            unchanged = await tasks.finalize_batch(*args)
+            assert unchanged['status'] == 'waiting_for_instruments'
+            # Recovery callback records the result once; it cannot recurse.
+            await tasks.execute_instrument(*args, 'ETHUSDT')
+            assert repair.call_count == 1
+            next_progress = await tasks.finalize_batch(*args)
+            assert next_progress['coverage']['ready'] == 1
+            assert next_progress['coverage']['warming'] == 1
+            assert next_progress['coverage']['pending'] == 49
+    asyncio.run(scenario())
+
+
+def test_forex_reports_observed_gaps_and_publishes_repair_without_counting_it_complete(monkeypatch):
+    clock = int(time.time()) // 900 * 900 + 120
+    monkeypatch.setattr(time, 'time', lambda: clock)
+    async def scenario():
+        server = fakeredis.FakeServer()
+        async with client(server) as redis:
+            manifest = dict(MANIFEST, provider='massive', market='forex', symbols=['EURUSD', 'GBPUSD'])
+            args = await scheduled_fixture(redis, manifest)
+            tasks, _, load, _, _ = wire_workers(monkeypatch, server, args[2])
+            ingestion = importlib.import_module('core.services.scanner_ingestion_tasks')
+            monkeypatch.setattr(ingestion.prepare_scanner_instrument, 'apply_async', Mock())
+            load.return_value = []
+            for symbol in manifest['symbols']:
+                await tasks.execute_instrument(*args, symbol, recover_missing=True)
+            batch = InstrumentBatch(ScanDispatch(redis, *args[:-1]), args[-1])
+            assert await batch.completed_count() == 0
+            first = await tasks.finalize_batch(*args)
+            assert first['coverage']['pending'] == 0
+            assert first['coverage']['warming'] == 2
+            assert first['coverage']['ready'] == 0
+            assert await batch.dispatch.valid(args[-1])  # Repair remains authorized.
+            load.return_value = candles(args[2])
+            await tasks.execute_instrument(*args, 'EURUSD')
+            assert await batch.completed_count() == 1
+            repaired = await tasks.finalize_batch(*args)
+            assert repaired['status'] == 'published'
+            assert repaired['coverage']['ready'] == 1
+            assert repaired['coverage']['warming'] == 1
+            # A repeated provisional result cannot downgrade the repaired row.
+            await batch.observe_missing('EURUSD', empty_instrument('EURUSD', 'warming', 'late'))
+            assert (await batch.outcomes())['EURUSD']['status'] == 'ready'
     asyncio.run(scenario())

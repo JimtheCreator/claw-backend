@@ -2,10 +2,13 @@
 import asyncio
 from collections import OrderedDict
 import logging
+import os
 import re
+import time
 
 from core.services.scanner_alerts import consume_events, deliver_one
 from core.scanner.catalog import INTERVAL_SECONDS
+from core.scanner.automation import CONFIG_KEY
 from infrastructure.database.redis.scanner_events import ScannerEventStream
 
 log = logging.getLogger(__name__)
@@ -18,45 +21,63 @@ class ScannerInboxPump:
         self.redis, self.repository, self.consumer = redis, repository, consumer
         self.cursor = 0
         self.streams = OrderedDict()
+        self.profiles_due = 0
 
     async def tick(self):
+        # Active streams must not wait for a complete SCAN of the candle/job
+        # keyspace. At full-universe scale that can take many minutes.
+        if time.monotonic() >= self.profiles_due:
+            for universe in sorted(await self.redis.hkeys(CONFIG_KEY)):
+                if isinstance(universe, bytes):
+                    universe = universe.decode()
+                for interval in INTERVAL_SECONDS:
+                    self.remember(f'scanner:v1:{{{universe}:{interval}}}:events')
+            self.profiles_due = time.monotonic() + 30
         # SCAN also finds pending events for subsequently disabled universes.
         # Registry-only discovery would strand their unacknowledged batches.
         self.cursor, keys = await self.redis.scan(self.cursor, match='scanner:v1:*:events', count=100)
         consumed = 0
         for key in keys:
-            if isinstance(key, bytes):
-                key = key.decode()
-            if not EVENT_STREAM.fullmatch(key):
-                continue
-            stream = self.streams.setdefault(key, ScannerEventStream(self.redis, key[:-7]))
+            self.remember(key)
+        # Revisit known streams every tick, with bounded round-robin work.
+        # Otherwise a discovered stream still waits for the next full SCAN.
+        for key in list(self.streams)[:32]:
+            stream = self.streams[key]
             self.streams.move_to_end(key)
-            while len(self.streams) > 1024:
-                self.streams.popitem(last=False)
             try:
-                consumed += await consume_events(stream, self.repository, self.consumer)
+                consumed += await consume_events(stream, self.repository, self.consumer, count=1)
             except Exception as exc:
-                # Never acknowledge malformed/failed batches. Keep other scopes
-                # moving and leave operator-visible evidence without payloads.
                 log.error('Scanner inbox batch retained: %s (%s)', key, type(exc).__name__)
-        processed, queued = 0, 0
-        for _ in range(100):
-            result = await self.repository.fanout_one()
-            if result is None:
-                break
-            processed += 1
-            queued += result['queued']
-        return {'consumed': consumed, 'processed': processed, 'queued': queued}
+        processed = await self.repository.retire_ineligible_events(include_unwatched=True)
+        # One bounded set-based transaction avoids a WAN round trip per event,
+        # including when many detections match an all-market subscription.
+        result = await self.repository.fanout_batch()
+        return {'consumed': consumed, 'processed': processed + result['processed'],
+                'queued': result['queued']}
 
+    def remember(self, key):
+        if isinstance(key, bytes):
+            key = key.decode()
+        if not EVENT_STREAM.fullmatch(key):
+            return
+        self.streams.setdefault(key, ScannerEventStream(self.redis, key[:-7]))
+        while len(self.streams) > 1024:
+            self.streams.popitem(last=False)
 
 async def run_inbox(redis, repository, consumer, stop):
     pump = ScannerInboxPump(redis, repository, consumer)
+    maintenance_due = time.monotonic()
     log.info('Scanner inbox started; waiting for scanner event batches')
     while not stop.is_set():
         try:
             stats = await pump.tick()
             if any(stats.values()):
                 log.info('Scanner inbox: %s', stats)
+            if os.getenv('SCANNER_RETENTION_ENABLED') == '1' and time.monotonic() >= maintenance_due:
+                maintenance_due = time.monotonic()+60
+                pruned = await repository.prune_terminal_history()
+                if any(pruned.values()):
+                    log.info('Scanner retention: %s', pruned)
         except Exception as exc:
             log.error('Scanner inbox unavailable (%s)', type(exc).__name__)
         await pause(stop)

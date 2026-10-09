@@ -2,6 +2,10 @@
 import hashlib
 import json
 import uuid
+import os
+from datetime import datetime, timezone
+from .market_sessions import MarketSession
+from .capacity import scanner_stream_budget
 
 from redis.exceptions import WatchError
 from .catalog import INTERVAL_SECONDS
@@ -11,6 +15,7 @@ CONFIG_KEY = "scanner:automation:universes:v1"
 MAX_STREAMS = 200  # Pilot budget; leaves room for existing chart subscriptions.
 DISPATCH_SECONDS = 1500  # Covers ingestion + detection hard limits and queue delay.
 MAX_ATTEMPTS = 3
+ATTEMPT_WINDOW_SECONDS = DISPATCH_SECONDS
 SCHEDULE_GRACE = 30
 
 _CLAIM = """
@@ -19,7 +24,7 @@ if redis.call('EXISTS', KEYS[2]) == 1 then return 0 end
 local attempts = tonumber(redis.call('GET', KEYS[3]) or '0')
 if attempts >= tonumber(ARGV[4]) then return 0 end
 redis.call('SET', KEYS[2], ARGV[1], 'EX', ARGV[2])
-redis.call('SET', KEYS[3], attempts + 1, 'EX', ARGV[3])
+redis.call('SET', KEYS[3], attempts + 1, 'EX', ARGV[5])
 return 1
 """
 _FINISH = """
@@ -45,7 +50,24 @@ def config(manifest, intervals):
 
 def streams_for(configs):
     return {f"{symbol.lower()}@kline_{interval}"
-            for c in configs for symbol in c["manifest"]["symbols"] for interval in c["intervals"]}
+            for c in configs if c["manifest"]["provider"] == "binance"
+            for symbol in c["manifest"]["symbols"] for interval in c["intervals"]}
+
+
+def candidate_reference(candidate):
+    """Constant-size broker argument, fenced to the enabled manifest revision."""
+    return {'manifest_ref': candidate['manifest']['id'], 'revision': candidate['revision']}
+
+
+async def resolve_candidate(redis, candidate):
+    if 'manifest_ref' not in candidate:
+        return candidate  # Existing queued jobs remain readable during rollout.
+    raw = await redis.hget(CONFIG_KEY, candidate['manifest_ref'])
+    if raw is None:
+        return None
+    value = json.loads(raw)
+    resolved = config(value['manifest'], value['intervals'])
+    return resolved if resolved['revision'] == candidate['revision'] else None
 
 
 class AutomationRegistry:
@@ -57,7 +79,7 @@ class AutomationRegistry:
         parsed = [json.loads(raw) for raw in values]
         return [config(value["manifest"], value["intervals"]) for value in parsed]
 
-    async def enable(self, manifest, intervals):
+    async def enable(self, manifest, intervals, *, expected_revision=None):
         candidate = config(manifest, intervals)
         for _ in range(5):
             async with self.redis.pipeline() as pipe:
@@ -66,11 +88,17 @@ class AutomationRegistry:
                     existing = await pipe.hgetall(CONFIG_KEY)
                     values = {k.decode() if isinstance(k, bytes) else k: json.loads(v)
                               for k, v in existing.items()}
+                    # A metadata refresh must not resurrect a disabled profile
+                    # or overwrite a newer operator change.
+                    if expected_revision is not None and values.get(manifest['id'], {}).get('revision') != expected_revision:
+                        return None
                     values[manifest["id"]] = candidate
-                    if len(streams_for(values.values())) > MAX_STREAMS:
-                        raise ValueError("Continuous pilot is limited to 200 distinct streams")
+                    budget = scanner_stream_budget()
+                    if len(streams_for(values.values())) > budget:
+                        raise ValueError(f"Scanner exceeds the configured {budget} distinct stream budget")
                     pipe.multi()
                     pipe.hset(CONFIG_KEY, manifest["id"], json.dumps(candidate))
+                    pipe.set("market:routing:updated_at", datetime.now(timezone.utc).isoformat())
                     await pipe.execute()
                     return candidate
                 except WatchError:
@@ -78,7 +106,11 @@ class AutomationRegistry:
         raise RuntimeError("Scanner configuration changed concurrently; retry")
 
     async def disable(self, universe):
-        return await self.redis.hdel(CONFIG_KEY, universe)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            pipe.hdel(CONFIG_KEY, universe)
+            pipe.set("market:routing:updated_at", datetime.now(timezone.utc).isoformat())
+            result = await pipe.execute()
+        return result[0]
 
     async def active(self, candidate):
         raw = await self.redis.hget(CONFIG_KEY, candidate["manifest"]["id"])
@@ -98,7 +130,8 @@ class ScanDispatch:
     async def claim(self):
         token = uuid.uuid4().hex
         result = await self.redis.eval(_CLAIM, 3, self.done_key, self.lease_key,
-            self.prefix + ":attempts", token, DISPATCH_SECONDS, self.ttl, MAX_ATTEMPTS)
+            self.prefix + ":attempts:v2", token, DISPATCH_SECONDS, self.ttl, MAX_ATTEMPTS,
+            ATTEMPT_WINDOW_SECONDS)
         return token if result else None
 
     async def valid(self, token):
@@ -117,6 +150,14 @@ class ScanDispatch:
                              "done" if success else "retry", self.ttl,
                              max(60, min(int(retry_after), self.ttl)))
 
+    async def expires_at(self):
+        """Broker expiry cannot outlive either the candle close or its lease."""
+        remaining = max(0, await self.redis.pttl(self.lease_key)) / 1000
+        seconds, micros = await self.redis.time()
+        deadline = min(self.cutoff + INTERVAL_SECONDS[self.interval] + SCHEDULE_GRACE,
+                       int(seconds) + int(micros) / 1_000_000 + remaining)
+        return datetime.fromtimestamp(deadline, timezone.utc)
+
     def publication_guard(self, token):
         """Conditions the snapshot pointer must check atomically at publication."""
         return {
@@ -132,6 +173,9 @@ async def schedule_once(redis, enqueue):
     queued = 0
     version = detector_version()
     for candidate in await AutomationRegistry(redis).all():
+        if candidate['manifest']['market'] == 'forex' and not MarketSession('forex').is_open(
+                datetime.fromtimestamp(int(seconds), timezone.utc)):
+            continue
         for interval in candidate["intervals"]:
             step = INTERVAL_SECONDS[interval]
             cutoff = (int(seconds) - SCHEDULE_GRACE) // step * step

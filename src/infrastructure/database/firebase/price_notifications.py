@@ -19,6 +19,8 @@ def display_number(value):
 def price_notification_body(payload):
     movement = 'rose' if payload['direction'] == 'above' else 'fell'
     message = f"{payload['symbol']} {movement} to {display_number(payload['price'])}"
+    if payload.get('price_basis') == 'mid_quote':
+        message = f"{payload['symbol']} mid-price {movement} to {display_number(payload['price'])}"
     target = f"Target {display_number(payload['target'])}"
     if payload.get('kind') == 'percentage':
         sign = '+' if payload['direction'] == 'above' else '−'
@@ -54,17 +56,18 @@ class FirebasePriceSender(FirebaseScannerSender):
     def _send(delivery,token=None):
         if not token: raise RuntimeError('No registered notification device')
         p=delivery['payload']; identifier=str(delivery['id'])
+        provider, market = p.get('provider', 'binance'), p.get('market', 'spot')
         remaining=delivery['expires_at']-datetime.now(timezone.utc)
         if remaining.total_seconds()<=0: raise PermanentDeliveryError()
         message=messaging.Message(token=token,
             notification=messaging.Notification(title=f"Alert on {p['symbol']}",
                 body=price_notification_body(p)),
             data={'type':'price_alert','notification_id':identifier,'user_id':delivery['user_id'],
-                  'symbol':p['symbol'],'provider':'binance','market':'spot','alert_id':str(delivery['rule_id'])},
+                  'symbol':p['symbol'],'provider':provider,'market':market,'alert_id':str(delivery['rule_id'])},
             android=messaging.AndroidConfig(collapse_key=identifier,ttl=remaining),
             apns=messaging.APNSConfig(headers={'apns-collapse-id':identifier,'apns-expiration':str(int(delivery['expires_at'].timestamp())),
                 'apns-push-type':'alert','apns-priority':'10'},
-                payload=messaging.APNSPayload(messaging.Aps(sound='default',thread_id='price-'+p['symbol'],
+                payload=messaging.APNSPayload(messaging.Aps(sound='default',thread_id=('price-' if provider=='binance' else 'price-'+provider+'-'+market+'-')+p['symbol'],
                     category='WATCHERS_PRICE_ALERT', custom_data={'interruption-level':'time-sensitive'}))))
         started = time.monotonic()
         try:

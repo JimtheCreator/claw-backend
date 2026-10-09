@@ -40,7 +40,8 @@ def raw_bars(rows, step=900):
              int(timestamp_seconds(r["timestamp"]) * 1000) + step * 1000 - 1] for r in rows]
 
 
-def test_configuration_survives_new_registry_and_enforces_total_stream_budget():
+def test_configuration_survives_new_registry_and_enforces_total_stream_budget(monkeypatch):
+    monkeypatch.setenv("SCANNER_STREAM_BUDGET", "200")
     async def scenario():
         async with redis_client() as redis:
             registry = AutomationRegistry(redis)
@@ -84,6 +85,23 @@ def test_half_hour_dispatch_uses_closed_1800_second_boundary_and_own_stream():
             assert interval == "30m"
             assert cutoff == (int(seconds) - SCHEDULE_GRACE) // 1800 * 1800
             assert await ScanDispatch(redis, candidate, interval, cutoff, version).valid(token)
+    asyncio.run(scenario())
+
+
+def test_repair_expiry_does_not_outlive_short_lease_on_daily_dispatch():
+    async def scenario():
+        async with redis_client() as redis:
+            candidate = await AutomationRegistry(redis).enable(MANIFEST, ['1d'])
+            seconds = int((await redis.time())[0])
+            cutoff = (seconds - SCHEDULE_GRACE) // 86400 * 86400
+            dispatch = ScanDispatch(redis, candidate, '1d', cutoff, detector_version())
+            assert await dispatch.claim()
+            await redis.pexpire(dispatch.lease_key, 10000)
+            expiry = (await dispatch.expires_at()).timestamp()
+            assert seconds <= expiry <= seconds + 11
+            assert expiry <= cutoff + 86400 + SCHEDULE_GRACE
+            await redis.delete(dispatch.lease_key)
+            assert (await dispatch.expires_at()).timestamp() <= int((await redis.time())[0]) + 1
     asyncio.run(scenario())
 
 
@@ -198,6 +216,43 @@ def test_failed_candle_read_does_not_cause_provider_fallback():
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize('indexes', [[249], [240, 249]])
+def test_recovery_fetches_only_missing_span_and_validates_complete_window(indexes):
+    async def scenario():
+        async with redis_client() as redis:
+            complete = candles()
+            store = NS(load=AsyncMock(return_value=[r for i,r in enumerate(complete) if i not in indexes]), save=AsyncMock())
+            recovered = complete[min(indexes):max(indexes)+1]
+            provider = NS(get_klines=AsyncMock(return_value=raw_bars(recovered)))
+            assert await ensure_window(redis, store, provider, 'BTCUSDT', '15m', CUTOFF) == 'ready'
+            kwargs = provider.get_klines.call_args.kwargs
+            assert kwargs['limit'] == max(indexes)-min(indexes)+1
+            assert kwargs['start_time'] == raw_bars(recovered)[0][0]
+            assert len(store.save.call_args.args[2]) == len(recovered)
+            provider.get_klines.return_value = []
+            assert await ensure_window(redis, store, provider, 'BTCUSDT', '15m', CUTOFF) != 'ready'
+    asyncio.run(scenario())
+
+
+def test_daily_retry_limit_recovers_after_bounded_cooldown(monkeypatch):
+    async def scenario():
+        async with redis_client() as redis:
+            candidate = await AutomationRegistry(redis).enable(MANIFEST, ['1d'])
+            seconds, _ = await redis.time()
+            cutoff = (int(seconds)-SCHEDULE_GRACE)//86400*86400
+            dispatch = ScanDispatch(redis, candidate, '1d', cutoff, detector_version())
+            for _ in range(3):
+                assert await dispatch.claim()
+                await redis.delete(dispatch.lease_key)
+            assert await dispatch.claim() is None
+            key = dispatch.prefix + ':attempts:v2'
+            assert 0 < await redis.ttl(key) <= 1500
+            await redis.pexpire(key, 1)
+            await asyncio.sleep(.01)
+            assert await dispatch.claim()
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize("mutate", [
     lambda bar: [bar[0] + 1, *bar[1:]],
     lambda bar: [*bar[:6], bar[6] + 1],
@@ -253,7 +308,7 @@ def test_scheduled_pipeline_repairs_once_scans_then_suppresses_redelivery(monkey
             monkeypatch.setenv("REDIS_URL", "redis://test")
             for module in (ingestion, scans):
                 monkeypatch.setattr(module, "InfluxDBMarketDataRepository", lambda **kw: repo)
-                monkeypatch.setattr(module, "FinalizedBinanceCandles", lambda _: store)
+                monkeypatch.setattr(module, "scanner_candles", lambda _, *args: store)
             monkeypatch.setattr(ingestion, "BinanceMarketData", lambda **kw: provider)
             submit = Mock(return_value=NS(id="scan-job"))
             monkeypatch.setattr(scans.scan_scheduled_universe, "apply_async", submit)
@@ -394,7 +449,7 @@ def test_stream_persistence_accepts_only_enabled_finalized_identity(monkeypatch)
             repo = NS(client=NS(close=Mock()))
             store = NS(save=AsyncMock())
             monkeypatch.setattr(ingestion, "InfluxDBMarketDataRepository", lambda **kw: repo)
-            monkeypatch.setattr(ingestion, "FinalizedBinanceCandles", lambda _: store)
+            monkeypatch.setattr(ingestion, "scanner_candles", lambda _, *args: store)
             seconds, _ = await redis.time()
             cutoff = int(seconds) // 900 * 900
             data = {"k": dict(x=True, s="BTCUSDT", i="15m", t=(cutoff - 900)*1000,
@@ -416,6 +471,7 @@ def test_stream_persistence_accepts_only_enabled_finalized_identity(monkeypatch)
 
 
 def test_gateway_background_failure_exits_for_supervised_restart(monkeypatch):
+    monkeypatch.setenv('SCANNER_CANDLE_STORE', 'influx')
     stub = NS(save_market_data_task=NS(delay=Mock()))
     for name in ("core.services.tasks", "src.core.services.tasks"):
         monkeypatch.setitem(sys.modules, name, stub)
@@ -435,4 +491,121 @@ def test_gateway_background_failure_exits_for_supervised_restart(monkeypatch):
         with pytest.raises(RuntimeError, match="stopped unexpectedly"):
             await manager._run_owned()
         manager.binance_client.disconnect.assert_awaited_once()
+    asyncio.run(scenario())
+
+
+def test_large_universe_scans_cache_before_requesting_repairs(monkeypatch):
+    async def scenario():
+        server=fakeredis.FakeServer()
+        async with redis_client(server) as redis:
+            monkeypatch.setenv('SCANNER_STREAM_BUDGET','2000')
+            monkeypatch.setenv('BINANCE_WS_CONNECTIONS','12')
+            monkeypatch.setenv('BINANCE_WS_STREAMS_PER_CONNECTION','800')
+            manifest=dict(MANIFEST,symbols=[f'COIN{i}USDT' for i in range(1500)])
+            candidate=await AutomationRegistry(redis).enable(manifest,['15m'])
+            enqueue=AsyncMock(); await schedule_once(redis,enqueue)
+            args=enqueue.call_args.args
+            module=importlib.import_module('core.services.scanner_ingestion_tasks')
+            tasks=importlib.import_module('core.services.scanner_tasks')
+            monkeypatch.setattr(module,'new_redis',lambda:redis_client(server))
+            provider=Mock(side_effect=AssertionError('Coordinator must not open provider'))
+            monkeypatch.setattr(module,'BinanceMarketData',provider)
+            submit,final=Mock(),Mock()
+            monkeypatch.setattr(tasks.scan_market_instrument,'apply_async',submit)
+            monkeypatch.setattr(tasks.finalize_scanner_batch,'apply_async',final)
+            from infrastructure.database.redis.scanner_recovery_order import RecoveryOrder
+            await RecoveryOrder(redis, candidate, '15m').started(manifest['symbols'][0])
+            result=await module.prepare(*args)
+            assert result=={'status':'cache_scan_dispatched','instruments':1500}
+            assert submit.call_count==1500
+            assert submit.call_args_list[0].kwargs['args'][-1] == manifest['symbols'][1]
+            assert submit.call_args_list[-1].kwargs['args'][-1] == manifest['symbols'][0]
+            assert submit.call_args.kwargs['queue']=='scanner_binance_spot_15m'
+            assert submit.call_args.kwargs['kwargs']=={'recover_missing': True}
+            assert submit.call_args.kwargs['priority']==6
+            reference = submit.call_args.kwargs['args'][0]
+            assert 'manifest' not in reference
+            assert len(json.dumps(reference)) < 150
+            assert final.call_args.kwargs['countdown']==30
+            assert final.call_args.kwargs['queue']=='scanner_control'
+            assert (await module.prepare(*args))['instruments']==0
+            provider.assert_not_called()
+    asyncio.run(scenario())
+
+
+def test_failed_instrument_repair_does_not_block_stored_candle_scan(monkeypatch):
+    async def scenario():
+        server=fakeredis.FakeServer()
+        async with redis_client(server) as redis:
+            await AutomationRegistry(redis).enable(MANIFEST,['15m'])
+            enqueue=AsyncMock(); await schedule_once(redis,enqueue)
+            args=enqueue.call_args.args
+            module=importlib.import_module('core.services.scanner_ingestion_tasks')
+            tasks=importlib.import_module('core.services.scanner_tasks')
+            monkeypatch.setattr(module,'new_redis',lambda:redis_client(server))
+            repo=NS(client=NS(close=Mock()))
+            monkeypatch.setattr(module,'scanner_repository',lambda **kw:repo)
+            monkeypatch.setattr(module,'BinanceMarketData',lambda **kw:NS(disconnect=AsyncMock()))
+            monkeypatch.setattr(module,'scanner_candles',lambda *args:object())
+            monkeypatch.setattr(module,'ensure_window',AsyncMock(side_effect=TimeoutError('private-provider-details')))
+            submit=Mock(); monkeypatch.setattr(tasks.scan_market_instrument,'apply_async',submit)
+            result=await module.prepare_instrument(*args,'BTCUSDT')
+            assert result['repair']=='deferred'
+            from infrastructure.database.redis.scanner_recovery_order import RecoveryOrder
+            order = RecoveryOrder(redis, args[0], args[1])
+            attempted = await redis.zscore(order.key, 'BTCUSDT')
+            assert attempted is not None
+            assert submit.call_args.kwargs['args'][-1]=='BTCUSDT'
+            repo.client.close.assert_called_once()
+            await AutomationRegistry(redis).disable(MANIFEST['id'])
+            submit.reset_mock()
+            assert (await module.prepare_instrument(*args,'BTCUSDT'))['status']=='superseded'
+            assert await redis.zscore(order.key, 'BTCUSDT') == attempted
+            submit.assert_not_called()
+    asyncio.run(scenario())
+
+
+def test_legacy_forex_repairs_leave_crypto_lane_without_provider_io(monkeypatch):
+    async def scenario():
+        server = fakeredis.FakeServer()
+        async with redis_client(server) as redis:
+            manifest = dict(MANIFEST, id='forex-lane-test', provider='massive', market='forex', symbols=['EURUSD'])
+            candidate = await AutomationRegistry(redis).enable(manifest, ['15m'])
+            seconds = int((await redis.time())[0])
+            cutoff = (seconds-SCHEDULE_GRACE)//900*900
+            version = detector_version()
+            dispatch = ScanDispatch(redis, candidate, '15m', cutoff, version)
+            token = await dispatch.claim()
+            args = [candidate, '15m', cutoff, version, token, 'EURUSD']
+            module = importlib.import_module('core.services.scanner_ingestion_tasks')
+            monkeypatch.setattr(module, 'new_redis', lambda: redis_client(server))
+            provider_module = importlib.import_module('infrastructure.data_sources.massive.history')
+            provider = Mock(side_effect=AssertionError('Legacy lane must not perform Forex I/O'))
+            monkeypatch.setattr(provider_module, 'MassiveHistory', provider)
+            submit = Mock()
+            monkeypatch.setattr(module.prepare_scanner_instrument, 'apply_async', submit)
+            assert await module.prepare_instrument(*args, legacy_queue=True) == {'status': 'rerouted'}
+            assert submit.call_args.kwargs['queue'] == 'scanner_backfill_forex_15m'
+            assert submit.call_args.kwargs['args'][1:] == args[1:]
+            provider.assert_not_called()
+            await AutomationRegistry(redis).disable(manifest['id'])
+            submit.reset_mock()
+            assert await module.prepare_instrument(*args, legacy_queue=True) == {'status': 'superseded'}
+            submit.assert_not_called()
+    asyncio.run(scenario())
+
+
+def test_compact_instrument_jobs_resolve_only_the_enabled_revision():
+    from core.scanner.automation import candidate_reference, resolve_candidate
+    async def scenario():
+        async with redis_client() as redis:
+            registry = AutomationRegistry(redis)
+            candidate = await registry.enable(MANIFEST, ['15m'])
+            reference = candidate_reference(candidate)
+            assert await resolve_candidate(redis, reference) == candidate
+            assert await resolve_candidate(redis, candidate) == candidate
+            await registry.enable(dict(MANIFEST, symbols=['ETHUSDT']), ['15m'])
+            assert await resolve_candidate(redis, reference) is None
+            await registry.disable(MANIFEST['id'])
+            assert await resolve_candidate(redis, reference) is None
     asyncio.run(scenario())

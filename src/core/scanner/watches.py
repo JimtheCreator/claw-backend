@@ -15,9 +15,9 @@ class WatchCreate(BaseModel):
     @field_validator('symbols')
     @classmethod
     def normalize_symbols(cls, values):
-        import re
+        from .engine import SYMBOL
         normalized = sorted(set(values))
-        if any(not re.fullmatch(r'[A-Z0-9]{2,30}', value) for value in normalized):
+        if any(not SYMBOL.fullmatch(value) for value in normalized):
             raise ValueError('Invalid symbol')
         return normalized
 
@@ -25,6 +25,20 @@ class WatchCreate(BaseModel):
 class WatchAction(BaseModel):
     model_config = ConfigDict(extra='forbid')
     action: Literal['pause', 'resume']
+
+
+MarketScope = Literal['crypto', 'forex', 'all']
+
+
+class ScopedWatchCreate(WatchCreate):
+    """V2 requires consent; V1 remains an explicitly crypto-only adapter."""
+    universe: str = Field(default='all-markets', pattern=r'^[a-z0-9][a-z0-9-]{0,63}$')
+    market_scope: MarketScope
+
+
+class WatchScopeUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    market_scope: MarketScope
 
 
 class WatchLimitReached(Exception):
@@ -41,6 +55,11 @@ class FollowCreate(BaseModel):
     # Accepted for older clients; saved follows always cover every scanner interval.
     interval: ScanInterval | None = Field(default=None, deprecated=True)
     muted: bool = False
+
+
+class ScopedFollowCreate(FollowCreate):
+    universe: str = Field(default='all-markets', pattern=r'^[a-z0-9][a-z0-9-]{0,63}$')
+    market_scope: MarketScope
 
 
 class DeviceRegistration(BaseModel):

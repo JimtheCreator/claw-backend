@@ -15,6 +15,52 @@ from infrastructure.data_sources.massive.client import MassiveClient
 from infrastructure.database.redis.rate_limiter import ProviderRequestDeferred, RedisRateLimiter
 
 
+def test_managed_socket_capacity_matches_gateway_and_never_evicts_live_streams(monkeypatch):
+    module=importlib.import_module('infrastructure.data_sources.binance.client')
+    monkeypatch.setenv('BINANCE_WS_CONNECTIONS','12')
+    budget=NS(acquire=AsyncMock())
+    factory=Mock(return_value=budget)
+    monkeypatch.setattr(module,'RedisRateLimiter',factory)
+    sockets=[]
+    async def connect(*args,**kwargs):
+        socket=NS(state=NS(name='OPEN'),close=AsyncMock())
+        sockets.append(socket)
+        return socket
+    connection=AsyncMock(side_effect=connect)
+    monkeypatch.setattr(module.websockets,'connect',connection)
+    async def run():
+        client=BinanceMarketData(use_pool=False)
+        client.global_limiter=NS(get_client=Mock(return_value=object()))
+        for index in range(12):
+            await client.get_websocket_connection_managed(str(index),'wss://test.invalid/ws')
+        assert len(sockets)==12 and budget.acquire.await_count==12
+        assert await client.get_websocket_connection_managed('0','wss://test.invalid/ws') is sockets[0]
+        with pytest.raises(ProviderRequestDeferred,match='capacity'):
+            await client.get_websocket_connection_managed('extra','wss://test.invalid/ws')
+        assert len(sockets)==12 and budget.acquire.await_count==12
+        for socket in sockets:socket.close.assert_not_awaited()
+        sockets[0].state.name='CLOSED'
+        assert await client.get_websocket_connection('0','wss://test.invalid/ws') is sockets[-1]
+        assert len(sockets)==13 and budget.acquire.await_count==13
+        assert factory.call_args.kwargs['key_prefix']=='binance_gateway_connect'
+    asyncio.run(run())
+
+
+def test_managed_socket_budget_failure_cannot_open_a_connection(monkeypatch):
+    module=importlib.import_module('infrastructure.data_sources.binance.client')
+    budget=NS(acquire=AsyncMock(side_effect=ProviderRequestDeferred('unavailable')))
+    monkeypatch.setattr(module,'RedisRateLimiter',Mock(return_value=budget))
+    connection=AsyncMock();monkeypatch.setattr(module.websockets,'connect',connection)
+    async def run():
+        client=BinanceMarketData(use_pool=False)
+        client.global_limiter=NS(get_client=Mock(return_value=object()))
+        with pytest.raises(ProviderRequestDeferred):
+            await client.get_websocket_connection_managed('one','wss://test.invalid/ws')
+        assert client._websocket_connections=={}
+        connection.assert_not_awaited()
+    asyncio.run(run())
+
+
 def timestamp(year, month, day, hour=0, minute=0, second=0):
     return int(datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc).timestamp() * 1000)
 
@@ -210,6 +256,21 @@ def test_market_endpoint_returns_503_with_retry_after(monkeypatch):
     assert error.value.headers == {"Retry-After": "12"}
 
 
+@pytest.mark.parametrize("failure", [{"error": "Internal server error"}, RuntimeError("store offline")])
+def test_chart_failure_is_not_a_successful_empty_history(monkeypatch, failure):
+    monkeypatch.setitem(sys.modules, "src.core.services.tasks", NS(save_market_data_task=NS(delay=Mock())))
+    monkeypatch.setitem(sys.modules, "core.services.crypto_list", NS(search_cryptos=AsyncMock()))
+    routes = importlib.import_module("presentation.api.routes.get_symbol_market_data")
+    fetch = AsyncMock(side_effect=failure) if isinstance(failure, Exception) else AsyncMock(return_value=failure)
+    monkeypatch.setattr(routes, "fetch_crypto_data_paginated", fetch)
+    with pytest.raises(routes.HTTPException) as error:
+        asyncio.run(routes.get_market_data("BTCUSDT", interval="1m", start_time=None,
+                                          end_time=None, page=1, page_size=200))
+    assert error.value.status_code == 503
+    assert error.value.headers == {"Retry-After": "5"}
+    assert "offline" not in error.value.detail
+
+
 @pytest.mark.parametrize("category,fetch_name", [
     ("crypto", "fetch_and_normalize_binance"),
     ("forex", "search_and_normalize_massive"),
@@ -226,3 +287,48 @@ def test_deferred_discovery_is_not_negative_cached_as_unknown_symbol(monkeypatch
     with pytest.raises(ProviderRequestDeferred):
         asyncio.run(service._search_external("EURUSD", category, "127.0.0.1"))
     service.redis.set_cached_data.assert_not_called()
+
+
+@pytest.mark.parametrize('response_kind',['foreign-pagination','http-error'])
+def test_massive_catalog_does_not_forward_or_log_credentials(monkeypatch,response_kind):
+    async def scenario():
+        calls=[];warning=Mock()
+        def respond(request):
+            calls.append(request)
+            return (httpx.Response(200,json={'results':[], 'next_url':'https://other.invalid/page'})
+                    if response_kind=='foreign-pagination' else httpx.Response(403))
+        factory=httpx.AsyncClient
+        monkeypatch.setattr('infrastructure.data_sources.massive.client.httpx.AsyncClient',
+            lambda **kw:factory(transport=httpx.MockTransport(respond),**kw))
+        monkeypatch.setattr('infrastructure.data_sources.massive.client.logger',NS(warning=warning))
+        client=MassiveClient();client.base_url='https://provider.invalid';client.api_key='private-test-credential'
+        client.rate_limiter=NS(acquire=AsyncMock(),defer=AsyncMock())
+        with pytest.raises(RuntimeError, match='Complete Forex catalog unavailable'):
+            await client.get_forex_pairs()
+        assert len(calls)==1 and calls[0].url.host=='provider.invalid'
+        warning.assert_called_once()
+        assert 'private-test-credential' not in str(warning.call_args)
+    asyncio.run(scenario())
+
+
+def test_massive_forex_pagination_preserves_cursor_and_rejects_stock_rows(monkeypatch):
+    async def scenario():
+        calls=[]
+        def respond(request):
+            calls.append(request)
+            if len(calls)==1:
+                return httpx.Response(200,json={'results':[{'ticker':'C:EURUSD','market':'fx'}],
+                    'next_url':'https://provider.invalid/v3/reference/tickers?cursor=fx-page-2&limit=1000'})
+            assert request.url.params['cursor']=='fx-page-2'
+            assert request.url.params['apiKey']=='test-key'
+            return httpx.Response(200,json={'results':[{'ticker':'C:USDJPY','market':'fx'}]})
+        factory=httpx.AsyncClient
+        monkeypatch.setattr('infrastructure.data_sources.massive.client.httpx.AsyncClient',
+            lambda **kw:factory(transport=httpx.MockTransport(respond),**kw))
+        client=MassiveClient(); client.base_url='https://provider.invalid';client.api_key='test-key'
+        client.rate_limiter=NS(acquire=AsyncMock())
+        assert [x['ticker'] for x in await client.get_forex_pairs()]==['C:EURUSD','C:USDJPY']
+        from core.services.market_normalizers import _normalize_massive_item
+        with pytest.raises(ValueError, match='Only provider-identified'):
+            _normalize_massive_item({'ticker':'AA','market':'stocks'})
+    asyncio.run(scenario())

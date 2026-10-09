@@ -4,6 +4,13 @@ The iPhone still connects to one FastAPI server on port **8000**. Background
 workers share market data, compute pattern matches and keep requests fast.
 You do not need to deploy a separate server for each worker during development.
 
+The Mac must remain awake for live quotes, scanner coverage and notifications.
+Sleep suspends the local workers; reopening the app cannot recover candles that
+the sleeping backend never received. After wake-up, bounded provider gap repair
+restores missing history. For a temporary development session, run
+`caffeinate -i -t 1800` in another Terminal to prevent idle sleep for 30 minutes.
+This does not provide an always-on production host or prevent lid-close sleep.
+
 ## Normal startup on this Mac
 
 Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` and
@@ -94,6 +101,7 @@ Run from `/Users/apple/VSCodeProjects/claw-backend`. Keep the existing `.env` an
 | Binance gateway | Shared chart and permanent scanner candle streams |
 | Scanner ingestion worker | Persist finalized candles and prepare missing bounded windows |
 | Scanner detection worker | Calculate patterns and publish shared match snapshots |
+| Forex detection worker | Four dedicated processes consume the five Forex timeframe queues, independently of other markets |
 | Scanner scheduler | Schedule work after closed candles, independently of app users |
 | Scanner inbox (`--notifications`) | Consume shared scan events and queue matching followers' notifications |
 | Scanner delivery (`--notifications`) | Deliver queued notifications through Firebase/APNs |

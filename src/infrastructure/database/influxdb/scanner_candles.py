@@ -28,11 +28,11 @@ class StoredBinanceCandles:
         measurement = "scanner_candles_v1" if self.finalized_only else "market_data"
         identity_filter = '|> filter(fn: (r) => r.provider == "binance" and r.market == "spot")' if self.finalized_only else ""
         query = f'''
-from(bucket: {json.dumps(self.repository.bucket)})
+from(bucket: {json.dumps(self.repository.bucket, ensure_ascii=False)})
 |> range(start: {start.isoformat()}, stop: {end.isoformat()})
 |> filter(fn: (r) => r._measurement == "{measurement}")
 {identity_filter}
-|> filter(fn: (r) => r.symbol == {json.dumps(symbol)} and r.interval == {json.dumps(interval)})
+|> filter(fn: (r) => r.symbol == {json.dumps(symbol, ensure_ascii=False)} and r.interval == {json.dumps(interval)})
 |> filter(fn: (r) => r._field == "open" or r._field == "high" or r._field == "low" or r._field == "close" or r._field == "volume")
 |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
 |> group(columns: [])

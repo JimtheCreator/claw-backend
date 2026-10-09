@@ -17,30 +17,24 @@ from infrastructure.data_sources.massive.client import MassiveClient
 from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
 from common.logger import logger
 
-# How many Massive fx pages the *startup/scheduled* ingestion sync pulls.
-# Massive is rate-limited to 5 req/min, so pulling the whole universe
-# (up to 10 pages) blocks ingestion for minutes and still comes back
-# incomplete (see get_forex_pairs' max_pages warning). Rather than eating
-# that cost eagerly, ingestion only seeds a fast, bounded batch (2 pages =
-# up to ~2000 of the most-alphabetically-common pairs); anything a user
-# actually searches for that isn't in that seed is fetched, persisted, and
-# cached on-demand by MarketCacheService._search_external, which already
-# implements the "fetch once on first search, serve from cache after"
-# strategy. This keeps ingestion fast without losing coverage.
-MASSIVE_INGESTION_SEED_PAGES = 2
+# A complete, validated provider catalog replaces the old two-page seed.
+MASSIVE_INGESTION_SEED_PAGES = 20
 
 
 async def fetch_and_normalize_binance() -> List[MarketInstrumentEntity]:
     logger.info("[normalizers] Fetching Binance exchange info...")
-    client = BinanceMarketData()
-    raw_data = await client.get_exchange_info()
+    client = BinanceMarketData(use_pool=False, strict_errors=True)
+    try:
+        raw_data = await client.get_exchange_info()
+    finally:
+        await client.disconnect()
 
     total_symbols = len(raw_data.get("symbols", []))
     logger.info(f"[normalizers] Binance returned {total_symbols} raw symbols; filtering to TRADING status...")
 
     instruments = []
     for item in raw_data.get("symbols", []):
-        if item.get("status") == "TRADING":
+        if item.get("status") == "TRADING" and item.get("isSpotTradingAllowed") is True:
             base = item["baseAsset"]
             quote = item["quoteAsset"]
 
@@ -63,19 +57,13 @@ async def fetch_and_normalize_binance() -> List[MarketInstrumentEntity]:
 
 
 async def fetch_and_normalize_massive() -> List[MarketInstrumentEntity]:
-    """Seeds the fx universe for the ingestion sync with a fast, bounded
-    pull (see MASSIVE_INGESTION_SEED_PAGES) instead of paging through the
-    entire universe. Anything outside the seed is picked up lazily the
-    first time a user searches for it -- see search_and_normalize_massive
-    and MarketCacheService._search_external."""
-    logger.info(
-        f"[normalizers] Seeding Massive fx universe "
-        f"(max_pages={MASSIVE_INGESTION_SEED_PAGES}, rest filled lazily on search)..."
-    )
+    """Fetch the complete, validated Forex catalog using the shared budget."""
+    logger.info("[normalizers] Refreshing the complete Massive Forex catalog...")
     client = MassiveClient()
     raw_data = await client.get_forex_pairs(max_pages=MASSIVE_INGESTION_SEED_PAGES)
-    instruments = [_normalize_massive_item(item) for item in raw_data]
-    logger.info(f"[normalizers] Normalized {len(instruments)} seeded Massive fx instruments.")
+    instruments = [_normalize_massive_item(item) for item in raw_data
+                   if item.get('market') == 'fx' and item.get('ticker', '').startswith('C:')]
+    logger.info(f"[normalizers] Normalized {len(instruments)} Massive Forex instruments.")
     return instruments
 
 
@@ -89,13 +77,16 @@ async def search_and_normalize_massive(query: str) -> List[MarketInstrumentEntit
     logger.info(f"[normalizers] Live Massive search for query='{query}'...")
     client = MassiveClient()
     raw_data = await client.search_forex_pairs(query)
-    instruments = [_normalize_massive_item(item) for item in raw_data]
+    instruments = [_normalize_massive_item(item) for item in raw_data
+                   if item.get('market') == 'fx' and item.get('ticker', '').startswith('C:')]
     logger.info(f"[normalizers] Live Massive search for '{query}' returned {len(instruments)} match(es).")
     return instruments
 
 
 def _normalize_massive_item(item: dict) -> MarketInstrumentEntity:
-    ticker = item.get("ticker", "").replace("C:", "")
+    if item.get('market') != 'fx' or not item.get('ticker', '').startswith('C:'):
+        raise ValueError('Only provider-identified Forex instruments can enter the Forex catalog')
+    ticker = item['ticker'][2:]
     # Massive's real response uses base_currency_symbol/currency_symbol,
     # not "base"/"quote" -- the old code read the wrong keys and only
     # worked by accident via the ticker-slicing fallback below. Prefer the

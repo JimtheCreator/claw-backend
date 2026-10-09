@@ -45,10 +45,24 @@ def process_plan(python: str, scanner: bool, notifications: bool = False) -> dic
         "forex-sparklines": module("forex_sparkline_service"),
         "gateway": module("websocket_subscription_manager"),
     }
+    if os.getenv("MASSIVE_STREAMING_ENABLED", "0") == "1":
+        roles.pop("forex-prices")
+        roles.pop("forex-sparklines")
+        roles["forex-stream"] = module("massive_stream_service")
     if scanner:
         roles.update({
-            "scanner-ingestion": worker("ingestion", "scanner_ingestion", 2),
-            "scanner-detection": worker("detection", "scanner", 2),
+            "scanner-ingestion": worker("ingestion", "scanner_control,scanner_ingestion", 2),
+            "scanner-backfill": worker("backfill", ','.join(['scanner_backfill'] +
+                [f'scanner_backfill_{tf}' for tf in ('15m','30m','1h','4h','1d')]), 2),
+            "scanner-backfill-forex": worker("backfill-forex", ','.join(['scanner_backfill_forex'] +
+                [f'scanner_backfill_forex_{tf}' for tf in ('15m','30m','1h','4h','1d')]), 4),
+            "scanner-detection": worker("detection", ','.join(['scanner'] +
+                [f'scanner_{market}_{tf}' for market in ('binance_spot','massive_crypto')
+                 for tf in ('15m','30m','1h','4h','1d')]), 2),
+            # Reserve capacity for Forex so another market's recovery/rescans
+            # cannot starve its newly closed candle windows.
+            "scanner-detection-forex": worker("detection-forex", ','.join(
+                f'scanner_massive_forex_{tf}' for tf in ('15m','30m','1h','4h','1d')), 4),
             "scanner-scheduler": module("scanner_scheduler"),
         })
     if notifications:
@@ -78,8 +92,13 @@ def child_environment(source: dict[str, str], notifications: bool = False, role:
     return env
 
 
+def needs_influx() -> bool:
+    return any(os.getenv(key) != 'quest_only' for key in ('MARKET_CANDLE_STORE', 'SCANNER_CANDLE_STORE'))
+
+
 def check_configuration() -> bool:
-    missing = [key for key in REQUIRED_ENV if not os.getenv(key)]
+    required = [key for key in REQUIRED_ENV if needs_influx() or not key.startswith("INFLUXDB_")]
+    missing = [key for key in required if not os.getenv(key)]
     if missing:
         print("Missing .env settings: " + ", ".join(missing))
         return False
@@ -114,17 +133,34 @@ def check_connections() -> bool:
     except Exception as exc:
         print(f"Redis: unavailable ({type(exc).__name__}). Start the configured Redis service.")
         healthy = False
-    try:
-        with InfluxDBClient(url=os.environ["INFLUXDB_URL"], token=os.environ["INFLUXDB_TOKEN"],
-                            org=os.environ["INFLUXDB_ORG"], timeout=5000, retries=0) as client:
-            # Read data permissions, not admin/bucket-management permissions.
-            import json
-            query = f'from(bucket: {json.dumps(os.environ["INFLUXDB_BUCKET"])}) |> range(start: -1s) |> limit(n: 1)'
-            client.query_api().query(query)
-        print("InfluxDB bucket read: OK")
-    except Exception as exc:
-        print(f"InfluxDB: unavailable ({type(exc).__name__}). Check the configured service, bucket and token.")
-        healthy = False
+    if needs_influx():
+        try:
+            with InfluxDBClient(url=os.environ["INFLUXDB_URL"], token=os.environ["INFLUXDB_TOKEN"],
+                                org=os.environ["INFLUXDB_ORG"], timeout=5000, retries=0) as client:
+                # Read data permissions, not admin/bucket-management permissions.
+                import json
+                query = f'from(bucket: {json.dumps(os.environ["INFLUXDB_BUCKET"])}) |> range(start: -1s) |> limit(n: 1)'
+                client.query_api().query(query)
+            print("InfluxDB bucket read: OK")
+        except Exception as exc:
+            print(f"InfluxDB: unavailable ({type(exc).__name__}). Check the configured service, bucket and token.")
+            healthy = False
+    needs_quest = (os.getenv('MASSIVE_STREAMING_ENABLED') == '1'
+                   or os.getenv('SCANNER_CANDLE_STORE', 'influx') != 'influx'
+                   or os.getenv('MARKET_CANDLE_STORE', 'influx') != 'influx'
+                   or os.getenv('MOMENTUM_CANDLE_STORE', 'sqlite') != 'sqlite')
+    if needs_quest:
+        try:
+            with httpx.Client(timeout=5) as client:
+                response = client.get(os.getenv('QUESTDB_HTTP_URL', 'http://127.0.0.1:9000').rstrip('/') + '/exec',
+                                      params={'query': 'SELECT 1'})
+                response.raise_for_status()
+                if response.json().get('dataset') != [[1]]:
+                    raise RuntimeError('QuestDB read probe failed')
+            print('QuestDB read: OK')
+        except Exception as exc:
+            print(f'QuestDB: unavailable ({type(exc).__name__}). Start the configured QuestDB service.')
+            healthy = False
     try:
         key = os.environ["SUPABASE_SERVICE_KEY"]
         with httpx.Client(timeout=6) as client:
@@ -145,36 +181,49 @@ def check_connections() -> bool:
 def stop_children(children: dict[str, subprocess.Popen], grace: float = 25) -> None:
     # Each child gets its own process group, including Celery's pool children.
     # Never kill unrelated workers or an API started outside this launcher.
-    for child in children.values():
+    denied = set()
+
+    def signal_group(name, child, sig):
         try:
-            os.killpg(child.pid, signal.SIGTERM)
+            os.killpg(child.pid, sig)
+            return True
         except ProcessLookupError:
-            pass
+            return False
+        except PermissionError:
+            # A denied group signal must not skip cleanup of the other roles.
+            # Popen only signals this launcher's still-running direct child.
+            denied.add(name)
+            if sig and child.poll() is None:
+                try:
+                    child.send_signal(sig)
+                except (ProcessLookupError, PermissionError):
+                    pass
+            return child.poll() is None
+
+    for name, child in children.items():
+        signal_group(name, child, signal.SIGTERM)
     deadline = time.monotonic() + grace
     for child in children.values():
         try:
             child.wait(timeout=max(0, deadline - time.monotonic()))
         except subprocess.TimeoutExpired:
             pass
-    # A leader can exit before its pool; give the group the remaining grace.
     while time.monotonic() < deadline:
-        alive = False
-        for child in children.values():
-            try:
-                os.killpg(child.pid, 0)
-                alive = True
-            except ProcessLookupError:
-                pass
-        if not alive:
+        alive = [signal_group(name, child, 0) for name, child in children.items()]
+        if not any(alive):
             break
         time.sleep(min(0.1, max(0, deadline - time.monotonic())))
-    for child in children.values():
+    for name, child in children.items():
+        signal_group(name, child, signal.SIGKILL)
+    deadline = time.monotonic() + 3
+    for name, child in children.items():
         try:
-            os.killpg(child.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    for child in children.values():
-        child.wait()
+            child.wait(timeout=max(0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            print(f"Could not stop {name} (PID {child.pid}); stop this process before restarting.", flush=True)
+    if denied:
+        print("macOS denied process-group cleanup for: " + ", ".join(sorted(denied))
+              + ". Direct children were also signalled; check for remaining workers before restarting.", flush=True)
 
 
 def serve(scanner: bool, notifications: bool = False) -> int:
@@ -188,11 +237,27 @@ def serve(scanner: bool, notifications: bool = False) -> int:
         # Do not start a second set of feeds when another API owns the port.
         with socket.socket() as probe:
             try:
+                # Match Uvicorn: recently closed connections in TIME_WAIT do
+                # not mean another API is still listening after a restart.
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 probe.bind(("0.0.0.0", 8000))
             except OSError:
                 print("Port 8000 is already in use. Stop your old local API first; it was not modified.")
                 return 1
         children = {}
+        plan = process_plan(sys.executable, scanner, notifications)
+        restart_at, failures, started_at = {}, {}, {}
+
+        def start_child(name):
+            fd = os.open(LOGS / f"{name}.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "ab", buffering=0) as output:
+                child = subprocess.Popen(plan[name], cwd=ROOT,
+                    env=child_environment(os.environ, notifications, name),
+                    stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
+            started_at[name] = time.monotonic()
+            print(f"Started {name}; log: logs/dev-backend/{name}.log", flush=True)
+            return child
+
         env = child_environment(os.environ, notifications, "scanner-scheduler")
         previous_handlers = {}
 
@@ -202,28 +267,38 @@ def serve(scanner: bool, notifications: bool = False) -> int:
         try:
             for sig in (signal.SIGINT, signal.SIGTERM):
                 previous_handlers[sig] = signal.signal(sig, stop)
-            for name, command in process_plan(sys.executable, scanner, notifications).items():
-                fd = os.open(LOGS / f"{name}.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-                with os.fdopen(fd, "ab", buffering=0) as output:
-                    children[name] = subprocess.Popen(command, cwd=ROOT, env=child_environment(os.environ, notifications, name),
-                        stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
-                print(f"Started {name}; log: logs/dev-backend/{name}.log", flush=True)
+            for name in plan:
+                children[name] = start_child(name)
             if scanner:
                 # Explicit --scanner is the opt-in to bounded live market work.
                 # Registry validation and stream limits still apply.
-                command = [sys.executable, str(ROOT / "scripts/manage_scanner.py"), "enable",
-                    "--manifest", "config/scanner/binance-spot-pilot.json", "--intervals", "15m", "30m", "1h", "4h", "1d"]
+                command = [sys.executable, str(ROOT / "scripts/manage_scanner.py"), "bootstrap"]
                 with (LOGS / "scanner-enable.log").open("ab") as output:
                     subprocess.run(command, cwd=ROOT, env=env, stdout=output,
                         stderr=subprocess.STDOUT, check=True, timeout=30)
-                print("Binance pilot enabled: 10 symbols, five timeframes. First snapshots may take a few minutes.")
+                print("Configured scanner profiles preserved. First snapshots may take a few minutes.")
             print("API: http://localhost:8000/docs | Ctrl-C stops this launcher's processes.", flush=True)
             print("Use a second terminal for ngrok; see docs/local-ios-backend.md.", flush=True)
             while True:
-                for name, child in children.items():
-                    if child.poll() is not None:
+                for name, child in list(children.items()):
+                    if child.poll() is None:
+                        continue
+                    if name == 'api':
                         print(f"{name} exited ({child.returncode}); stopping the group. Read its log above.", flush=True)
                         return 1
+                    now = time.monotonic()
+                    if name not in restart_at:
+                        # Retire the failed role's entire pool before replacing
+                        # it. Other feeds and the API remain available.
+                        stop_children({name: child}, grace=2)
+                        attempts = 0 if now - started_at[name] > 300 else failures.get(name, 0)
+                        failures[name] = min(attempts + 1, 6)
+                        delay = min(60, 2 ** failures[name])
+                        restart_at[name] = time.monotonic() + delay
+                        print(f"{name} exited ({child.returncode}); retrying in {delay}s. Other services remain running.", flush=True)
+                    elif now >= restart_at[name]:
+                        children[name] = start_child(name)
+                        del restart_at[name]
                 time.sleep(1)
         except KeyboardInterrupt:
             print("Stopping local backend processes...", flush=True)
@@ -235,15 +310,17 @@ def serve(scanner: bool, notifications: bool = False) -> int:
             # A second Ctrl-C must not abandon orphan worker processes.
             for sig in previous_handlers:
                 signal.signal(sig, signal.SIG_IGN)
-            stop_children(children)
-            for sig, handler in previous_handlers.items():
-                signal.signal(sig, handler)
+            try:
+                stop_children(children)
+            finally:
+                for sig, handler in previous_handlers.items():
+                    signal.signal(sig, handler)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("check", "commands", "start"))
-    parser.add_argument("--scanner", action="store_true", help="Start and enable the 10-symbol Binance scanner pilot")
+    parser.add_argument("--scanner", action="store_true", help="Start the configured scanner profiles without replacing their coverage")
     parser.add_argument("--notifications", action="store_true", help="Enable event and price alerts, inbox and push delivery (requires --scanner and migrated alert database)")
     args = parser.parse_args()
     if args.notifications and not args.scanner:

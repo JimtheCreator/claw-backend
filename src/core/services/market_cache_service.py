@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from core.domain.entities.MarketInstrumentEntity import MarketInstrumentEntity
 from infrastructure.database.supabase.markets_repo import MarketRepository
@@ -52,6 +53,7 @@ class MarketCacheService:
         serialized = json.dumps([inst.model_dump() for inst in instruments])
         
         await self.redis.set_cached_data(key=self.CACHE_KEY, value=serialized, ttl=self.CACHE_TTL)
+        await self.redis._redis.set("market:routing:updated_at", datetime.now(timezone.utc).isoformat())
         logger.info(f"Market cache warmed with {len(instruments)} instruments.")
 
     async def get_all_cached_instruments(self) -> List[MarketInstrumentEntity]:

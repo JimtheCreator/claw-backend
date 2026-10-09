@@ -26,6 +26,7 @@ celery_app.conf.update(
         Queue('broadcasts'),
         Queue('scanner'),
         Queue('scanner_ingestion'),
+        Queue('scanner_backfill'),
         # Drain jobs sent by older application builds before an explicit
         # route/default queue was configured. New tasks do not use this.
         Queue('celery'),
@@ -33,6 +34,9 @@ celery_app.conf.update(
     task_serializer='json',
     accept_content=['json'],
     result_serializer='json',
+    # Scanner tasks publish their outcomes to bounded domain stores, not this
+    # backend. Keep other task diagnostics for one hour, not Celery's 24h.
+    result_expires=3600,
     timezone='UTC',
     enable_utc=True,
     include=[
@@ -47,6 +51,7 @@ celery_app.conf.update(
         'src.core.services.scanner_tasks.scan_market_instrument': {'queue': 'scanner'},
         'src.core.services.scanner_tasks.finalize_scanner_batch': {'queue': 'scanner'},
         'src.core.services.scanner_ingestion_tasks.prepare_scanner_scan': {'queue': 'scanner_ingestion'},
+        'src.core.services.scanner_ingestion_tasks.prepare_scanner_instrument': {'queue': 'scanner_backfill'},
         'src.core.services.scanner_ingestion_tasks.persist_scanner_candle': {'queue': 'scanner_ingestion'},
         # Telegram tasks - lightweight, use default queue
         'src.core.services.tasks.process_telegram_update': {'queue': 'telegram'},

@@ -12,6 +12,41 @@ from core.alerts.price import PriceAlertCreate
 from infrastructure.database.supabase.price_alerts import PriceAlertRepository
 
 
+def test_forex_price_basis_isolation_and_durable_delayed_crossing():
+    async def run():
+        async with database() as db:
+            await db.admin.execute('TRUNCATE scanner_alerts.price_rules CASCADE')
+            api, worker = PriceAlertRepository(db.api_pool), PriceAlertRepository(db.worker_pool)
+            legacy = PriceAlertCreate(request_id=uuid4(), symbol='EURUSD', kind='price',
+                                      direction='above', amount='1.12', reference_price='1.1')
+            fx = legacy.model_copy(update=dict(request_id=uuid4(), provider='massive', market='forex', price_basis='mid_quote'))
+            await api.create_price('fx-owner', fx)
+            await api.create_price('legacy-owner', legacy)
+            with pytest.raises(ValueError):
+                await api.existing_price('fx-owner', fx.model_copy(update=dict(provider='binance',market='spot',price_basis='last_trade')))
+            await db.admin.execute("UPDATE scanner_alerts.price_rules SET created_at=clock_timestamp()-interval '2 minutes'")
+            now = int(time.time()*1000)
+            # Fresh on ingestion, replayed after a database outage. Preserve the
+            # earlier crossing even though the latest observed value retreated.
+            ticks = [dict(symbol='EURUSD', price=p, time=now-60_000+i,
+                          provider='massive', market='forex', price_basis='mid_quote')
+                     for i,p in enumerate(('1.11','1.125','1.10'))]
+            assert await worker.ingest([dict(ticks[1], price_basis='last_trade')]) == 0
+            assert sum(await asyncio.gather(worker.ingest(ticks),worker.ingest(ticks))) == 1
+            assert (await api.list_prices('legacy-owner'))[0]['status'] == 'active'
+            saved = (await api.list_prices('fx-owner'))[0]
+            assert (saved['provider'],saved['market'],saved['price_basis'],saved['status']) == ('massive','forex','mid_quote','triggered')
+            delivery = await worker.claim_price()
+            assert delivery['payload']['price'] == '1.125'
+            assert delivery['payload']['provider'] == 'massive'
+            assert delivery['payload']['market'] == 'forex'
+            assert delivery['payload']['price_basis'] == 'mid_quote'
+            assert await worker.ingest(ticks) == 0
+            # Source identity is honored in the reverse direction too.
+            assert await worker.ingest([dict(symbol='EURUSD',price='1.13',time=now)]) == 1
+    asyncio.run(run())
+
+
 def test_price_fanout_replay_rls_cancel_and_delivery_receipts():
     async def run():
         async with database() as db:

@@ -1,3 +1,4 @@
+from redis.exceptions import RedisError
 # src/infrastructure/market_data/enhanced_subscription_manager.py
 import asyncio
 import json
@@ -36,7 +37,8 @@ from datetime import datetime, timezone
 from core.services.tasks import save_market_data_task
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from core.scanner.automation import AutomationRegistry, streams_for
-from infrastructure.database.redis.lease import RedisLease
+from core.scanner.capacity import gateway_limits
+from infrastructure.database.redis.lease import RedisLease, LeaseLost
 from infrastructure.database.redis.rate_limiter import RedisRateLimiter
 
 # Configuration - Conservative Binance limits
@@ -46,8 +48,7 @@ DATA_CHANNEL_PREFIX = "binance:data:"
 CANDLE_CACHE_PREFIX = "candles:"
 
 # Binance WebSocket Limits (being conservative)
-MAX_CONNECTIONS = 3  # Application socket cap, not a provider entitlement.
-MAX_STREAMS_PER_CONNECTION = 200  # Binance allows 1024, we use 200 for safety
+MAX_CONNECTIONS, MAX_STREAMS_PER_CONNECTION = gateway_limits()
 MAX_SUBSCRIPTION_REQUESTS_PER_SECOND = 1  # Leave headroom for ping/pong and window boundaries.
 MAX_SUBSCRIPTION_REQUESTS_PER_CONNECTION = 100  # Application control-message budget per hour.
 
@@ -131,12 +132,12 @@ class BinanceConnection:
     
     def is_healthy(self) -> bool:
         """Check if connection is healthy with detailed logging"""
-        logger.info(f"Health check for connection {self.connection_id}:")
-        logger.info(f"  - websocket exists: {self.websocket is not None}")
-        logger.info(f"  - is_connected: {self.is_connected}")
+        logger.debug(f"Health check for connection {self.connection_id}:")
+        logger.debug(f"  - websocket exists: {self.websocket is not None}")
+        logger.debug(f"  - is_connected: {self.is_connected}")
         
         if not self.websocket or not self.is_connected:
-            logger.info(f"  - UNHEALTHY: websocket or connection missing")
+            logger.debug(f"  - UNHEALTHY: websocket or connection missing")
             self.is_connected = False  # Sync state
             return False
         
@@ -148,44 +149,44 @@ class BinanceConnection:
             except AttributeError:
                 # Binance client connection might not have .state
                 # In that case, trust self.is_connected flag
-                logger.info(f"  - websocket.state not available, relying on is_connected flag")
+                logger.debug(f"  - websocket.state not available, relying on is_connected flag")
                 pass
             
             if state_name and state_name != 'OPEN':
-                logger.info(f"  - UNHEALTHY: websocket is in state '{state_name}'")
+                logger.debug(f"  - UNHEALTHY: websocket is in state '{state_name}'")
                 return False
                 
         except Exception as e:
-            logger.info(f"  - UNHEALTHY: error checking websocket status: {e}")
+            logger.debug(f"  - UNHEALTHY: error checking websocket status: {e}")
             return False
         
         # Allow grace period after connection before checking message timeout
         now = time.time()
         if self.connection_time:
             grace_period_remaining = 60 - (now - self.connection_time)
-            logger.info(f"  - grace period remaining: {grace_period_remaining:.1f}s")
+            logger.debug(f"  - grace period remaining: {grace_period_remaining:.1f}s")
             if grace_period_remaining > 0:
-                logger.info(f"  - HEALTHY: in grace period")
+                logger.debug(f"  - HEALTHY: in grace period")
                 return True
         else:
-            logger.info(f"  - WARNING: connection_time is None")
+            logger.debug(f"  - WARNING: connection_time is None")
             
         # If we have active streams, we should be receiving messages
         active_stream_count = len(self.active_streams)
-        logger.info(f"  - active streams: {active_stream_count}")
+        logger.debug(f"  - active streams: {active_stream_count}")
         
         if active_stream_count > 0:
             if self.last_message_time:
                 time_since_last_message = now - self.last_message_time
-                logger.info(f"  - time since last message: {time_since_last_message:.1f}s")
+                logger.debug(f"  - time since last message: {time_since_last_message:.1f}s")
                 if time_since_last_message > 300:
                     logger.warning(f"Connection {self.connection_id}: No messages received for {time_since_last_message:.0f} seconds with {active_stream_count} active streams")
-                    logger.info(f"  - UNHEALTHY: no messages for too long")
+                    logger.debug(f"  - UNHEALTHY: no messages for too long")
                     return False
             else:
-                logger.info(f"  - last_message_time is None (streams exist but no messages yet)")
+                logger.debug(f"  - last_message_time is None (streams exist but no messages yet)")
         
-        logger.info(f"  - HEALTHY: all checks passed")
+        logger.debug(f"  - HEALTHY: all checks passed")
         return True
 
 
@@ -220,6 +221,7 @@ class WebsocketSubscriptionManager:
         self.retired_scanner_streams = set()
         self.subscription_lock = asyncio.Lock()
         self.gateway_lease = None
+        self.candle_sink = None
 
 
 
@@ -259,9 +261,8 @@ class WebsocketSubscriptionManager:
 
     async def _connect_owned(self, connection):
         await self._assert_gateway_owner()
-        await RedisRateLimiter(redis_client=redis_cache.get_redis_client(),
-            key_prefix="binance_gateway_connect", max_per_second=1,
-            max_per_minute=10, max_wait_seconds=3).acquire(1)
+        # The client owns the shared connection-attempt budget, including
+        # non-gateway callers. Do not charge the same attempt twice here.
         await connection.connect()
         task = self.message_handler_tasks.get(connection.connection_id)
         if not task or task.done():
@@ -544,16 +545,16 @@ class WebsocketSubscriptionManager:
         loop_count = 0
         while connection.is_healthy():
             loop_count += 1
-            logger.info(f"Connection {connection.connection_id} message loop iteration {loop_count}")
+            logger.debug(f"Connection {connection.connection_id} message loop iteration {loop_count}")
             
             try:
-                logger.info(f"Connection {connection.connection_id}: Waiting for message (timeout: 30s)")
+                logger.debug(f"Connection {connection.connection_id}: Waiting for message (timeout: 30s)")
                 # Only try to receive messages if we have active streams
                 message = await asyncio.wait_for(connection.websocket.recv(), timeout=30.0)
                 data = json.loads(message)
                 
                 connection.last_message_time = time.time()
-                logger.info(f"Connection {connection.connection_id}: Received message, updated last_message_time")
+                logger.debug(f"Connection {connection.connection_id}: Received message, updated last_message_time")
                 
                 if 'stream' in data and 'data' in data:
                     stream_name = data['stream']
@@ -574,29 +575,19 @@ class WebsocketSubscriptionManager:
                                 await pipe.execute()
                         continue
 
-                    # ==================== TEMPORARY DEBUG LOGGING ====================
-                    # Log the raw data for specific symbols before any checks
-                    if 'solusdt' in stream_name:
-                        logger.info(f"RAW SOLUSDT DATA for '{stream_name}': {stream_data}")
-                    
-                    # ADDED THIS BLOCK FOR BTCUSDT
-                    if 'btcusdt' in stream_name:
-                        logger.info(f"RAW BTCUSDT DATA for '{stream_name}': {stream_data}")
-                    # =================================================================
-                    
                     self.last_data_time[stream_name] = time.time()
                     
                     if self._validate_stream_data(stream_name, stream_data):
                         await self._assert_gateway_owner()
-                        channel = f"{DATA_CHANNEL_PREFIX}{stream_name}"
-                        await redis_cache.publish(channel, json.dumps(stream_data))
+                        # Background scanner feeds need only closed candles.
+                        # Avoid Redis fan-out for every provisional update when
+                        # there is no interactive chart subscribed to the stream.
+                        if self.stream_subscribers.get(stream_name, 0) > 0:
+                            channel = f"{DATA_CHANNEL_PREFIX}{stream_name}"
+                            await redis_cache.publish(channel, json.dumps(stream_data))
                         
                         if '@kline_' in stream_name and stream_data.get('k', {}).get('x') is True:
-                            if stream_name in getattr(self, 'scanner_streams', set()):
-                                from core.services.scanner_ingestion_tasks import persist_scanner_candle
-                                await asyncio.to_thread(persist_scanner_candle.apply_async,
-                                    args=[stream_name, stream_data], queue="scanner_ingestion")
-                            await self._cache_candle_data(stream_name, stream_data)
+                            await self._store_closed_candle(stream_name, stream_data)
                 
                 elif 'result' in data or 'code' in data:
                     request = getattr(connection, 'pending_requests', {}).get(data.get('id'))
@@ -661,7 +652,27 @@ class WebsocketSubscriptionManager:
             logger.error(f"Error validating stream data for {stream_name}: {e}")
             return False
 
-    async def _cache_candle_data(self, stream_name: str, kline_data: dict):
+    async def _store_closed_candle(self, stream_name, data):
+        sink = getattr(self, 'candle_sink', None)
+        if sink is not None:
+            # Both readers use the same finalized Quest table. Journal once;
+            # the elected writer batches storage without delaying chart ticks.
+            from core.services.binance_candle_sink import CandleQueueFull
+            while True:
+                try:
+                    await sink.accept(stream_name, data)
+                    break
+                except CandleQueueFull:
+                    # Flush runs independently. Pause this receiver instead of
+                    # dropping a closed candle when storage is behind.
+                    await asyncio.sleep(0.25)
+        elif stream_name in getattr(self, 'scanner_streams', set()):
+            from core.services.scanner_ingestion_tasks import persist_scanner_candle
+            await asyncio.to_thread(persist_scanner_candle.apply_async,
+                args=[stream_name, data], queue='scanner_ingestion')
+        await self._cache_candle_data(stream_name, data, persist=sink is None)
+
+    async def _cache_candle_data(self, stream_name: str, kline_data: dict, *, persist=True):
         """Persist a just-closed candle from the live stream.
 
         This used to only write to a `candles:{symbol}:{interval}` Redis
@@ -717,7 +728,7 @@ class WebsocketSubscriptionManager:
             # next time anyone requests a range covering it - not just
             # sitting in a Redis cache with a 1-hour TTL that nothing reads.
             open_time_ms = kline.get('t')
-            if open_time_ms is not None:
+            if persist and open_time_ms is not None:
                 entity = MarketDataEntity(
                     symbol=symbol,
                     interval=interval,
@@ -855,12 +866,26 @@ class WebsocketSubscriptionManager:
             heartbeat.cancel()
             owned.cancel()
             await asyncio.gather(heartbeat, owned, return_exceptions=True)
-            await self.gateway_lease.release()
+            try:
+                await self.gateway_lease.release()
+            except (RedisError, TimeoutError):
+                # Sockets are already closed. A failed release expires by TTL;
+                # it must not mask the cause or prevent retrying election.
+                logger.warning("Gateway lease release unavailable; waiting for expiry")
 
     async def _run_owned(self):
         """Enhanced main loop with connection pooling"""
         background_tasks = []
+        candle_transport = None
         try:
+            if (os.getenv('SCANNER_CANDLE_STORE') == 'quest_only'
+                    and os.getenv('MARKET_CANDLE_STORE') == 'quest_only'):
+                import httpx
+                from core.services.binance_candle_sink import BinanceCandleSink
+                from infrastructure.database.questdb.candles import QuestCandles
+                candle_transport = httpx.AsyncClient(timeout=30)
+                self.candle_sink = BinanceCandleSink(redis_cache.get_redis_client(),
+                    self.gateway_lease, QuestCandles(client=candle_transport))
             await self.initialize()
             
             # Start background tasks
@@ -870,6 +895,8 @@ class WebsocketSubscriptionManager:
                 asyncio.create_task(self._subscription_processor()),
                 asyncio.create_task(self._reconcile_scanner_streams())
             ]
+            if getattr(self, 'candle_sink', None) is not None:
+                background_tasks.append(asyncio.create_task(self.candle_sink.flush()))
             
             all_tasks = background_tasks
             
@@ -898,8 +925,22 @@ class WebsocketSubscriptionManager:
             
             # ADD: Disconnect the Binance client
             await self.binance_client.disconnect()
+            if candle_transport is not None:
+                await candle_transport.aclose()
             logger.info("Binance client disconnected")
 
+async def run_gateway():
+    while True:
+        try:
+            await WebsocketSubscriptionManager().run()
+            return
+        except (LeaseLost, RedisError, TimeoutError):
+            # A suspended laptop or temporary Redis stall can expire ownership.
+            # run() has already closed the old sockets; re-elect before opening
+            # new ones instead of taking the local API and Forex feed down.
+            logger.warning("Gateway coordination interrupted; reconnecting after re-election")
+            await asyncio.sleep(2)
+
+
 if __name__ == "__main__":
-    manager = WebsocketSubscriptionManager()
-    asyncio.run(manager.run())
+    asyncio.run(run_gateway())

@@ -1,6 +1,8 @@
 """Shared event inbox, set-based fan-out and bounded notification delivery."""
 import asyncio
 import logging
+from core.scanner.watches import EventConflict
+from infrastructure.database.redis.scanner_events import MalformedBatch
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +19,14 @@ class PushConfigurationError(RuntimeError):
 async def consume_events(stream, repository, consumer, *, count=10):
     accepted = 0
     for identifier, batch in await stream.read(consumer, count=count):
-        await repository.accept_batch(batch, stream_id=identifier)
+        try:
+            if isinstance(batch, MalformedBatch):
+                raise ValueError("Malformed event JSON")
+            await repository.accept_batch(batch, stream_id=identifier)
+        except (ValueError, KeyError, TypeError, EventConflict) as exc:
+            await stream.quarantine(identifier, batch, type(exc).__name__)
+            log.error("Scanner event quarantined (%s); operator review required", type(exc).__name__)
+            continue
         # A failed DB transaction or a process death before this point leaves the
         # stream entry pending. Replaying the committed batch is idempotent.
         await stream.acknowledge(identifier)

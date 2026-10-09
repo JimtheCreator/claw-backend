@@ -1,0 +1,27 @@
+services:
+  influx:
+    image: influxdb:2.7
+    ports: ["127.0.0.1::8086"]
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: storage-test
+      DOCKER_INFLUXDB_INIT_PASSWORD: disposable-storage-test-password
+      DOCKER_INFLUXDB_INIT_ORG: storage-test
+      DOCKER_INFLUXDB_INIT_BUCKET: storage-test
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: disposable-storage-test-token
+    tmpfs: [/var/lib/influxdb2, /etc/influxdb2]
+    healthcheck:
+      test: [CMD, influx, ping]
+      interval: 1s
+      timeout: 2s
+      retries: 60
+  quest:
+    image: questdb/questdb:10.0.1
+    ports: ["127.0.0.1::9000"]
+    tmpfs: [/var/lib/questdb]
+    cpus: 2
+    mem_limit: 2g
+    environment:
+      QDB_SHARED_WORKER_COUNT: 2
+      QDB_HTTP_WORKER_COUNT: 1
+      QDB_WAL_APPLY_WORKER_COUNT: 2

@@ -1,0 +1,28 @@
+name: watchers-timeseries
+services:
+  questdb:
+    image: questdb/questdb:10.0.1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:8812:8812"
+    volumes:
+      - questdb-data:/var/lib/questdb
+    cpus: 4
+    mem_limit: 2g
+    environment:
+      # Explicit heap within the 2 GiB container, leaving room for native work.
+      # Exit on OOM so Docker restarts instead of leaving a dead HTTP worker.
+      JVM_PREPEND: "-Xms256m -Xmx1g -XX:+ExitOnOutOfMemoryError"
+      # Scanner SQL contains symbol/cutoff literals and rarely reuses a plan.
+      QDB_HTTP_QUERY_CACHE_ENABLED: "false"
+      QDB_SHARED_WORKER_COUNT: 2
+      QDB_HTTP_WORKER_COUNT: 1
+      QDB_WAL_APPLY_WORKER_COUNT: 2
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  questdb-data:

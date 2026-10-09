@@ -46,8 +46,15 @@ class MomentumCache:
             connection.close()
 
     def put(self, symbol, interval, frame):
+        self._put(symbol, interval, frame, snapshot=False)
+
+    def put_and_snapshot(self, symbol, interval, frame):
+        """Return committed rows for mirroring, including retained taker values."""
+        return self._put(symbol, interval, frame, snapshot=True)
+
+    def _put(self, symbol, interval, frame, *, snapshot):
         if frame.empty:
-            return
+            return pd.DataFrame(columns=COLUMNS)
         rows = []
         for row in frame.itertuples(index=False):
             taker = getattr(row, 'taker_buy_volume', None)
@@ -63,6 +70,18 @@ class MomentumCache:
                 AND candles.close=excluded.close AND candles.volume=excluded.volume
                 THEN COALESCE(excluded.taker_buy_volume,candles.taker_buy_volume)
                 ELSE excluded.taker_buy_volume END''', rows)
+            if not snapshot:
+                return
+            saved = []
+            timestamps = sorted({row[2] for row in rows})
+            for offset in range(0, len(timestamps), 900):
+                batch = timestamps[offset:offset+900]
+                saved.extend(db.execute('SELECT timestamp,open,high,low,close,volume,taker_buy_volume '
+                    'FROM candles WHERE symbol=? AND interval=? AND timestamp IN ('+
+                    ','.join('?' for _ in batch)+')', (symbol,interval,*batch)).fetchall())
+        result = pd.DataFrame(sorted(saved), columns=COLUMNS)
+        result['timestamp'] = pd.to_datetime(result.timestamp, utc=True)
+        return result
 
     def get(self, symbol, interval, end, count):
         with self._connection() as db:
@@ -101,7 +120,9 @@ async def load_momentum_history(symbol, interval, snapshot, fetch_page, *, cache
     """`snapshot` has CLOSED requested bars. fetch_page uses the existing limiter."""
     required = required_momentum_bars(interval)
     snapshot = validate_frame(snapshot, interval)
-    cache = cache or MomentumCache()
+    if cache is None:
+        from infrastructure.database.momentum_rollout import momentum_store
+        cache = momentum_store(MomentumCache)
     end = pd.Timestamp(snapshot.timestamp.iloc[-1])
     await asyncio.to_thread(cache.put, symbol, interval, snapshot)
     deadline, pages, reason = time.monotonic()+timeout_seconds, 0, 'Page budget exhausted; warm the history cache.'

@@ -6,14 +6,15 @@ import hashlib
 import json
 import math
 import operator
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .catalog import INTERVAL_SECONDS, detector_catalog, pattern_catalog
 from .preview import chart_candles, geometry
+from core.domain.instrument_identity import SYMBOL
 
-SYMBOL = re.compile(r"^[A-Z0-9]{3,30}$")
 UNIVERSE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 LOOKBACK = 250
 CLOSE_GRACE_SECONDS = 5
@@ -22,14 +23,18 @@ CLOSE_GRACE_SECONDS = 5
 def validate_manifest(manifest):
     if not UNIVERSE.fullmatch(manifest.get("id", "")):
         raise ValueError("Invalid universe id")
-    # Only Binance spot currently has a scanner ingestion adapter.
-    if (manifest.get("provider"), manifest.get("market")) != ("binance", "spot"):
-        raise ValueError("The pilot candle adapter only supports Binance spot")
+    if manifest['id'] == 'all-markets':
+        raise ValueError('all-markets is reserved for explicit cross-universe watches')
+    if 'events_enabled' in manifest and type(manifest['events_enabled']) is not bool:
+        raise ValueError('events_enabled must be a boolean')
+    if (manifest.get("provider"), manifest.get("market")) not in {
+            ("binance", "spot"), ("massive", "forex"), ("massive", "crypto")}:
+        raise ValueError("Unsupported scanner provider/market")
     symbols = manifest.get("symbols", [])
-    if not symbols or len(symbols) > 1000 or len(set(symbols)) != len(symbols):
-        raise ValueError("Specify 1–1000 unique symbols")
+    if not symbols or len(symbols) > 20000 or len(set(symbols)) != len(symbols):
+        raise ValueError("Specify 1–20000 unique symbols")
     if not all(isinstance(s, str) and SYMBOL.fullmatch(s) for s in symbols):
-        raise ValueError("Invalid Binance symbol")
+        raise ValueError("Invalid scanner symbol")
     enabled = manifest.get("detectors", [])
     known = {item["id"] for item in detector_catalog()}
     if not enabled or len(enabled) != len(set(enabled)) or not set(enabled) <= known:
@@ -51,7 +56,7 @@ def timestamp_seconds(value):
     raise ValueError("Candle timestamp must be an aware datetime or ISO string")
 
 
-def closed_window(rows, interval, cutoff):
+def closed_window(rows, interval, cutoff, *, session=None):
     """Reject bad/gapped inputs; never invent candles or infer a missing close."""
     step = INTERVAL_SECONDS[interval]
     by_time = {}
@@ -73,11 +78,12 @@ def closed_window(rows, interval, cutoff):
     times = sorted(by_time)[-LOOKBACK:]
     if not times:
         return "warming", None
-    if times[-1] != cutoff - step:
+    expected = session.expected_opens(cutoff, step, LOOKBACK) if session else None
+    if times[-1] != (expected[-1] if expected else cutoff - step):
         return "stale", None
     if len(times) < LOOKBACK:
         return "warming", None
-    if any(b - a != step for a, b in zip(times, times[1:])):
+    if (times != expected if expected else any(b - a != step for a, b in zip(times, times[1:]))):
         return "gapped", None
     ohlcv = {key: [by_time[t][key] for t in times]
              for key in ("open", "high", "low", "close", "volume")}
@@ -94,13 +100,15 @@ def load_registry():
 def detector_version():
     root = Path(__file__).parents[1] / "use_cases/market_analysis/detect_patterns_engine"
     digest = hashlib.sha256()
-    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json"), Path(__file__).with_name("preview.py")]:
+    # A deliberate cache reset invalidates queued work and snapshot baselines.
+    digest.update(os.getenv('QUESTDB_CACHE_GENERATION', '').encode())
+    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json"), Path(__file__).with_name("preview.py"), Path(__file__).with_name("events.py")]:
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
     return "pilot-v1-" + digest.hexdigest()[:16]
 
 
-def normalize_detections(raw, detector, symbol, interval, ohlcv):
+def normalize_detections(raw, detector, symbol, interval, ohlcv, *, provider="binance", market="spot"):
     """One row per symbol/variant, with the most recent pattern anchor retained.
 
     A detector confidence is a geometry score, not a success probability. Its
@@ -132,8 +140,8 @@ def normalize_detections(raw, detector, symbol, interval, ohlcv):
         if age > (0 if detector["category"] == "candlestick" else 3):
             continue
         match = {
-            "instrument_id": f"binance:spot:{symbol}", "symbol": symbol,
-            "provider": "binance", "market": "spot", "interval": interval,
+            "instrument_id": f"{provider}:{market}:{symbol}", "symbol": symbol,
+            "provider": provider, "market": market, "interval": interval,
             "pattern_id": name, "detector_id": detector["id"],
             "status": "detected", "geometry_score": score,
             "pattern_start": ohlcv["timestamp"][start],
@@ -161,7 +169,7 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
     except Exception:
         return empty_instrument(symbol, "error", "candle_store_error")
     try:
-        status, ohlcv = closed_window(rows, interval, cutoff)
+        status, ohlcv = closed_window(rows, interval, cutoff, session=getattr(source, "session", None))
     except (KeyError, TypeError, ValueError, OverflowError):
         status, ohlcv = "invalid_data", None
     if status != "ready":
@@ -171,6 +179,8 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
     if {d["id"] for d in selected} != set(detector_ids):
         raise ValueError("Unknown detector id")
     version = version or detector_version()
+    provider = getattr(source, "provider", "binance")
+    market = getattr(source, "market", "spot")
 
     async def compute():
         functions = load_registry() if registry is None else registry
@@ -178,28 +188,33 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
                    "chart": chart_candles(ohlcv),
                    "issues": [], "detector_coverage": {}, "input_revision": revision,
                    "detector_version": version, "data_as_of": utc_iso(cutoff)}
-        for detector in selected:
-            stats = {"evaluated": 0, "errors": 0}
-            outcome["detector_coverage"][detector["id"]] = stats
-            try:
-                entry = functions[detector["id"]]
-                raw = await entry.get("strict_function", entry["function"])(ohlcv)
-                matches = normalize_detections(raw, detector, symbol, interval, ohlcv)
-            except Exception:
-                outcome["status"] = "partial"
-                stats["errors"] = 1
-                outcome["issues"].append({"symbol": symbol, "detector_id": detector["id"],
-                                          "reason": "detector_error"})
-                continue
-            stats["evaluated"] = 1
-            outcome["matches"].extend(matches)
+        from core.use_cases.market_analysis.detect_patterns_engine.shared_features import shared_features
+        with shared_features():
+            for detector in selected:
+                stats = {"evaluated": 0, "errors": 0}
+                outcome["detector_coverage"][detector["id"]] = stats
+                try:
+                    entry = functions[detector["id"]]
+                    raw = await entry.get("strict_function", entry["function"])(ohlcv)
+                    matches = normalize_detections(raw, detector, symbol, interval, ohlcv,
+                                                   provider=provider, market=market)
+                except Exception:
+                    outcome["status"] = "partial"
+                    stats["errors"] = 1
+                    outcome["issues"].append({"symbol": symbol, "detector_id": detector["id"],
+                                              "reason": "detector_error"})
+                    continue
+                stats["evaluated"] = 1
+                outcome["matches"].extend(matches)
+        if not outcome['matches']:
+            outcome.pop('chart', None)
         return outcome
 
     if cache is None:
         result, hit = await compute(), False
     else:
         # No universe/user identifier: overlapping scopes share identical work.
-        identity = ["binance", "spot", symbol, interval, cutoff,
+        identity = [provider, market, symbol, interval, cutoff,
                     sorted(set(detector_ids)), version, revision]
         resolved = await cache.resolve(identity, compute)
         if resolved is None:
@@ -231,7 +246,7 @@ def assemble_snapshot(manifest, interval, cutoff, outcomes, *, version=None):
         for match in outcome["matches"]:
             results[match["pattern_id"]].append(match)
         if outcome.get("chart") and outcome["matches"]:
-            charts[f"binance:spot:{symbol}"] = outcome["chart"]
+            charts[f"{manifest['provider']}:{manifest['market']}:{symbol}"] = outcome["chart"]
         issues.extend(outcome["issues"])
         if outcome.get("input_revision"):
             revisions[symbol] = outcome["input_revision"]

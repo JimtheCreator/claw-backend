@@ -77,7 +77,7 @@ def test_influx_writes_real_zero_but_omits_unknown_and_queries_the_field():
     manager = MagicMock()
     writer = manager.__enter__.return_value
     query = Mock(return_value=[])
-    repo.client = NS(write_api=lambda: manager, query_api=lambda: NS(query=query))
+    repo.client = NS(write_api=lambda **kwargs: manager, query_api=lambda: NS(query=query))
     asyncio.run(repo.save_market_data_bulk([entity(0), entity(None), entity(2)]))
     points = writer.write.call_args.kwargs['record']
     assert 'taker_buy_volume=0' in points[0].to_line_protocol()
@@ -184,7 +184,8 @@ def test_closed_websocket_candle_persists_base_taker_volume(monkeypatch):
 
 
 @pytest.mark.parametrize('closed', [False, True])
-def test_gateway_dispatches_only_nested_closed_kline_to_persistence(monkeypatch, closed):
+@pytest.mark.parametrize('subscribers', [0, 1])
+def test_gateway_dispatches_only_nested_closed_kline_to_persistence(monkeypatch, closed, subscribers):
     save = NS(save_market_data_task=NS(delay=Mock()))
     monkeypatch.setitem(sys.modules, 'src.core.services.tasks', save)
     monkeypatch.setitem(sys.modules, 'core.services.tasks', save)
@@ -195,13 +196,14 @@ def test_gateway_dispatches_only_nested_closed_kline_to_persistence(monkeypatch,
     manager.last_data_time = {}
     manager._cache_candle_data = AsyncMock()
     stream = 'ethusdt@kline_15m'
+    manager.stream_subscribers = {stream: subscribers}
     data = {'e': 'kline', 'k': dict(o='100', h='102', l='99', c='101', v='10', x=closed)}
     connection = NS(connection_id=1, active_streams={stream},
                     is_healthy=Mock(side_effect=[True, True, False, False]),
                     websocket=NS(recv=AsyncMock(return_value=json.dumps({'stream': stream, 'data': data}))))
     asyncio.run(manager._handle_connection_messages(connection))
-    cache.publish.assert_awaited_once()
+    assert cache.publish.await_count == subscribers
     if closed:
-        manager._cache_candle_data.assert_awaited_once_with(stream, data)
+        manager._cache_candle_data.assert_awaited_once_with(stream, data, persist=True)
     else:
         manager._cache_candle_data.assert_not_called()

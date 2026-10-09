@@ -1,4 +1,18 @@
 services:
+  redis-durable:
+    image: redis:7-alpine
+    profiles: [durable]
+    command: [redis-server, --save, "", --appendonly, "yes", --appendfsync, "always", --maxmemory, "128mb", --maxmemory-policy, "noeviction"]
+    ports: ["127.0.0.1::6379"]
+    volumes: [forex-capacity-redis:/data]
+    cpus: 1
+    mem_limit: 512m
+    networks: [isolated]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 1s
+      timeout: 2s
+      retries: 30
   postgres:
     image: postgres:16-alpine
     profiles: [alerts]
@@ -44,3 +58,5 @@ services:
       retries: 60
 networks:
   isolated: {}
+volumes:
+  forex-capacity-redis:

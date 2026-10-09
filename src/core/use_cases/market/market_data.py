@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 from infrastructure.data_sources.binance.client import BinanceMarketData, shared_binance_client
 from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
+from infrastructure.database.market_rollout import market_data_store, require_legacy_deletion
 from core.domain.entities.MarketDataEntity import MarketDataEntity
 from common.logger import logger
 import asyncio
@@ -30,6 +31,18 @@ BATCH_SIZES = {
 # Format: {(symbol, interval): task_status}
 # where task_status is True if a task is currently running
 ACTIVE_BACKGROUND_TASKS: Dict[Tuple[str, str], bool] = {}
+
+
+def latest_closed_open(end_time, interval):
+    """Cached closed candles remain fresh throughout the next live candle."""
+    end = end_time.astimezone(timezone.utc)
+    if interval == '1M':
+        current = end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return (current - timedelta(days=1)).replace(day=1)
+    if interval == '1w':
+        return (end-timedelta(days=end.weekday()+7)).replace(hour=0, minute=0, second=0, microsecond=0)
+    step = INTERVAL_MINUTES[interval] * 60
+    return datetime.fromtimestamp(int(end.timestamp()) // step * step - step, timezone.utc)
 
 # Celery uses a fresh asyncio loop for each task. Never reuse an aiohttp
 # session created on a previous task's (now closed) event loop.
@@ -163,8 +176,8 @@ async def fetch_crypto_data_paginated(
         if not start_time:
             start_time = calculate_start_time(interval)
         try:
-            repo = (InfluxDBMarketDataRepository(verify_connection=False, timeout_ms=10_000)
-                    if analysis_binance_client.get() is not None else InfluxDBMarketDataRepository())
+            repo = (market_data_store(InfluxDBMarketDataRepository, verify_connection=False, timeout_ms=10_000)
+                    if analysis_binance_client.get() is not None else market_data_store(InfluxDBMarketDataRepository))
         except Exception:
             if analysis_binance_client.get() is None:
                 raise
@@ -178,7 +191,9 @@ async def fetch_crypto_data_paginated(
         # If request is large and we're prioritizing recent data, use smart fetching
         should_use_smart_fetch = (
             prioritize_recent and 
-            (estimated_candles > page_size or analysis_binance_client.get() is not None) and
+            # The app requests exactly one page's time span. Equality must
+            # recover a missing prefix too, not return only the newest ticks.
+            (estimated_candles >= page_size or analysis_binance_client.get() is not None) and
             page == 1  # Only for first page to avoid complications
         )
         
@@ -186,10 +201,25 @@ async def fetch_crypto_data_paginated(
             logger.info(f"Using smart recent-priority fetch for {symbol} ({interval}) - estimated {int(estimated_candles)} candles")
             
             # Fetch recent data first using reverse method
+            # A freshly received live candle does not make the requested
+            # historical page complete. Read the actual recent page rather
+            # than downsampling a year-wide default range into a single point.
+            recent_start = max(start_time, end_time - timedelta(
+                minutes=INTERVAL_MINUTES[interval] * (page_size + 1)))
             recent_data = await repo.get_historical_data_reverse(
-                symbol, interval, start_time, end_time, page, page_size,
-                allow_downsample=analysis_binance_client.get() is None,
+                symbol, interval, recent_start, end_time, page, page_size,
+                allow_downsample=False,
             )
+
+            if recent_data and len(recent_data) < min(page_size, int(estimated_candles)):
+                missing_prefix = await _fetch_from_binance_chronological(
+                    symbol, interval, start_time, recent_data[0].timestamp,
+                    page_size - len(recent_data), True)
+                if isinstance(missing_prefix, dict):
+                    return missing_prefix
+                merged = {c.timestamp: c for c in missing_prefix}
+                merged.update({c.timestamp: c for c in recent_data})
+                recent_data = sorted(merged.values(), key=lambda c: c.timestamp)[-page_size:]
             
             if recent_data:
                 # Convert back to chronological order for API compatibility
@@ -197,7 +227,7 @@ async def fetch_crypto_data_paginated(
                 
                 # Check for stale data and fetch missing if needed
                 latest_candle_time = recent_data[-1].timestamp
-                stale_threshold = datetime.now(timezone.utc) - timedelta(minutes=INTERVAL_MINUTES[interval])
+                stale_threshold = latest_closed_open(end_time, interval)
                 
                 if latest_candle_time < stale_threshold:
                     logger.info(f"Recent data is stale for {symbol} ({interval}), fetching latest...")
@@ -358,7 +388,7 @@ async def _check_and_update_stale_data(
     """Check if data is stale and fetch missing recent candles"""
     try:
         last_candle_time = historical[-1].timestamp
-        stale_threshold = end_time - timedelta(minutes=INTERVAL_MINUTES[interval])
+        stale_threshold = latest_closed_open(end_time, interval)
         
         if last_candle_time < stale_threshold:
             logger.info(f"Stale data detected for {symbol} ({interval}), fetching missing candles.")
@@ -515,6 +545,7 @@ async def delete_market_data(
         dict: Result of the deletion operation
     """
     try:
+        require_legacy_deletion()
         repo = InfluxDBMarketDataRepository()
         
         # First, check if data exists for this symbol/interval
@@ -594,6 +625,7 @@ async def delete_market_data(
 async def delete_all_market_data():
     """Delete all market data from InfluxDB - USE WITH CAUTION"""
     try:
+        require_legacy_deletion()
         repo = InfluxDBMarketDataRepository()
         # Use the correct predicate format for delete API
         predicate = '_measurement="market_data"'
