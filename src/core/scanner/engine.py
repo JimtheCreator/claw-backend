@@ -102,13 +102,13 @@ def detector_version():
     digest = hashlib.sha256()
     # A deliberate cache reset invalidates queued work and snapshot baselines.
     digest.update(os.getenv('QUESTDB_CACHE_GENERATION', '').encode())
-    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json"), Path(__file__).with_name("preview.py"), Path(__file__).with_name("events.py")]:
+    for path in sorted(root.glob("*.py")) + [Path(__file__), Path(__file__).with_name("catalog.json"), Path(__file__).with_name("preview.py"), Path(__file__).with_name("events.py"), Path(__file__).with_name("forex_empty_intervals.py")]:
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
     return "pilot-v1-" + digest.hexdigest()[:16]
 
 
-def normalize_detections(raw, detector, symbol, interval, ohlcv, *, provider="binance", market="spot"):
+def normalize_detections(raw, detector, symbol, interval, ohlcv, *, provider="binance", market="spot", recent_opens=None):
     """One row per symbol/variant, with the most recent pattern anchor retained.
 
     A detector confidence is a geometry score, not a success probability. Its
@@ -136,6 +136,13 @@ def normalize_detections(raw, detector, symbol, interval, ohlcv, *, provider="bi
         if not math.isfinite(score) or not 0 <= score <= 1:
             raise ValueError("Detector returned invalid score")
         age = size - 1 - end
+        if recent_opens is not None:
+            # Skipping provider-confirmed empty historical buckets must not
+            # make a pattern ending hours/days ago appear newly detected.
+            ended = timestamp_seconds(ohlcv['timestamp'][end])
+            if ended not in recent_opens:
+                continue
+            age = len(recent_opens) - 1 - recent_opens.index(ended)
         # Candlesticks refer to this close; swing patterns can require right bars.
         if age > (0 if detector["category"] == "candlestick" else 3):
             continue
@@ -181,6 +188,10 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
     version = version or detector_version()
     provider = getattr(source, "provider", "binance")
     market = getattr(source, "market", "spot")
+    recent_opens = None
+    if market == 'forex':
+        from .market_sessions import MarketSession
+        recent_opens = MarketSession('forex').expected_opens(cutoff, INTERVAL_SECONDS[interval], 4)
 
     async def compute():
         functions = load_registry() if registry is None else registry
@@ -197,7 +208,7 @@ async def scan_instrument(symbol, interval, cutoff, detector_ids, source, *,
                     entry = functions[detector["id"]]
                     raw = await entry.get("strict_function", entry["function"])(ohlcv)
                     matches = normalize_detections(raw, detector, symbol, interval, ohlcv,
-                                                   provider=provider, market=market)
+                                                   provider=provider, market=market, recent_opens=recent_opens)
                 except Exception:
                     outcome["status"] = "partial"
                     stats["errors"] = 1

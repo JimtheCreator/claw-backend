@@ -22,6 +22,9 @@ class MassiveScannerCandles(QuestCandles):
         checked_identity(symbol)
         if interval not in INTERVAL_SECONDS or type(limit) is not int or not 1 <= limit <= 251:
             raise ValueError("Invalid scanner window")
+        if self.market == 'forex':
+            from core.scanner.forex_empty_intervals import confirmed_empty_intervals, ObservedForexSession
+            self.session = ObservedForexSession(interval, await confirmed_empty_intervals(self.url, symbol, interval))
         starts = self.session.expected_opens(cutoff, INTERVAL_SECONDS[interval], limit)
         # Fixed validated vocabulary; do not interpolate arbitrary SQL durations.
         bucket = {"15m":"15m","30m":"30m","1h":"1h","4h":"4h","1d":"1d"}[interval]
@@ -54,5 +57,11 @@ class MassiveScannerCandles(QuestCandles):
         # Session calendar also catches any out-of-session records from a
         # mismatched feed, instead of treating them as ordinary forex candles.
         from .candles import epoch_us
+        if self.market == 'forex' and self.session.empty:
+            # A subsequently stored provider correction wins over old empty
+            # evidence immediately, without waiting for the evidence to expire.
+            present = {epoch_us(row['timestamp'])//1000000 for row in rows}
+            self.session = ObservedForexSession(interval, self.session.empty - present)
+            starts = self.session.expected_opens(cutoff, INTERVAL_SECONDS[interval], limit)
         expected = set(starts)
         return [row for row in rows if epoch_us(row['timestamp'])//1000000 in expected][:limit]

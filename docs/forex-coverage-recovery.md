@@ -70,3 +70,21 @@ and `logs/forex-coverage-publication-live-20261008.json`. Test receipts are
 `logs/forex-coverage-publication-tests-20261008.log`, and
 `logs/forex-recovery-runtime-20261008.json` (check its status before claiming
 the load/restart gate passed).
+
+## Provider-confirmed empty intervals (9 October follow-up)
+
+Massive omits aggregate bars when there are no quote updates ([provider
+documentation](https://www.massive.com/docs/rest/forex/aggregates/custom-bars)).
+The scanner now counts 250 real candles across historical empty intervals only
+after a completed provider history request confirms them. Evidence expires;
+unknown gaps and a missing latest candle still prevent scanning. No candles
+are fabricated and no Influx history is copied. Pattern recency remains based
+on elapsed market intervals, so sparse history cannot make an old match fresh.
+
+All 20 public symbol checks returned ready: EURUSD, GBPUSD, USDJPY and XAUUSD
+on 15m, 30m, 1h, 4h and 1d. These checks do not establish full catalog coverage.
+The refreshed version is still processing the 1,204-symbol catalog.
+Live repair and detection evidence: `logs/forex-observed-window-live-20261009.json`
+and `logs/forex-live-publish-verification-20261009.json`.
+Validation: 118 focused tests passed, including the next-close Forex pattern
+event lifecycle with a provider-confirmed historical empty interval.
