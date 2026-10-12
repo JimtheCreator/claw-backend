@@ -88,3 +88,43 @@ Live repair and detection evidence: `logs/forex-observed-window-live-20261009.js
 and `logs/forex-live-publish-verification-20261009.json`.
 Validation: 118 focused tests passed, including the next-close Forex pattern
 event lifecycle with a provider-confirmed historical empty interval.
+
+## Shared Forex history recovery (9 October)
+
+Chart timeframes now share the same provider-window repair receipt and visible
+QuestDB write. Each completed provider response also records empty-bucket evidence
+for the scanner timeframes it fully covers. Native hourly responses never certify
+15m/30m gaps. Provider budgets, candle validation and missing-latest-bar rejection
+are unchanged. No worker concurrency increase or history migration is involved.
+
+Validation: 29 focused tests passed. A real EURUSD request shared by 15m/30m/1h
+performed one fetch and one storage write for 118 provider candles; receipt:
+`logs/forex-shared-repair-live-20261009.json`.
+The public API reported fresh outcomes for all 1,204 Forex instruments on all
+five intervals, with zero pending and zero error entries. Ready counts were
+190/406/488/730/744 for 15m/30m/1h/4h/1d. Unavailable outcomes are not ready
+coverage, and this single observation does not establish sustained throughput.
+Receipt: `logs/forex-coverage-shared-repair-20261009.json`.
+
+## Database inventory audit — 11 October (market closed)
+
+Compared the authoritative active Forex catalog, the configured scanner universe,
+and QuestDB's stored Forex candle identities. All 1,204 active symbols are in
+all three; each has minute and hourly candles. No provider backfill or live
+market connection was needed for this read-only inventory. QuestDB additionally
+retains minute rows for NGNGBP and NGNJPY, which are outside the active catalog.
+
+Stored presence does not prove 250 usable recent bars at every chart interval.
+The retained daily snapshot, generated 9 October at 17:32:30 UTC for the
+00:00 UTC cutoff, reports 1,202 ready and two stale (CLPEUR, USDGMD), with no
+pending/gapped/error entries. Intraday snapshots are no longer retained; this
+audit does not claim current intraday readiness. Underlying candles are present.
+
+Search uses the instrument catalog. Price alerts consume quotes independently
+of pattern readiness, though Forex alert creation currently requires membership
+in an enabled scanner universe plus a fresh quote and healthy evaluator.
+Pattern alerts depend on a ready window for their particular interval and a
+new qualifying detector event. An unavailable window can miss pattern events;
+it must not be interpreted as a successful scan with zero matches.
+
+Evidence: `logs/forex-database-audit-20261011.json`.

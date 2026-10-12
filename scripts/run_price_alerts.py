@@ -119,4 +119,6 @@ async def main():
 
 if __name__=='__main__':
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(levelname)s %(message)s')
-    asyncio.run(main())
+    from scripts.worker_lock import worker_lock
+    with worker_lock("price-alerts"):
+        asyncio.run(main())

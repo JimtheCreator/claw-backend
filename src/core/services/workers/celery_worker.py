@@ -49,7 +49,7 @@ celery_app.conf.update(
         'src.core.services.scanner_tasks.scan_market_universe': {'queue': 'scanner'},
         'src.core.services.scanner_tasks.scan_scheduled_universe': {'queue': 'scanner'},
         'src.core.services.scanner_tasks.scan_market_instrument': {'queue': 'scanner'},
-        'src.core.services.scanner_tasks.finalize_scanner_batch': {'queue': 'scanner'},
+        'src.core.services.scanner_tasks.finalize_scanner_batch': {'queue': 'scanner_control'},
         'src.core.services.scanner_ingestion_tasks.prepare_scanner_scan': {'queue': 'scanner_ingestion'},
         'src.core.services.scanner_ingestion_tasks.prepare_scanner_instrument': {'queue': 'scanner_backfill'},
         'src.core.services.scanner_ingestion_tasks.persist_scanner_candle': {'queue': 'scanner_ingestion'},

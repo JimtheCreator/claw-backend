@@ -526,7 +526,7 @@ def test_large_universe_scans_cache_before_requesting_repairs(monkeypatch):
             reference = submit.call_args.kwargs['args'][0]
             assert 'manifest' not in reference
             assert len(json.dumps(reference)) < 150
-            assert final.call_args.kwargs['countdown']==30
+            assert final.call_args.kwargs['countdown']==5
             assert final.call_args.kwargs['queue']=='scanner_control'
             assert (await module.prepare(*args))['instruments']==0
             provider.assert_not_called()
@@ -609,3 +609,33 @@ def test_compact_instrument_jobs_resolve_only_the_enabled_revision():
             await registry.disable(MANIFEST['id'])
             assert await resolve_candidate(redis, reference) is None
     asyncio.run(scenario())
+
+
+def test_scheduler_uses_finalized_window_grace_without_waiting_thirty_seconds(monkeypatch):
+    from core.scanner.engine import CLOSE_GRACE_SECONDS
+    assert SCHEDULE_GRACE == CLOSE_GRACE_SECONDS == 5
+    async def run():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            await AutomationRegistry(redis).enable(MANIFEST, ['15m'])
+            boundary = 1791288000
+            redis.time = AsyncMock(return_value=(boundary + 5, 0))
+            enqueue = AsyncMock()
+            assert await schedule_once(redis, enqueue) == 1
+            assert enqueue.call_args.args[2] == boundary
+    asyncio.run(run())
+
+
+def test_preparation_cannot_block_the_publication_lane(monkeypatch):
+    from core.services.workers.scanner_scheduler import enqueue
+    from core.services.scanner_ingestion_tasks import prepare_scanner_scan
+    submit = Mock()
+    monkeypatch.setattr(prepare_scanner_scan, 'apply_async', submit)
+    args = [MANIFEST, '15m', 1791288000, 'v1', 'a' * 32]
+    asyncio.run(enqueue(*args))
+    assert submit.call_args.kwargs['queue'] == 'scanner_ingestion'
+    prepare_scanner_scan.push_request(delivery_info={'routing_key': 'scanner_control'})
+    try:
+        assert prepare_scanner_scan.run(*args) == {'status': 'rerouted'}
+        assert submit.call_args.kwargs == {'args': args, 'queue': 'scanner_ingestion'}
+    finally:
+        prepare_scanner_scan.pop_request()

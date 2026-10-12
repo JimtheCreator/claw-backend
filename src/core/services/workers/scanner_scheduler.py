@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 async def enqueue(candidate, interval, cutoff, version, token):
     from core.services.scanner_ingestion_tasks import prepare_scanner_scan
     await asyncio.to_thread(prepare_scanner_scan.apply_async,
-        args=[candidate, interval, cutoff, version, token], queue="scanner_control")
+        args=[candidate, interval, cutoff, version, token], queue="scanner_ingestion")
 
 
 async def run():

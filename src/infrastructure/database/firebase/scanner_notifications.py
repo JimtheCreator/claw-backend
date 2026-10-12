@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import logging
+import time
 from datetime import datetime, timezone
 import re
 from firebase_admin import db, messaging
@@ -19,7 +20,9 @@ class FirebaseScannerSender:
     async def send(self, delivery):
         if self.repository is None:
             return await asyncio.to_thread(self._send, delivery)
-        tokens, receipts = await self.repository.notification_devices(delivery)
+        targets = delivery.pop('notification_targets', None)
+        tokens, receipts = (targets if targets is not None
+                            else await self.repository.notification_devices(delivery))
         if not tokens:
             if receipts:
                 return 'devices-processed'
@@ -68,23 +71,35 @@ class FirebaseScannerSender:
         remaining = delivery['expires_at'] - datetime.now(timezone.utc)
         if remaining.total_seconds() <= 0:
             raise PermanentDeliveryError()
+        summary = delivery['payload'].get('summary')
+        from core.scanner.notification_summary import summary_body
+        from core.scanner.catalog import pattern_catalog
+        name = next((p['display_name'] for p in pattern_catalog() if p['id'] == match['pattern_id']), match['pattern_id'].replace('_', ' ').title())
+        name = name.replace(' And ', ' & ')
         message = messaging.Message(
             token=token,
-            notification=messaging.Notification(title=match['pattern_id'].replace('_', ' ').title(),
-                body=f"{match['symbol']} · {match['interval']} · Pattern detected"),
+            notification=messaging.Notification(title=name + (f" · {match['interval'].upper()}" if summary else ''),
+                body=(delivery['payload'].get('notification_body') or summary_body(summary)) if summary else f"{match['symbol']} · {match['interval']} · Pattern detected"),
             data={'notification_id': notification_id, 'watch_id': str(delivery['watch_id']),
                   'event_id': delivery['event_id'], 'symbol': match['symbol'],
                   'pattern_id': match['pattern_id'], 'interval': match['interval'],
                   'provider': match['provider'], 'market': match['market'],
-                  'type': 'event_match', 'user_id': uid,
+                  'type': 'event_match_summary' if summary else 'event_match', 'user_id': uid,
                   'universe': delivery.get('universe', 'binance-spot-pilot')},
             android=messaging.AndroidConfig(collapse_key=notification_id, ttl=remaining),
             apns=messaging.APNSConfig(headers={'apns-collapse-id': notification_id,
                 'apns-expiration': str(int(delivery['expires_at'].timestamp())),
                 'apns-push-type': 'alert', 'apns-priority': '10'},
                 payload=messaging.APNSPayload(messaging.Aps(sound='default', thread_id='event-' + match['pattern_id']))))
+        started = time.monotonic()
         try:
-            return messaging.send(message, app=app)
+            result = messaging.send(message, app=app)
+            cutoff = delivery['payload'].get('data_as_of')
+            age = ((datetime.now(timezone.utc) - datetime.fromisoformat(cutoff)).total_seconds()
+                   if cutoff else -1)
+            log.info('Pattern push accepted: notification=%s firebase=%.3fs since_close=%.3fs',
+                     notification_id, time.monotonic()-started, age)
+            return result
         except messaging.ThirdPartyAuthError:
             raise PushConfigurationError() from None
         except (messaging.UnregisteredError, messaging.SenderIdMismatchError):

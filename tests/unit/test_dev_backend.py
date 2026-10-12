@@ -13,10 +13,10 @@ from scripts import dev_backend as dev
 def test_scanner_roles_are_explicit_and_notification_queues_are_excluded():
     basic = dev.process_plan("python", False)
     full = dev.process_plan("python", True)
-    assert set(full) - set(basic) == {"scanner-ingestion", "scanner-backfill", "scanner-backfill-forex", "scanner-detection", "scanner-detection-forex", "scanner-scheduler"}
+    assert set(full) - set(basic) == {"scanner-control", "scanner-ingestion", "scanner-backfill", "scanner-backfill-forex", "scanner-detection", "scanner-detection-forex", "scanner-scheduler"}
     queues = {arg.removeprefix("--queues=") for command in full.values()
               for arg in command if arg.startswith("--queues=")}
-    assert queues == {"default,analysis", "scanner_control,scanner_ingestion",
+    assert queues == {"default,analysis", "scanner_control", "scanner_ingestion",
         "scanner_backfill,scanner_backfill_15m,scanner_backfill_30m,scanner_backfill_1h,scanner_backfill_4h,scanner_backfill_1d",
         "scanner_backfill_forex,scanner_backfill_forex_15m,scanner_backfill_forex_30m,scanner_backfill_forex_1h,scanner_backfill_forex_4h,scanner_backfill_forex_1d",
         ','.join(['scanner'] + [f'scanner_{market}_{tf}' for market in ('binance_spot','massive_crypto')
@@ -184,3 +184,14 @@ def test_worker_failure_restarts_only_its_role_and_keeps_api_running(tmp_path, m
     assert [c.args[0] for c in factory.call_args_list] == [['api'], ['feed'], ['feed']]
     assert cleanup.call_args_list[0].args == ({'feed': failed},)
     assert cleanup.call_args_list[-1].args == ({'api':api, 'feed':replacement},)
+
+
+def test_publication_has_reserved_capacity_and_delivery_concurrency_is_configurable(monkeypatch):
+    monkeypatch.delenv('SCANNER_DELIVERY_CONCURRENCY', raising=False)
+    plan = dev.process_plan('python', True, True)
+    assert '--queues=scanner_control' in plan['scanner-control']
+    assert '--concurrency=1' in plan['scanner-control']
+    assert '--queues=scanner_ingestion' in plan['scanner-ingestion']
+    assert plan['scanner-delivery'][-3:] == ['--concurrency', '4', 'delivery']
+    monkeypatch.setenv('SCANNER_DELIVERY_CONCURRENCY', '8')
+    assert dev.process_plan('python', True, True)['scanner-delivery'][-3:] == ['--concurrency', '8', 'delivery']

@@ -58,7 +58,9 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     try:
-        asyncio.run(run(args))
+        from scripts.worker_lock import worker_lock
+        with worker_lock(f"scanner-{args.mode}"):
+            asyncio.run(run(args))
     except (OSError, asyncpg.PostgresError):
         raise SystemExit('Scanner alert worker could not connect to its configured services') from None
 

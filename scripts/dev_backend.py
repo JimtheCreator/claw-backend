@@ -51,7 +51,8 @@ def process_plan(python: str, scanner: bool, notifications: bool = False) -> dic
         roles["forex-stream"] = module("massive_stream_service")
     if scanner:
         roles.update({
-            "scanner-ingestion": worker("ingestion", "scanner_control,scanner_ingestion", 2),
+            "scanner-control": worker("control", "scanner_control", 1),
+            "scanner-ingestion": worker("ingestion", "scanner_ingestion", 2),
             "scanner-backfill": worker("backfill", ','.join(['scanner_backfill'] +
                 [f'scanner_backfill_{tf}' for tf in ('15m','30m','1h','4h','1d')]), 2),
             "scanner-backfill-forex": worker("backfill-forex", ','.join(['scanner_backfill_forex'] +
@@ -68,7 +69,7 @@ def process_plan(python: str, scanner: bool, notifications: bool = False) -> dic
     if notifications:
         roles.update({
             "scanner-inbox": [python, str(ROOT / "scripts/run_scanner_alerts.py"), "inbox"],
-            "scanner-delivery": [python, str(ROOT / "scripts/run_scanner_alerts.py"), "--concurrency", "2", "delivery"],
+            "scanner-delivery": [python, str(ROOT / "scripts/run_scanner_alerts.py"), "--concurrency", os.getenv("SCANNER_DELIVERY_CONCURRENCY", "4"), "delivery"],
             "price-alerts": [python, str(ROOT / "scripts/run_price_alerts.py")],
         })
     return roles

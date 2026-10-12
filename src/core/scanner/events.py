@@ -82,7 +82,7 @@ def lifecycle_transition(previous, metadata, results):
 
     if reason:
         events.append(event("baseline_reset", reason=reason))
-    elif not same_close:
+    elif not same_close or ready is not None:
         for key in sorted(prior.keys() | current.keys()):
             old, new = prior.get(key), current.get(key)
             if ready is not None:
@@ -98,6 +98,10 @@ def lifecycle_transition(previous, metadata, results):
                                     reason="replaced" if new else "absent_on_complete_scan"))
             if new and (not old or changed):
                 events.append(event("detected", new, new_symbol=not bool(old)))
-    batch = {"schema_version": 1, "batch_id": batch_id, "scope": scope,
+    # Several publications may finish different instruments at the same close.
+    # Event identity stays tied to the close; batch identity names this fragment.
+    # Per-instrument cutoffs above suppress corrections/replays of an observed bar.
+    fragment_id = _digest([batch_id, sorted(e['event_id'] for e in events)])
+    batch = {"schema_version": 2, "batch_id": fragment_id, "scope": scope,
              "epoch": epoch, "data_as_of": cutoff, "events": events}
     return state, batch

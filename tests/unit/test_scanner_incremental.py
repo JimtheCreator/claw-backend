@@ -219,7 +219,7 @@ def test_independent_jobs_publish_pending_then_complete_without_read_api_changes
             result = await tasks.execute_scheduled(*args)
             assert result == {"status": "dispatched", "instruments": 2}
             repo.assert_not_called()  # Fan-out is independent of candle storage/CPU.
-            assert final.call_args.kwargs["countdown"] == 180
+            assert final.call_args.kwargs["countdown"] == 5
             assert final.call_args.kwargs["queue"] == 'scanner_control'
             assert (await tasks.execute_scheduled(*args))["instruments"] == 0
             await tasks.execute_instrument(*args, "BTCUSDT")
@@ -250,7 +250,7 @@ def test_failed_fanout_leaves_watchdog_to_publish_incomplete_coverage(monkeypatc
             with pytest.raises(RuntimeError):
                 await tasks.execute_scheduled(*args)
             final.assert_called_once()
-            assert final.call_args.kwargs["countdown"] == 180
+            assert final.call_args.kwargs["countdown"] == 5
             result = await tasks.finalize_batch(*args)
             assert result["coverage"]["pending"] == 2
             assert result["coverage"]["ready"] == 0
@@ -292,7 +292,7 @@ def test_large_repair_watchdog_keeps_owner_until_bounded_wait_expires(monkeypatc
             first = await store.metadata()
             assert first['coverage']['pending'] == 51
             assert await redis.ttl(dispatch.lease_key) > 60
-            assert final.call_args.kwargs['countdown'] == 30
+            assert final.call_args.kwargs['countdown'] == 5
             assert await dispatch.valid(args[-1])
             repo.assert_not_called()
             assert await tasks.finalize_batch(*args) == dict(status='waiting_for_instruments', completed=0, eligible=51)
@@ -369,7 +369,8 @@ def test_cached_symbols_publish_while_other_symbols_wait_for_recovery(monkeypatc
 
 
 def test_forex_reports_observed_gaps_and_publishes_repair_without_counting_it_complete(monkeypatch):
-    clock = int(time.time()) // 900 * 900 + 120
+    # Fixed open-market Tuesday; this contract also runs when Forex is closed.
+    clock = 1791288120
     monkeypatch.setattr(time, 'time', lambda: clock)
     async def scenario():
         server = fakeredis.FakeServer()

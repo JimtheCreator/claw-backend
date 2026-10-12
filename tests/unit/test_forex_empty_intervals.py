@@ -158,3 +158,40 @@ def test_verified_forex_windows_can_emit_a_new_pattern_at_the_next_close():
         assert batch['events'][0]['type'] == 'detected'
         assert batch['events'][0]['match']['instrument_id'] == 'massive:forex:EURUSD'
     asyncio.run(run())
+
+
+def test_timeframes_share_one_provider_fetch_and_storage_write():
+    async def run():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            start = (CUTOFF-7200)*1000
+            raw = [dict(t=start, o=1, h=2, l=1, c=1.5, v=2)]
+            provider = SimpleNamespace(minute_bars=AsyncMock(return_value=raw))
+            async def save(*args):
+                await asyncio.sleep(.02)
+            store = SimpleNamespace(url=URL, market='forex', save=AsyncMock(side_effect=save))
+            await asyncio.gather(*(repair_history_chunk(
+                redis, provider, store, 'EURUSD', start, CUTOFF*1000,
+                chart_interval=tf) for tf in ('15m', '30m', '1h')))
+            assert provider.minute_bars.await_count == 1
+            assert store.save.await_count == 1
+            for tf, step in [('15m',900), ('30m',1800), ('1h',3600)]:
+                proof = set(await redis.zrange(evidence_key(URL, 'EURUSD', tf), 0, -1))
+                assert proof == {str(stamp) for stamp in range(start//1000+step, CUTOFF, step)}
+            # A two-hour request proves nothing about whole 4h/daily buckets.
+            assert await redis.zcard(evidence_key(URL, 'EURUSD', '4h')) == 0
+            assert await redis.zcard(evidence_key(URL, 'EURUSD', '1d')) == 0
+    asyncio.run(run())
+
+
+def test_native_hours_never_certify_shorter_timeframe_gaps():
+    async def run():
+        async with fakeredis.aioredis.FakeRedis(decode_responses=True) as redis:
+            provider = SimpleNamespace(bars=AsyncMock(return_value=[]))
+            store = SimpleNamespace(url=URL, market='forex', save=AsyncMock())
+            await repair_history_chunk(redis, provider, store, 'EURUSD',
+                (CUTOFF-4*3600)*1000, CUTOFF*1000, interval='1h', chart_interval='4h')
+            assert await redis.zcard(evidence_key(URL, 'EURUSD', '1h')) == 4
+            assert await redis.zcard(evidence_key(URL, 'EURUSD', '4h')) == 1
+            for tf in ('15m', '30m', '1d'):
+                assert await redis.zcard(evidence_key(URL, 'EURUSD', tf)) == 0
+    asyncio.run(run())

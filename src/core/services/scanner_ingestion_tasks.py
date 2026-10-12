@@ -10,7 +10,7 @@ from infrastructure.data_sources.binance.client import BinanceMarketData
 from infrastructure.database.influxdb.market_db import InfluxDBMarketDataRepository
 from infrastructure.database.influxdb.scanner_candles import finalized_row
 from infrastructure.database.redis.lease import RedisLease
-from infrastructure.database.redis.scanner_batch import InstrumentBatch
+from infrastructure.database.redis.scanner_batch import InstrumentBatch, FINALIZE_RETRY_SECONDS
 from infrastructure.database.redis.scanner_recovery_order import RecoveryOrder
 from core.scanner.queues import detection_queue
 from src.core.services.workers.celery_worker import celery_app
@@ -81,7 +81,7 @@ async def dispatch_repairs(redis, dispatch, candidate, interval, cutoff, version
     from core.services.scanner_tasks import finalize_scanner_batch, scan_market_instrument
     batch = InstrumentBatch(dispatch, token)
     await asyncio.to_thread(finalize_scanner_batch.apply_async,
-        args=[candidate, interval, cutoff, version, token], queue='scanner_control', countdown=30)
+        args=[candidate, interval, cutoff, version, token], queue='scanner_control', countdown=FINALIZE_RETRY_SECONDS)
     queued = 0
     reference = candidate_reference(candidate)
     for symbol in await RecoveryOrder(redis, candidate, interval).symbols_by_turn():
@@ -162,8 +162,13 @@ def prepare_scanner_instrument(self, candidate, interval, cutoff, version, token
 
 
 @celery_app.task(ignore_result=True, name="src.core.services.scanner_ingestion_tasks.prepare_scanner_scan",
-                 queue="scanner_ingestion", time_limit=600, soft_time_limit=None)
-def prepare_scanner_scan(candidate, interval, cutoff, version, token):
+                 queue="scanner_ingestion", bind=True, time_limit=600, soft_time_limit=None)
+def prepare_scanner_scan(self, candidate, interval, cutoff, version, token):
+    # Old queued preparation jobs must not occupy the publication-only lane.
+    if (self.request.delivery_info or {}).get('routing_key') == 'scanner_control':
+        prepare_scanner_scan.apply_async(args=[candidate, interval, cutoff, version, token],
+                                         queue='scanner_ingestion')
+        return {'status': 'rerouted'}
     return asyncio.run(asyncio.wait_for(prepare(candidate, interval, cutoff, version, token), 540))
 
 

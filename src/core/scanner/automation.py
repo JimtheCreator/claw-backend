@@ -9,14 +9,14 @@ from .capacity import scanner_stream_budget
 
 from redis.exceptions import WatchError
 from .catalog import INTERVAL_SECONDS
-from .engine import validate_manifest, detector_version
+from .engine import validate_manifest, detector_version, CLOSE_GRACE_SECONDS
 
 CONFIG_KEY = "scanner:automation:universes:v1"
 MAX_STREAMS = 200  # Pilot budget; leaves room for existing chart subscriptions.
 DISPATCH_SECONDS = 1500  # Covers ingestion + detection hard limits and queue delay.
 MAX_ATTEMPTS = 3
 ATTEMPT_WINDOW_SECONDS = DISPATCH_SECONDS
-SCHEDULE_GRACE = 30
+SCHEDULE_GRACE = CLOSE_GRACE_SECONDS  # Scan only closed, validated windows; missing data goes to recovery.
 
 _CLAIM = """
 if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end

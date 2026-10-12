@@ -82,8 +82,9 @@ async def repair_history_chunk(redis, provider, store, symbol, start_ms, end_ms,
         raise ValueError("Invalid aligned history chunk")
     identity = ["massive-history-repair-v3", os.getenv('QUESTDB_CACHE_GENERATION', ''), store.url, store.market, symbol,
                 interval, start_ms, end_ms]
-    if chart_interval is not None:
-        identity += ['empty-evidence-v1', chart_interval]
+    if store.market == 'forex':
+        # One provider window and storage write serves every chart timeframe.
+        identity += ['empty-evidence-v2']
     ttl = 600 if start_ms % chunk == 0 and end_ms % chunk == 0 else 30
 
     async def fetch_and_save():
@@ -108,10 +109,15 @@ async def repair_history_chunk(redis, provider, store, symbol, start_ms, end_ms,
                            (bar[k] for k in ('o', 'h', 'l', 'c', 'v'))))))
         for offset in range(0, len(converted), 1000):
             await store.save(symbol, interval, converted[offset:offset + 1000], end_ms // 1000)
-        if store.market == 'forex' and chart_interval is not None:
+        if store.market == 'forex':
+            from core.scanner.catalog import INTERVAL_SECONDS
             from core.scanner.forex_empty_intervals import confirm_empty_intervals
-            await confirm_empty_intervals(redis, store.url, symbol, chart_interval,
-                                          start_ms, end_ms, raw)
+            # Only certify buckets fully covered by this native resolution.
+            # Hourly history cannot establish the absence of a 15m/30m bar.
+            for timeframe, seconds in INTERVAL_SECONDS.items():
+                if seconds * 1000 >= step:
+                    await confirm_empty_intervals(redis, store.url, symbol, timeframe,
+                                                  start_ms, end_ms, raw)
         return {"rows": len(converted)}
 
     return await RedisSingleFlight(redis, operation_timeout=70, wait_timeout=75,

@@ -46,12 +46,16 @@ class ScannerInboxPump:
             self.streams.move_to_end(key)
             try:
                 consumed += await consume_events(stream, self.repository, self.consumer, count=1)
+                if consumed:
+                    # Fan out this committed batch before reading another stream.
+                    # Rotation still gives every market/timeframe its next turn.
+                    break
             except Exception as exc:
                 log.error('Scanner inbox batch retained: %s (%s)', key, type(exc).__name__)
         processed = await self.repository.retire_ineligible_events(include_unwatched=True)
         # One bounded set-based transaction avoids a WAN round trip per event,
         # including when many detections match an all-market subscription.
-        result = await self.repository.fanout_batch()
+        result = await self.repository.fanout_batch(limit=100)
         return {'consumed': consumed, 'processed': processed + result['processed'],
                 'queued': result['queued']}
 
@@ -71,13 +75,16 @@ async def run_inbox(redis, repository, consumer, stop):
     while not stop.is_set():
         try:
             stats = await pump.tick()
-            if any(stats.values()):
+            busy = any(stats.values())
+            if busy:
                 log.info('Scanner inbox: %s', stats)
             if os.getenv('SCANNER_RETENTION_ENABLED') == '1' and time.monotonic() >= maintenance_due:
                 maintenance_due = time.monotonic()+60
                 pruned = await repository.prune_terminal_history()
                 if any(pruned.values()):
                     log.info('Scanner retention: %s', pruned)
+            if busy:
+                continue
         except Exception as exc:
             log.error('Scanner inbox unavailable (%s)', type(exc).__name__)
         await pause(stop)

@@ -286,7 +286,7 @@ def test_inbox_yields_after_slow_fanout_without_cancelling_the_transaction(monke
         repo = AsyncMock()
         repo.retire_ineligible_events.return_value = 500
 
-        async def slow_transaction():
+        async def slow_transaction(**kwargs):
             clock[0] += 3
             return {'processed': 16, 'queued': 16, 'completed': 0}
 
@@ -316,4 +316,85 @@ def test_superseded_snapshots_keep_navigation_grace_without_days_of_progress_cop
             assert await redis.ttl(store.snapshot_key(second["snapshot"])) > 86400
             stream = ScannerEventStream(redis, store.prefix)
             assert await redis.ttl(stream.state_key) == -1
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize('provider,market,symbols', [
+    ('binance', 'spot', ('BTCUSDT', 'ETHUSDT')),
+    ('massive', 'forex', ('EURUSD', 'USDJPY')),
+])
+def test_same_close_late_instrument_emits_once_with_distinct_valid_batches(provider, market, symbols):
+    from infrastructure.database.supabase.scanner_watches import validated_batch
+
+    def page(index, ready, matched):
+        meta, rows = snapshot(index)
+        template = rows[PATTERN][0]
+        meta.update(provider=provider, market=market,
+                    coverage={'eligible': 2, 'ready': len(ready)},
+                    instrument_coverage={s: 'ready' if s in ready else 'pending' for s in symbols})
+        rows[PATTERN] = [dict(template, provider=provider, market=market, symbol=s,
+                             instrument_id=f'{provider}:{market}:{s}') for s in matched]
+        return meta, rows
+
+    state, _ = lifecycle_transition(None, *page(0, symbols, ()))
+    state, first = lifecycle_transition(state, *page(1, symbols[:1], symbols[:1]))
+    state, second = lifecycle_transition(state, *page(1, symbols, symbols))
+    assert [e['match']['symbol'] for e in first['events']] == [symbols[0]]
+    assert [e['match']['symbol'] for e in second['events']] == [symbols[1]]
+    assert first['batch_id'] != second['batch_id']
+    validated_batch(first)
+    validated_batch(second)
+    state, replay = lifecycle_transition(state, *page(1, symbols, symbols))
+    assert replay['events'] == []
+    _, correction = lifecycle_transition(state, *page(1, symbols, ()))
+    assert correction['events'] == []
+
+
+def test_inbox_fans_out_before_reading_another_busy_stream(monkeypatch):
+    from unittest.mock import AsyncMock
+    from core.services.workers import scanner_alert_worker as worker
+
+    async def run():
+        calls = []
+        redis = AsyncMock()
+        redis.hkeys.return_value = []
+        redis.scan.return_value = (0, [])
+        repo = AsyncMock()
+        repo.retire_ineligible_events.return_value = 0
+        async def consume(stream, *args, **kwargs):
+            calls.append(stream.stream_key)
+            return 1
+        async def fanout(**kwargs):
+            calls.append('fanout')
+            return {'processed': 1, 'queued': 1}
+        repo.fanout_batch.side_effect = fanout
+        monkeypatch.setattr(worker, 'consume_events', consume)
+        pump = worker.ScannerInboxPump(redis, repo, 'test')
+        for scope in ('crypto', 'forex'):
+            pump.remember(f'scanner:v1:{{{scope}:15m}}:events')
+        await pump.tick()
+        await pump.tick()
+        assert calls == ['scanner:v1:{crypto:15m}:events', 'fanout',
+                         'scanner:v1:{forex:15m}:events', 'fanout']
+    asyncio.run(run())
+
+
+def test_busy_inbox_does_not_sleep_between_passes(monkeypatch):
+    from unittest.mock import AsyncMock
+    from core.services.workers import scanner_alert_worker as worker
+    async def run():
+        stop = asyncio.Event()
+        calls = []
+        async def tick(self):
+            calls.append('tick')
+            if len(calls) == 2:
+                stop.set()
+            return {'consumed': 1, 'processed': 1, 'queued': 1}
+        monkeypatch.setattr(worker.ScannerInboxPump, 'tick', tick)
+        monkeypatch.setenv('SCANNER_RETENTION_ENABLED', '0')
+        pause = AsyncMock()
+        monkeypatch.setattr(worker, 'pause', pause)
+        await worker.run_inbox(None, None, 'test', stop)
+        assert calls == ['tick', 'tick']
+        pause.assert_not_awaited()
     asyncio.run(run())

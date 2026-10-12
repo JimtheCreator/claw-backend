@@ -39,7 +39,7 @@ if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
 return redis.call('DEL', KEYS[1])
 """
 
-FINALIZE_RETRY_SECONDS = 30
+FINALIZE_RETRY_SECONDS = 5
 # Keep publishing for the whole repair lease. The old 12-minute cap stopped
 # reporting progress while the 25-minute Forex repair batch was still running.
 MAX_FINALIZE_RETRIES = DISPATCH_SECONDS // FINALIZE_RETRY_SECONDS

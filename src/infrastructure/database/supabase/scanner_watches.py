@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import os
 import re
 import uuid
 
@@ -30,7 +31,7 @@ MATCHING_WATCH = """w.status='active'
 
 
 def validated_batch(batch):
-    if batch.get('schema_version') != 1 or len(json.dumps(batch).encode()) > 1024 * 1024:
+    if batch.get('schema_version') not in (1, 2) or len(json.dumps(batch).encode()) > 1024 * 1024:
         raise ValueError('Invalid scanner event batch')
     scope, epoch, cutoff = batch['scope'], batch['epoch'], batch['data_as_of']
     if (len(scope) != 4 or tuple(scope[:2]) not in {('binance', 'spot'), ('massive', 'forex'), ('massive', 'crypto')}
@@ -42,7 +43,10 @@ def validated_batch(batch):
         raise ValueError('Unaligned scanner event cutoff')
     if timestamp > datetime.now(timezone.utc) + timedelta(seconds=60):
         raise ValueError('Future scanner event cutoff')
-    if batch['batch_id'] != _digest([scope, epoch, cutoff]):
+    close_id = _digest([scope, epoch, cutoff])
+    expected_batch = (close_id if batch['schema_version'] == 1 else
+                      _digest([close_id, sorted(e['event_id'] for e in batch['events'])]))
+    if batch['batch_id'] != expected_batch:
         raise ValueError('Invalid scanner batch identity')
     known = {p['id'] for p in pattern_catalog()}
     seen = set()
@@ -58,7 +62,7 @@ def validated_batch(batch):
               or match['instrument_id'] != f"{scope[0]}:{scope[1]}:{match['symbol']}"
               or [match['provider'], match['market'], match['interval']] != [scope[0], scope[1], scope[3]]):
             raise ValueError('Invalid lifecycle match')
-        expected = _digest([batch['batch_id'], kind, match and match['instrument_id'],
+        expected = _digest([close_id, kind, match and match['instrument_id'],
                             match and match['pattern_id'], match and match['pattern_start']])
         if event['event_id'] != expected or expected in seen:
             raise ValueError('Invalid or duplicate event identity')
@@ -93,11 +97,11 @@ class ScannerWatchRepository:
     async def transaction(self, user_id=None):
         async with self.pool.acquire(timeout=5) as connection:
             async with connection.transaction():
-                await connection.execute('SET LOCAL statement_timeout = \'15000ms\'')
-                if user_id is None:
-                    await connection.execute('SET LOCAL ROLE scanner_watch_worker')
-                else:
-                    await connection.execute('SET LOCAL ROLE scanner_watch_api')
+                role = 'scanner_watch_worker' if user_id is None else 'scanner_watch_api'
+                # These fixed statements share one round trip; transaction-local
+                # settings still reset on pool release and cannot leak user scope.
+                await connection.execute(f"SET LOCAL statement_timeout = '15000ms'; SET LOCAL ROLE {role}")
+                if user_id is not None:
                     await connection.execute("SELECT set_config('scanner_alerts.user_id',$1,true)", user_id)
                 yield connection
 
@@ -256,6 +260,19 @@ class ScannerWatchRepository:
                 ORDER BY created_at DESC,id DESC LIMIT $4''',
                 user_id, before[0] if before else None, before[1] if before else None, limit)
             return [dict(row, payload=json.loads(row['payload'])) for row in rows]
+
+    async def notification_summary(self, user_id, notification_id):
+        async with self.transaction(user_id) as con:
+            payload = await con.fetchval('''SELECT payload FROM scanner_alerts.outbox
+                WHERE id=$1 AND user_id=$2''', notification_id, user_id)
+            if payload is None:
+                return None
+            value = json.loads(payload)
+            summary = value.get('summary')
+            if summary is None:
+                return None
+            return dict(summary, pattern_id=value['match']['pattern_id'],
+                        interval=value['match']['interval'], data_as_of=value['data_as_of'])
 
     async def accept_batch(self, batch, *, stream_id):
         cutoff, fingerprint = validated_batch(batch)
@@ -437,9 +454,11 @@ class ScannerWatchRepository:
             return dict(outbox=len(ids),events=len(events),batches=len(batches))
 
     async def claim_delivery(self):
+        grouped = os.getenv('SCANNER_GROUPED_PATTERN_ALERTS', '1') == '1'
         async with self.transaction() as con:
             # Claim one indexed candidate. Never sweep the whole backlog per send.
-            row = await con.fetchrow('''SELECT o.*,w.status AS watch_status,w.armed_at,e.universe,
+            row = await con.fetchrow('''SELECT o.*,w.status AS watch_status,w.armed_at,w.market_scope,e.universe,
+                (cardinality(w.symbols)=0 AND w.mode='repeat') AS broad_watch,
                 (w.market_scope='all' OR w.market_scope=e.market_scope) AS scope_allowed,
                 e.epoch=h.epoch AS current_definition,clock_timestamp() AS now
                 FROM scanner_alerts.outbox o JOIN scanner_alerts.watches w ON w.id=o.watch_id
@@ -447,7 +466,10 @@ class ScannerWatchRepository:
                 JOIN scanner_alerts.heads h ON h.universe=e.universe AND h.interval=e.interval
                 WHERE o.status IN ('pending','sending') AND o.next_attempt_at<=clock_timestamp()
                 AND (o.lease_until IS NULL OR o.lease_until<=clock_timestamp())
-                ORDER BY o.next_attempt_at,o.id FOR UPDATE OF o SKIP LOCKED LIMIT 1''')
+                AND (o.delivery_group IS NULL OR o.delivery_group=o.id)
+                AND (NOT $1 OR cardinality(w.symbols)>0 OR w.mode<>'repeat' OR o.attempts>0
+                     OR o.created_at<=clock_timestamp()-interval '3 seconds')
+                ORDER BY o.next_attempt_at,o.id FOR UPDATE OF o,w SKIP LOCKED LIMIT 1''', grouped)
             if row is None:
                 return None
             terminal = ('expired' if row['expires_at'] <= row['now'] else
@@ -457,24 +479,110 @@ class ScannerWatchRepository:
                         or not row['scope_allowed'] else None)
             if terminal:
                 await con.execute('''UPDATE scanner_alerts.outbox SET status=$2,
-                    lease_token=NULL,lease_until=NULL WHERE id=$1''', row['id'], terminal)
+                    lease_token=NULL,lease_until=NULL WHERE id=$1 OR delivery_group=$1''', row['id'], terminal)
                 return {'id': row['id'], 'status': terminal}
+            if grouped and row['delivery_group'] is None:
+                match = json.loads(row['payload'])['match']
+                cutoff = datetime.fromisoformat(json.loads(row['payload'])['data_as_of'])
+                # Serialize across overlapping watches for this user/event/close.
+                # Nonblocking lock prevents claim lanes waiting on each other's rows.
+                group_key = json.dumps([row['user_id'], match['pattern_id'], match['interval'], cutoff.isoformat()])
+                if not await con.fetchval('SELECT pg_try_advisory_xact_lock(hashtextextended($1,0))', group_key):
+                    return None
+                previous = await con.fetchrow('''SELECT o.* FROM scanner_alerts.outbox o
+                    JOIN scanner_alerts.events e ON e.event_id=o.event_id
+                    WHERE o.user_id=$1 AND e.pattern_id=$2 AND e.interval=$3 AND e.cutoff=$4
+                      AND o.delivery_group=o.id AND o.status IN ('pending','sending','delivered')
+                    ORDER BY o.created_at,o.id LIMIT 1 FOR UPDATE OF o''',
+                    row['user_id'], match['pattern_id'], match['interval'], cutoff)
+                if previous is not None:
+                    from core.scanner.notification_summary import pattern_summary
+                    previous_payload = json.loads(previous['payload'])
+                    existing = previous_payload['summary']['matches']
+                    previous_payload['summary'] = pattern_summary(
+                        [dict(payload={'match':m}, universe=m['universe']) for m in existing]
+                        + [dict(payload={'match':match}, universe=row['universe'])])
+                    await con.execute('UPDATE scanner_alerts.outbox SET payload=$2::jsonb WHERE id=$1',
+                                      previous['id'], json.dumps(previous_payload))
+                    # Later arrivals join the existing notification, even while it
+                    # is retrying. A delivered group never produces another push.
+                    await con.execute('''UPDATE scanner_alerts.outbox SET delivery_group=$2,status=$3,
+                        attempts=$4,lease_token=$5,lease_until=$6,next_attempt_at=$7,
+                        delivered_at=$8,provider_message_id=$9 WHERE id=$1''',
+                        row['id'],previous['id'],previous['status'],previous['attempts'],
+                        previous['lease_token'],previous['lease_until'],previous['next_attempt_at'],
+                        previous['delivered_at'],previous['provider_message_id'])
+                    return {'id':previous['id'],'status':'grouped'}
+                # The user/event/close lock serializes overlapping watches.
+                # Limit each claim; remaining rows join the same anchor later.
+                members = await con.fetch('''SELECT o.*,e.universe FROM scanner_alerts.outbox o
+                    JOIN scanner_alerts.watches mw ON mw.id=o.watch_id
+                    JOIN scanner_alerts.events e ON e.event_id=o.event_id
+                    JOIN scanner_alerts.heads h ON h.universe=e.universe AND h.interval=e.interval
+                    WHERE o.user_id=$1 AND o.status='pending'
+                      AND o.delivery_group IS NULL AND o.expires_at>clock_timestamp()
+                      AND o.created_at>=mw.armed_at AND mw.status IN ('active','completed') AND e.epoch=h.epoch
+                      AND e.pattern_id=$2
+                      AND e.interval=$3 AND e.cutoff=$4
+                      AND (mw.market_scope='all' OR e.market_scope=mw.market_scope)
+                    ORDER BY (o.id=$5) DESC,o.created_at,o.id FOR UPDATE OF o LIMIT 5000''',
+                    row['user_id'], match['pattern_id'], match['interval'], cutoff, row['id'])
+                from core.scanner.notification_summary import pattern_summary, summary_body
+                summary = pattern_summary([dict(m, payload=json.loads(m['payload'])) for m in members])
+                payload = json.loads(row['payload'])
+                payload['summary'] = summary
+                payload['notification_body'] = summary_body(summary)
+                await con.execute('UPDATE scanner_alerts.outbox SET delivery_group=$1 WHERE id=ANY($2::uuid[])',
+                                  row['id'], [m['id'] for m in members])
+                await con.execute('UPDATE scanner_alerts.outbox SET payload=$2::jsonb WHERE id=$1',
+                                  row['id'], json.dumps(payload))
+            # Upgrading an older grouped retry also freezes its wording once.
+            current_payload = json.loads(row['payload'])
+            if row['delivery_group'] is not None and current_payload.get('summary') and not current_payload.get('notification_body'):
+                from core.scanner.notification_summary import summary_body
+                current_payload['notification_body'] = summary_body(current_payload['summary'])
+                await con.execute('UPDATE scanner_alerts.outbox SET payload=$2::jsonb WHERE id=$1', row['id'], json.dumps(current_payload))
             token = uuid.uuid4()
             updated = await con.fetchrow('''UPDATE scanner_alerts.outbox SET status='sending',attempts=attempts+1,
                 lease_token=$2,lease_until=clock_timestamp()+interval '120 seconds',
                 next_attempt_at=clock_timestamp()+interval '120 seconds' WHERE id=$1 RETURNING *''', row['id'], token)
+            if updated['delivery_group'] is not None:
+                await con.execute('''UPDATE scanner_alerts.outbox SET status='sending',attempts=$3,
+                    lease_token=$2,lease_until=$4,next_attempt_at=$4
+                    WHERE delivery_group=$1 AND id<>$1''', updated['id'], token,
+                    updated['attempts'], updated['lease_until'])
             return dict(updated, payload=json.loads(updated['payload']), universe=row['universe'])
 
     async def delivery_allowed(self, delivery):
+        # Fetch destinations with the final consent/lease check, avoiding another
+        # transaction between checking cancellation and contacting the provider.
         async with self.transaction() as con:
-            return bool(await con.fetchval('''SELECT true FROM scanner_alerts.outbox o JOIN scanner_alerts.watches w ON w.id=o.watch_id
+            row = await con.fetchrow("""SELECT
+                ARRAY(SELECT token FROM scanner_alerts.devices WHERE user_id=o.user_id
+                    AND updated_at>clock_timestamp()-interval '90 days') AS tokens,
+                ARRAY(SELECT token_hash FROM scanner_alerts.device_receipts WHERE outbox_id=o.id) AS receipts
+                FROM scanner_alerts.outbox o JOIN scanner_alerts.watches w ON w.id=o.watch_id
                 JOIN scanner_alerts.events e ON e.event_id=o.event_id
                 JOIN scanner_alerts.heads h ON h.universe=e.universe AND h.interval=e.interval
                 WHERE o.id=$1 AND o.lease_token=$2 AND o.status='sending' AND o.lease_until>clock_timestamp()
                 AND o.expires_at>clock_timestamp() AND w.status IN ('active','completed')
                 AND o.created_at>=w.armed_at AND e.epoch=h.epoch
-                AND (w.market_scope='all' OR w.market_scope=e.market_scope)''',
-                delivery['id'], delivery['lease_token']))
+                AND (w.market_scope='all' OR w.market_scope=e.market_scope)
+                AND NOT EXISTS (
+                    SELECT 1 FROM scanner_alerts.outbox member
+                    JOIN scanner_alerts.watches mw ON mw.id=member.watch_id
+                    JOIN scanner_alerts.events me ON me.event_id=member.event_id
+                    JOIN scanner_alerts.heads mh ON mh.universe=me.universe AND mh.interval=me.interval
+                    WHERE member.delivery_group=o.id AND
+                      (me.epoch<>mh.epoch OR member.expires_at<=clock_timestamp()
+                       OR mw.status IN ('paused','deleted') OR member.created_at<mw.armed_at
+                       OR (mw.market_scope<>'all' AND mw.market_scope<>me.market_scope)))""",
+                delivery['id'], delivery['lease_token'])
+            delivery.pop('notification_targets', None)
+            if row is None:
+                return False
+            delivery['notification_targets'] = (list(row['tokens']), set(row['receipts']))
+            return True
 
     async def finish_delivery(self, delivery, *, provider_id=None, error=None, permanent=False, cancelled=False):
         state = ('cancelled' if cancelled else 'delivered' if error is None else
@@ -485,5 +593,5 @@ class ScannerWatchRepository:
                 next_attempt_at=clock_timestamp()+($4 * interval '1 second'),last_error=$5,provider_message_id=$6,
                 delivered_at=CASE WHEN $3='delivered' THEN clock_timestamp() ELSE NULL END,
                 lease_token=NULL,lease_until=NULL
-                WHERE id=$1 AND lease_token=$2 AND status='sending' AND lease_until>clock_timestamp() RETURNING true''',
+                WHERE (id=$1 OR delivery_group=$1) AND lease_token=$2 AND status='sending' AND lease_until>clock_timestamp() RETURNING true''',
                 delivery['id'], delivery['lease_token'], state, delay, error, provider_id))

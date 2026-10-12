@@ -228,3 +228,12 @@ async def register_device(installation_id: UUID, spec: DeviceRegistration,
 async def remove_device(installation_id: UUID, user=Depends(scanner_user), repo=Depends(get_watch_repository)):
     await repo.remove_device(user,installation_id)
     return Response(status_code=204)
+
+
+@router.get('/pattern-alerts/notifications/{notification_id}')
+async def notification_summary(notification_id: UUID, user=Depends(scanner_user),
+                               repo=Depends(get_watch_repository)):
+    summary = await repo.notification_summary(user, notification_id)
+    if summary is None:
+        raise HTTPException(404, 'Notification matches are no longer available')
+    return summary

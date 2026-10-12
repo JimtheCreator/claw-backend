@@ -1,5 +1,7 @@
 """Opt-in scanner queue. No API request enqueues or executes these sweeps."""
 import asyncio
+import logging
+import time
 from infrastructure.database.redis.scanner_payload import decode as decode_payload
 import os
 import json
@@ -62,7 +64,7 @@ async def execute_scheduled(candidate, interval, cutoff, version, token):
         # a finalizer which can expose pending coverage and request another attempt.
         await asyncio.to_thread(finalize_scanner_batch.apply_async,
             args=[candidate, interval, cutoff, version, token], queue="scanner_control",
-            countdown=180)
+            countdown=FINALIZE_RETRY_SECONDS)
         for symbol in candidate["manifest"]["symbols"]:
             if await batch.claim_enqueue(symbol):
                 await asyncio.to_thread(scan_market_instrument.apply_async,
@@ -207,6 +209,9 @@ async def finalize_batch(candidate, interval, cutoff, version, token, retry_toke
             except ScannerPublicationSuperseded:
                 return {"status": "superseded"}
             coverage = published["coverage"]
+            logging.getLogger(__name__).info(
+                'Pattern publication: universe=%s interval=%s since_close=%.3fs ready=%s pending=%s',
+                manifest['id'], interval, time.time()-cutoff, coverage['ready'], coverage.get('pending', 0))
             if not waiting_for_repairs:
                 await dispatch.finish(token, success=coverage["ready"] == coverage["eligible"])
             return {"status": "published", "snapshot": published["snapshot"],

@@ -72,6 +72,7 @@ def detection_batch(*, symbols=('BTCUSDT',), stamp=None, version='v1'):
 
 @asynccontextmanager
 async def database():
+    os.environ.setdefault('SCANNER_GROUPED_PATTERN_ALERTS', '0')
     dsn = os.environ['SCANNER_DATABASE_URL']
     admin = await asyncpg.connect(dsn, ssl=False)
     if await admin.fetchval("SELECT to_regclass('scanner_alerts.watches') IS NOT NULL"):
@@ -93,7 +94,7 @@ async def database():
     retention_migration = (ROOT/'migrations/20261001_scanner_retention.sql').read_text()
     await admin.execute(retention_migration)
     await admin.execute(retention_migration)
-    for filename in ('20260926_symbol_price_alerts.sql', '20261003_price_alert_markets.sql'):
+    for filename in ('20260926_symbol_price_alerts.sql', '20261003_price_alert_markets.sql', '20261011_grouped_pattern_alerts.sql'):
         price_migration = (ROOT/'migrations'/filename).read_text()
         await admin.execute(price_migration)
         await admin.execute(price_migration)
@@ -271,6 +272,7 @@ def test_bounded_inbox_cleanup_preserves_live_detections_and_locked_rows():
             # Baseline and detection at the same close share a batch identity;
             # create the live observation in a separate source scope instead.
             live['scope'][2] = 'live-test'
+            live['schema_version'] = 1  # Legacy queued batches remain supported.
             from core.scanner.events import _digest
             live['batch_id'] = _digest([live['scope'], live['epoch'], live['data_as_of']])
             for event in live['events']:
@@ -804,4 +806,164 @@ def test_partial_forex_lifecycle_reaches_only_consented_watchers():
             assert len(await db.api.history('crypto'))==0
             assert len(await db.api.history('forex'))==1
             assert len(await db.api.history('all'))==1
+    asyncio.run(scenario())
+
+
+def test_late_same_close_forex_and_crypto_patterns_deliver_once():
+    from core.scanner.watches import ScopedWatchCreate
+    async def scenario():
+        async with database() as db:
+            saved = await db.api.create('alice', ScopedWatchCreate(
+                pattern_id=PATTERN, interval=INTERVAL, market_scope='all'))
+            await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$1',
+                                   cutoff()-timedelta(seconds=1))
+            await db.api.register_device('alice', uuid.uuid4(), 'disposable-pattern-test-token')
+            for provider, market, symbols in [('binance','spot',('BTCUSDT','ETHUSDT')),
+                                               ('massive','forex',('EURUSD','USDJPY'))]:
+                def page(at, ready, matched):
+                    meta, rows = snapshot(at, symbols=matched)
+                    meta.update(provider=provider, market=market, universe_id=f'{provider}-test',
+                                coverage={'eligible': 2, 'ready': len(ready)},
+                                instrument_coverage={s: 'ready' if s in ready else 'pending' for s in symbols})
+                    for match in rows[PATTERN]:
+                        match.update(provider=provider, market=market,
+                                     instrument_id=f"{provider}:{market}:{match['symbol']}")
+                    return meta, rows
+                state, _ = lifecycle_transition(None, *page(cutoff()-timedelta(days=1), symbols, ()))
+                state, first = lifecycle_transition(state, *page(cutoff(), symbols[:1], symbols[:1]))
+                state, second = lifecycle_transition(state, *page(cutoff(), symbols, symbols))
+                for batch in (first, second):
+                    assert await accept(db.worker, batch)
+                    assert (await db.worker.fanout_batch())['queued'] == 1
+                    assert not await accept(db.worker, batch)
+                assert lifecycle_transition(state, *page(cutoff(), symbols, symbols))[1]['events'] == []
+            sent = []
+            class Sender:
+                async def send(self, delivery):
+                    assert delivery['notification_targets'] == (['disposable-pattern-test-token'], set())
+                    sent.append(delivery['payload']['match']['symbol'])
+                    return 'fake-accepted'
+            while await deliver_one(db.worker, Sender()) is not None:
+                pass
+            assert sorted(sent) == ['BTCUSDT', 'ETHUSDT', 'EURUSD', 'USDJPY']
+            assert await db.admin.fetchval("SELECT count(*) FROM scanner_alerts.outbox WHERE status='delivered'") == 4
+    asyncio.run(scenario())
+
+
+def test_grouped_delivery_window_concurrency_retry_and_owner_isolation(monkeypatch):
+    monkeypatch.setenv('SCANNER_GROUPED_PATTERN_ALERTS', '1')
+    async def scenario():
+        async with database() as db:
+            await watch(db)
+            await accept(db.worker, detection_batch(symbols=tuple(f'COIN{i}USDT' for i in range(50))))
+            assert await fanout_all(db.worker) == 50
+            assert await db.worker.claim_delivery() is None  # bounded collection window
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET created_at=created_at-interval '4 seconds'")
+            claims = await asyncio.gather(*(db.worker.claim_delivery() for _ in range(4)))
+            deliveries = [d for d in claims if d is not None]
+            assert len(deliveries) == 1
+            first = deliveries[0]
+            assert first['payload']['summary']['crypto_count'] == 50
+            assert await db.worker.delivery_allowed(first)
+            assert await db.api.notification_summary('bob', first['id']) is None
+            saved = await db.api.notification_summary('alice', first['id'])
+            assert len(saved['matches']) == 50
+            assert saved['interval'] == INTERVAL
+            assert await db.worker.finish_delivery(first, error='temporary provider failure')
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET next_attempt_at=clock_timestamp()")
+            retry = await db.worker.claim_delivery()
+            assert retry['id'] == first['id']
+            assert retry['payload'] == first['payload']
+            assert retry['attempts'] == 2
+            assert await db.worker.claim_delivery() is None
+            # A late symbol at the same candle close gets a new summary,
+            # never changes the frozen list or disappears into a retry.
+            await accept(db.worker, detection_batch(symbols=('LATEUSDT',)))
+            assert await fanout_all(db.worker) == 1
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET created_at=created_at-interval '4 seconds' WHERE delivery_group IS NULL")
+            late = await db.worker.claim_delivery()
+            assert late['id'] == retry['id'] and late['status'] == 'grouped'
+            assert len((await db.api.notification_summary('alice', first['id']))['matches']) == 51
+            assert not await db.worker.finish_delivery(first)  # stale lease cannot finish retry
+            assert await db.worker.finish_delivery(retry, provider_id='fake-summary')
+            assert await db.admin.fetchval("SELECT count(*) FROM scanner_alerts.outbox WHERE status='delivered'") == 51
+            assert await db.worker.claim_delivery() is None
+    asyncio.run(scenario())
+
+
+def test_grouping_keeps_symbol_alerts_immediate(monkeypatch):
+    monkeypatch.setenv('SCANNER_GROUPED_PATTERN_ALERTS', '1')
+    async def scenario():
+        async with database() as db:
+            await watch(db, symbols=['BTCUSDT'])
+            await accept(db.worker, detection_batch())
+            assert await fanout_all(db.worker) == 1
+            item = await db.worker.claim_delivery()
+            assert item is not None and item['delivery_group'] == item['id']
+            assert item['payload']['summary']['crypto_count'] == 1
+    asyncio.run(scenario())
+
+
+def test_grouped_mixed_markets_cancel_together_on_consent_change(monkeypatch):
+    from core.scanner.watches import ScopedWatchCreate
+    monkeypatch.setenv('SCANNER_GROUPED_PATTERN_ALERTS', '1')
+    async def scenario():
+        async with database() as db:
+            item = await db.api.create('alice', ScopedWatchCreate(pattern_id=PATTERN, interval=INTERVAL, market_scope='all'))
+            await db.admin.execute('UPDATE scanner_alerts.watches SET armed_at=$2 WHERE id=$1', item['id'], cutoff()-timedelta(seconds=1))
+            meta0, rows0 = snapshot(cutoff()-timedelta(days=1))
+            meta1, rows1 = snapshot(cutoff(), symbols=('EURUSD',))
+            for meta, rows in [(meta0, rows0), (meta1, rows1)]:
+                meta.update(provider='massive', market='forex', universe_id='massive-forex')
+                for match in rows[PATTERN]:
+                    match.update(provider='massive', market='forex', instrument_id='massive:forex:EURUSD')
+            state, _ = lifecycle_transition(None, meta0, rows0)
+            await accept(db.worker, lifecycle_transition(state, meta1, rows1)[1])
+            await accept(db.worker, detection_batch())
+            assert await fanout_all(db.worker) == 2
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET created_at=created_at-interval '4 seconds'")
+            delivery = await db.worker.claim_delivery()
+            assert delivery['payload']['summary']['crypto_count'] == 1
+            assert delivery['payload']['summary']['forex_count'] == 1
+            assert await db.worker.delivery_allowed(delivery)
+            await db.api.change_scope('alice', item['id'], 'crypto')
+            assert not await db.worker.delivery_allowed(delivery)
+            assert await db.worker.finish_delivery(delivery, cancelled=True)
+            assert await db.admin.fetchval("SELECT count(*) FROM scanner_alerts.outbox WHERE status='cancelled'") == 2
+    asyncio.run(scenario())
+
+
+def test_overlapping_watches_and_late_matches_share_one_notification(monkeypatch):
+    monkeypatch.setenv('SCANNER_GROUPED_PATTERN_ALERTS', '1')
+    async def scenario():
+        async with database() as db:
+            await watch(db)
+            await watch(db, symbols=['BTCUSDT'])
+            await watch(db, 'bob')
+            await accept(db.worker, detection_batch())
+            assert await fanout_all(db.worker) == 3
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET created_at=created_at-interval '4 seconds'")
+            claims = await asyncio.gather(*(db.worker.claim_delivery() for _ in range(4)))
+            sending = [d for d in claims if d and d['status']=='sending']
+            # A lane may skip while another holds the user/group lock.
+            while (extra := await db.worker.claim_delivery()) is not None:
+                if extra['status']=='sending': sending.append(extra)
+            assert len(sending) == 2 and {d['user_id'] for d in sending} == {'alice','bob'}
+            for d in sending:
+                assert d['payload']['summary']['crypto_count'] == 1
+                assert await db.worker.finish_delivery(d, provider_id='fake')
+            alice = next(d for d in sending if d['user_id']=='alice')
+            body = alice['payload']['notification_body']
+            await accept(db.worker, detection_batch(symbols=('ETHUSDT',)))
+            assert await fanout_all(db.worker) == 2
+            await db.admin.execute("UPDATE scanner_alerts.outbox SET created_at=created_at-interval '4 seconds' WHERE delivery_group IS NULL")
+            assert (await db.worker.claim_delivery())['status']=='grouped'
+            assert (await db.worker.claim_delivery())['status']=='grouped'
+            assert await db.worker.claim_delivery() is None
+            summary = await db.api.notification_summary('alice', alice['id'])
+            assert summary['crypto_count'] == 2
+            payload = json.loads(await db.admin.fetchval('SELECT payload FROM scanner_alerts.outbox WHERE id=$1', alice['id']))
+            assert payload['notification_body'] == body
+            await accept(db.worker, detection_batch(symbols=('ETHUSDT',)))
+            assert await fanout_all(db.worker) == 0
     asyncio.run(scenario())

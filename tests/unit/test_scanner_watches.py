@@ -259,3 +259,41 @@ def test_retired_pilot_requests_use_full_universe_without_changing_consent():
     assert converted.interval == '1h'
     assert current_watch_universe(spec, []).universe == 'binance-spot-pilot'
     assert current_watch_universe(FollowCreate(), enabled).universe == 'binance-spot-full'
+
+
+def test_sender_uses_destinations_from_latest_consent_check(monkeypatch):
+    from infrastructure.database.firebase.scanner_notifications import FirebaseScannerSender
+    async def run():
+        repo = Mock(notification_devices=AsyncMock(side_effect=AssertionError('extra lookup')),
+                    record_device_delivery=AsyncMock())
+        send = Mock(return_value='accepted')
+        monkeypatch.setattr(FirebaseScannerSender, '_send', send)
+        delivery = {'notification_targets': (['test-token'], set())}
+        assert await FirebaseScannerSender(repo).send(delivery) == 'accepted'
+        repo.notification_devices.assert_not_awaited()
+        repo.record_device_delivery.assert_awaited_once_with(delivery, 'test-token')
+        assert 'notification_targets' not in delivery
+    asyncio.run(run())
+
+
+def test_grouped_push_is_compact_and_routes_to_saved_summary(monkeypatch):
+    from core.scanner.notification_summary import pattern_summary, summary_body
+    from infrastructure.database.firebase import scanner_notifications as module
+    crypto = dict(symbol='BTCUSDT', market='spot', provider='binance', pattern_id='triple_top', interval='1h')
+    forex = dict(crypto, symbol='EURUSD', market='forex', provider='massive')
+    rows = [dict(payload={'match':m}, universe='test-universe') for m in (crypto, forex, crypto)]
+    summary = pattern_summary(rows)
+    assert (summary['crypto_count'], summary['forex_count']) == (1, 1)
+    assert summary_body(summary) in {'2 symbols now match this pattern.', '2 symbols are showing this pattern.', 'New matches detected across multiple symbols.', 'This pattern is showing up across multiple markets.'}
+    monkeypatch.setattr(module, 'scanner_firebase_app', lambda: object())
+    send = Mock(return_value='accepted')
+    monkeypatch.setattr(module.messaging, 'send', send)
+    delivery = dict(id=uuid.uuid4(), watch_id=uuid.uuid4(), user_id='alice', event_id='event',
+                    expires_at=datetime.now(timezone.utc)+timedelta(minutes=5),
+                    payload=dict(match=crypto, summary=summary, notification_body='2 symbols now match this pattern.'))
+    module.FirebaseScannerSender._send(delivery, 'fake-token')
+    message = send.call_args.args[0]
+    assert message.data['type'] == 'event_match_summary'
+    assert message.notification.title == 'Triple Top · 1H'
+    assert message.notification.body == delivery['payload']['notification_body']
+    assert 'matches' not in message.data  # thousands of matches cannot exceed push payload limits
