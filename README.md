@@ -1,148 +1,99 @@
-# Claw Backend (Watchers)
+# Watchers Backend
 
-Claw Backend is a high-performance, distributed financial intelligence platform designed for real-time market analysis and algorithmic pattern detection.
+The backend for Watchers: crypto and forex market data, live charts, pattern discovery, saved alerts, and push notifications for the iOS app.
 
-Unlike traditional monolithic screeners, Claw operates as a mesh of microservices, utilizing an event-driven architecture to ingest high-frequency market data, process complex quantitative models, and deliver actionable "Trader-Aware" insights via API and Telegram.
+## What it supports
 
----
+- Binance crypto and Massive forex data, symbol discovery, chart history, and live updates.
+- Pattern scanning across configured market universes on **15m, 30m, 1h, 4h, and 1D**. The launcher preserves configured profiles; it does not reset the scanner to the old ten-symbol pilot.
+- QuestDB candle storage with missing history fetched from providers as needed. Bulk copying historical InfluxDB data is not part of the current workflow.
+- Individual price alerts and grouped pattern notifications.
+- Firebase-authenticated APIs for the iOS app. Google and Apple sign-in happen in the app through Firebase Authentication; the backend verifies Firebase identity.
 
-## 🏗 System Architecture
+Searchability, chart-history availability, and scanner readiness are separate. A searchable symbol can still lack enough usable candles for pattern detection. Scan responses distinguish current, partial, stale, and unavailable results.
 
-The system is architected as a distributed cluster of services, ensuring that heavy data science computations do not block the responsiveness of the core API.
+## Notifications
 
----
+Pattern notifications group distinct symbols by **user + pattern + timeframe + candle close**, including overlapping watches and subscribed markets.
 
-## 🔌 Core Microservices
-
-**Core API (core-api):** A FastAPI gateway that handles client connections, WebSocket streaming, and orchestrates user requests. It serves as the "brain" for routing but delegates heavy lifting.
-
-**Data Workers (data-workers):** A scalable fleet of Celery workers. These nodes perform the CPU-intensive tasks:
-- Ingesting real-time crypto/stock data.
-- Running the Trader-Aware Analysis engine.
-- Calculating Swing Highs/Lows, ATR, and other technical indicators.
-
-**Notification Engine:** Decoupled handlers for delivering alerts via Telegram and Firebase, ensuring signals are pushed instantly upon pattern confirmation.
-
----
-
-## 🧠 Data Science & ML-Hybrid Engine
-
-Claw goes beyond simple if/else indicators by implementing a Trader-Aware Scoring System—a hybrid of quantitative analysis and heuristic modeling:
-
-- **Contextual Pattern Detection:** Patterns (Harmonic, Chart, Candlestick) are not just "found"; they are validated against support/resistance zones and trend direction.
-- **Multi-Factor Scoring:** Every setup is graded (0-100%) based on Trend Alignment, Zone Relevance, and Candle Confirmation using weighted algorithms.
-- **Zone Clustering:** Uses statistical clustering (via scikit-learn logic) to identify high-probability Supply/Demand zones dynamically.
-
----
-
-## ⚙️ Tech Stack
-
-### Backend & Infrastructure
-
-| Component | Technology | Role |
-|---|---:|---|
-| API Framework | FastAPI | Async REST & WebSocket endpoints |
-| Task Queue | Celery / message broker | Distributed background processing |
-| Message Broker | Redis / PubSub | Pub/Sub, Caching, and Task Brokerage |
-| Containerization | Docker / Docker Compose | Service orchestration (core-api vs workers) |
-| Reverse Proxy | Nginx / Traefik | Load balancing and routing |
-
-### Data Persistence
-
-| Component | Technology | Role |
-|---|---:|---|
-| Time Series | InfluxDB / Timescale | Storing OHLCV and high-frequency metric data |
-| Relational | Postgres / Supabase | User data, payments, and configuration |
-
-### Data Science & Analytics
-
-| Component | Technology | Role |
-|---|---:|---|
-| Quant Analysis | Pandas, NumPy, SciPy | Vectorized market data manipulation |
-| Indicators | TA-Lib | Technical analysis primitives |
-| ML / Clustering | Scikit-Learn | Adaptive thresholding and zone clustering |
-
----
-
-## 📂 Project Structure
-
-```
-Claw/
-├── docker/                  # Docker contexts for specific microservices
-│   ├── core-api/            # API Gateway container config
-│   ├── service-workers/     # Background worker container config
-│   ├── influxdb/            # Time-series DB setup
-│   └── redis/               # Broker setup
-│
-├── src/
-│   ├── core/
-│   │   ├── engines/         # The heavy lifters (PatternEngine, ChartEngine)
-│   │   ├── services/        # Business logic (Signals, Notifications)
-│   │   └── use_cases/       # Domain logic (Trader-Aware Analysis Pipeline)
-│   │       ├── trend_detector.py    # Market structure identification
-│   │       ├── scorer.py            # The "ML-ish" weighted scoring logic
-│   │       └── pattern_scanner.py   # Distributed scanning logic
-│   │
-│   ├── presentation/        # API Routes (REST + WebSockets)
-│   └── infrastructure/      # DB adapters (Supabase, Influx, Redis)
-│
-├── telegram/                # Telegram Bot service (standalone capability)
-└── requirements.txt         # Production dependencies
+```text
+Triple Top · 4H
+This pattern is showing up across multiple markets.
 ```
 
----
+Bodies use shuffled singular/plural message templates. Count-based messages describe newly detected symbols in the group, not every active match in the market. Late matches join the saved results without producing a push for each symbol. Tapping opens the corresponding pattern/timeframe results.
 
-## 🚀 Getting Started
+Grouping is enabled by default. Delivery uses durable outbox records, leases, and per-device receipts. Local notification scripts also prevent competing copies of the same worker within one checkout. Provider acceptance followed by a crash can still cause a retry; delivery is not guaranteed exactly once or instantaneously.
 
-For local iOS development, the app connects to one API and a single launcher
-supervises the background processes. Use the existing `.env` and `.venv`.
-Open OrbStack / Docker Desktop and start the configured Redis and InfluxDB
-services first. On the current Mac these are `claw_redis` and `claw_influxdb`.
+Price alerts remain individual target notifications. See [grouped pattern notifications](docs/grouped-pattern-notifications.md).
+
+## Services and storage
+
+| Component | Purpose |
+|---|---|
+| FastAPI | Authenticated REST APIs and chart WebSocket endpoints |
+| Celery workers | Candle ingestion, missing-history fetching, pattern detection and scan control |
+| Redis | Task queues, live streams and caching |
+| QuestDB | Candle history for charts and scanning |
+| Supabase/Postgres | Market catalog, scanner state, watches and durable notification records |
+| Firebase Authentication / FCM | User identity and iOS push delivery |
+
+Legacy storage adapters remain in the repository. The configured candle-store settings determine the active adapter; current local operation uses QuestDB. Market-provider entitlements and available history determine data availability.
+
+## Run locally
+
+Use the project's `.venv` and configured `.env`. Start the configured Redis and QuestDB services in Docker/OrbStack first. Supabase and Firebase credentials, market-provider access, and the necessary database migrations must already be configured.
 
 ```sh
 .venv/bin/python scripts/dev_backend.py check
-.venv/bin/python scripts/dev_backend.py start --scanner
+.venv/bin/python scripts/dev_backend.py start --scanner --notifications
 ```
 
-In a second terminal, expose port 8000 using the app's existing tunnel:
+The launcher starts the API, market streams, scanner services, and notification workers. It preserves scanner profiles and supervises worker restarts. Logs are in `logs/dev-backend/`. Ctrl-C requests shutdown. Do not run another launcher or standalone notification sender alongside an existing instance.
+
+- API documentation: `http://localhost:8000/docs`
+- Omit `--notifications` when push sending is not wanted.
+- For an iPhone, expose the API through your configured HTTPS tunnel and set the app's `WatchersAPIBaseURL` to that origin.
+- Keep credentials in local environment/configuration files, not in commits.
+
+See [local iOS backend setup](docs/local-ios-backend.md) for service roles and troubleshooting. No root Compose file is assumed by these instructions.
+
+## Repository layout
+
+```text
+src/
+  core/                   Scanner, alerts, analysis and worker services
+  infrastructure/         Database, provider and notification adapters
+  presentation/           API routes
+scripts/                  Local launcher, workers and validation tools
+migrations/               Database schema changes
+tests/                   Unit and integration coverage
+docs/                    Setup and feature documentation
+```
+
+## Validation
+
+Focused notification checks:
 
 ```sh
-ngrok http --url=stable-wholly-crappie.ngrok-free.app 8000
+PYTHONPATH=src:. .venv/bin/python -m pytest \
+  tests/unit/test_scanner_watches.py \
+  tests/unit/test_notification_worker_rotation.py -q
 ```
 
-`--scanner` enables the bounded 10-symbol Binance pilot on four intervals.
-Startup can require initial candle preparation; catalog definitions alone do
-not mean live scans are ready. Alert/push workers are not started. Ctrl-C stops
-the launcher's processes. Logs are under `logs/dev-backend/`.
+Scanner and alert integration validation (requires its local test dependencies):
 
-See **[Running the backend for iOS](docs/local-ios-backend.md)** for database
-startup, process roles, health checks, iPhone configuration and troubleshooting.
-The familiar manual `PYTHONPATH` commands also remain in `src/app.py`.
-There is no root Compose file; the older generic `docker-compose up` instruction
-did not match this checkout.
+```sh
+PYTHONPATH=src:. .venv/bin/python scripts/validate_scanner_runtime.py \
+  --alerts --report logs/scanner-validation.json
+```
 
----
+Tests do not substitute for checking provider connectivity, device push receipt, or the current live scan state.
 
-## 📊 The "Trader-Aware" Engine
+## Related documentation
 
-This backend features a dedicated system for Trader-Aware Analysis, documented in detail in `TRADER_AWARE_ANALYSIS_README.md`.
+- [Local backend setup](docs/local-ios-backend.md)
+- [Pattern notification grouping](docs/grouped-pattern-notifications.md)
+- [Analysis engine](TRADER_AWARE_ANALYSIS_README.md)
 
-**Key Capabilities:**
-- **Trend & Swing Analysis:** Auto-detection of HH/HL (Higher Highs/Lows) market structure.
-- **Adaptive Scoring:** A setup is only flagged if it meets a dynamic confidence threshold derived from multiple data points.
-- **Conflict Resolution:** A hierarchical priority system (Harmonic > Chart > Candlestick) ensures users aren't flooded with conflicting signals.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repo.
-2. Feature Branch: Create a branch for your microservice feature (e.g., `feature/new-worker-logic`).
-3. Tests: Ensure `tests/unit` pass.
-4. PR: Submit a Pull Request with a description of the architectural changes.
-
----
-
-## 📜 License
-
-MIT License
+Apple sign-in additionally requires the app's Apple Developer capability and the Apple provider enabled in Firebase. See [Firebase's setup guide](https://firebase.google.com/docs/auth/ios/apple) and the iOS README.
